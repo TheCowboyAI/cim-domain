@@ -201,35 +201,6 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
 
 // Example domain events for core entities
 
-/// Person was registered in the system
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PersonRegistered {
-    /// Person's unique ID
-    pub person_id: Uuid,
-    /// Identity component that was registered
-    pub identity: IdentityComponent,
-    /// Contact component (if provided)
-    pub contact: Option<crate::ContactComponent>,
-    /// Location ID (if assigned)
-    pub location_id: Option<Uuid>,
-    /// When the person was registered
-    pub registered_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for PersonRegistered {
-    fn aggregate_id(&self) -> Uuid {
-        self.person_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "PersonRegistered"
-    }
-
-    fn subject(&self) -> String {
-        format!("people.person.registered.v1")
-    }
-}
-
 /// Organization was created
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganizationCreated {

@@ -25,9 +25,7 @@ pub enum DomainEventEnum {
     /// An edge was removed from the graph
     EdgeRemoved(EdgeRemoved),
 
-    // Person events
-    /// A person was registered in the system
-    PersonRegistered(PersonRegistered),
+
 
     // Organization events
     /// An organization was created
@@ -545,7 +543,7 @@ impl DomainEvent for DomainEventEnum {
             Self::NodeUpdated(e) => e.subject(),
             Self::EdgeAdded(e) => e.subject(),
             Self::EdgeRemoved(e) => e.subject(),
-            Self::PersonRegistered(e) => e.subject(),
+
             Self::OrganizationCreated(e) => e.subject(),
             Self::OrganizationMemberAdded(e) => e.subject(),
             Self::OrganizationMemberRemoved(e) => e.subject(),
@@ -613,7 +611,7 @@ impl DomainEvent for DomainEventEnum {
             Self::NodeUpdated(e) => e.aggregate_id(),
             Self::EdgeAdded(e) => e.aggregate_id(),
             Self::EdgeRemoved(e) => e.aggregate_id(),
-            Self::PersonRegistered(e) => e.aggregate_id(),
+
             Self::OrganizationCreated(e) => e.aggregate_id(),
             Self::OrganizationMemberAdded(e) => e.aggregate_id(),
             Self::OrganizationMemberRemoved(e) => e.aggregate_id(),
@@ -681,7 +679,7 @@ impl DomainEvent for DomainEventEnum {
             Self::NodeUpdated(e) => e.event_type(),
             Self::EdgeAdded(e) => e.event_type(),
             Self::EdgeRemoved(e) => e.event_type(),
-            Self::PersonRegistered(e) => e.event_type(),
+
             Self::OrganizationCreated(e) => e.event_type(),
             Self::OrganizationMemberAdded(e) => e.event_type(),
             Self::OrganizationMemberRemoved(e) => e.event_type(),

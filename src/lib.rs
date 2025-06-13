@@ -41,7 +41,6 @@ mod command_handlers;
 mod query_handlers;
 mod bevy_bridge;
 mod location;
-mod person;
 mod organization;
 mod agent;
 mod policy;
@@ -75,7 +74,7 @@ pub use state_machine::{
     MooreMachine, MealyMachine,
     StateTransition, TransitionInput, TransitionOutput,
     EventOutput, EmptyInput, CommandInput,
-    DocumentState, PersonState, PersonTransitionInput,
+    DocumentState,
 };
 
 // Re-export from cim-subject crate
@@ -95,7 +94,7 @@ pub use events::{
 pub use events::{
     DomainEvent, EventMetadata, DomainEventEnvelope,
     DomainEventEnvelopeWithMetadata,
-    PersonRegistered, OrganizationCreated, OrganizationMemberAdded, AgentDeployed,
+    OrganizationCreated, OrganizationMemberAdded, AgentDeployed,
     LocationDefined, PolicyEnacted,
     AgentActivated, AgentSuspended, AgentWentOffline, AgentDecommissioned,
     AgentCapabilitiesAdded, AgentCapabilitiesRemoved,
@@ -111,7 +110,6 @@ pub use events::{
     DocumentVersionCreated, DocumentArchived,
 };
 pub use commands::{
-    RegisterPerson, UpdatePersonProfile,
     CreateOrganization, AddOrganizationMember,
     DeployAgent, UpdateAgentCapabilities,
     DefineLocation, EnactPolicy, UpdatePolicyRules,
@@ -129,13 +127,12 @@ pub use commands::{
 pub use command_handlers::{
     EventPublisher, MockEventPublisher,
     AggregateRepository, InMemoryRepository,
-    PersonCommandHandler, OrganizationCommandHandler, AgentCommandHandler,
+    OrganizationCommandHandler, AgentCommandHandler,
     LocationCommandHandler, PolicyCommandHandler, DocumentCommandHandler,
     WorkflowCommandHandler,
 };
 pub use query_handlers::{
     DirectQueryHandler, QueryResult, ReadModelStorage, InMemoryReadModel, QueryCriteria,
-    PersonView, GetPersonById, FindPeopleByOrganization, PersonQueryHandler,
     OrganizationView, GetOrganizationHierarchy, OrganizationHierarchyView, OrganizationQueryHandler,
     LocationView, FindLocationsByType, LocationQueryHandler,
     PolicyView, FindActivePolicies, PolicyQueryHandler,
@@ -152,15 +149,7 @@ pub use location::{
     Location, LocationMarker, LocationType,
     Address, GeoCoordinates, VirtualLocation,
 };
-pub use person::{
-    Person, PersonMarker,
-    IdentityComponent, ContactComponent, EmailAddress, PhoneNumber,
-    EmploymentComponent, PositionComponent,
-    SkillsComponent, SkillProficiency, Certification, Education,
-    AccessComponent, ExternalIdentifiersComponent,
-    ComponentMetadata,
-    EmployeeView, LdapProjection,
-};
+
 pub use organization::{
     Organization, OrganizationMarker,
     OrganizationType, OrganizationStatus,
@@ -217,7 +206,6 @@ pub mod markers {
         EventMarker, CommandMarker, QueryMarker
     };
     pub use crate::location::LocationMarker;
-    pub use crate::person::PersonMarker;
     pub use crate::organization::OrganizationMarker;
     pub use crate::agent::AgentMarker;
     pub use crate::policy::PolicyMarker;
