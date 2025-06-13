@@ -1,0 +1,72 @@
+[package]
+name = "cim-domain"
+version = "0.1.0"
+edition = "2021"
+authors = ["The Cowboy AI"]
+description = "Core DDD components and traits for CIM - Domain-Driven Design building blocks"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/thecowboyai/alchemist"
+keywords = ["ddd", "domain", "component", "entity", "aggregate"]
+categories = ["data-structures", "rust-patterns"]
+
+[[bin]]
+name = "generate-domain-graph"
+path = "src/bin/generate_domain_graph.rs"
+
+[dependencies]
+async-nats = "0.35"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+cid = { version = "0.11", features = ["serde"] }
+cim-ipld = { path = "../cim-ipld" }
+cim-subject = { path = "../cim-subject" }
+futures = "0.3"
+lru = "0.12"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1", features = ["sync"] }
+uuid = { version = "1.11", features = ["v4", "v7", "serde"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
+[[test]]
+name = "jetstream_event_store_tests"
+path = "tests/jetstream_event_store_tests.rs"
+
+[[example]]
+name = "command_handler_example"
+path = "examples/command_handler_example.rs"
+
+[[example]]
+name = "query_handler_example"
+path = "examples/query_handler_example.rs"
+
+[[example]]
+name = "state_machine_aggregates"
+path = "examples/state_machine_aggregates.rs"
+
+[[example]]
+name = "event_replay_example"
+path = "examples/event_replay_example.rs"
+
+[[example]]
+name = "inspect_cid"
+path = "examples/inspect_cid.rs"
+
+[[example]]
+name = "full_event_sourcing_demo"
+path = "examples/demos/full_event_sourcing_demo.rs"
+
+[[example]]
+name = "state_machine_demo"
+path = "examples/demos/state_machine_demo.rs"
+
+[[example]]
+name = "cqrs_pattern_demo"
+path = "examples/demos/cqrs_pattern_demo.rs"
+
+[[example]]
+name = "event_stream_example"
+path = "examples/event_stream_example.rs"

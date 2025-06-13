@@ -1,0 +1,104 @@
+{
+  "project": "CIM Domain",
+  "description": "Core Domain-Driven Design components for CIM",
+  "milestones": [
+    {
+      "id": "inception",
+      "name": "Project Inception",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "Initial project structure",
+        "Basic DDD traits and types"
+      ]
+    },
+    {
+      "id": "core-entities-identified",
+      "name": "Core Entities Identified",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "People, Agents, Organizations, Locations, Policies identified",
+        "User stories created",
+        "Acceptance tests defined"
+      ]
+    },
+    {
+      "id": "user-stories-created",
+      "name": "User Stories and Documentation",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "15 user stories (3 per entity)",
+        "3 cross-entity relationship stories",
+        "Implementation plan created"
+      ]
+    },
+    {
+      "id": "documentation-reorganized",
+      "name": "Documentation Reorganized",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "Moved docs to cim-domain submodule",
+        "Created qa/, plan/, progress/ structure"
+      ]
+    },
+    {
+      "id": "event-driven-architecture",
+      "name": "Event-Driven Architecture Implemented",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "Commands return only acknowledgments",
+        "Queries return only acknowledgments",
+        "Correlation and Causation IDs implemented",
+        "State machines for controlled workflows"
+      ]
+    },
+    {
+      "id": "subject-based-routing",
+      "name": "Subject-Based Routing Implemented",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "Subject parsing and patterns",
+        "Propagation scope (orthogonal to subjects)",
+        "Message translator trait",
+        "Subject-based permissions",
+        "Comprehensive design documentation"
+      ]
+    },
+    {
+      "id": "core-domain-implementation",
+      "name": "Core Domain Commands and Events",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "deliverables": [
+        "Commands for all 5 core entities",
+        "Events for all 5 core entities",
+        "Subject-based routing for events",
+        "All tests passing"
+      ]
+    },
+    {
+      "id": "bevy-bridge",
+      "name": "Bevy ECS Bridge",
+      "status": "COMPLETE",
+      "date": "2024-12-30",
+      "description": "Created bidirectional translation between NATS events and Bevy ECS commands using subject-based routing"
+    }
+  ],
+  "current_phase": "core-domain-implementation",
+  "next_steps": [
+    "Implement aggregates for core entities",
+    "Create NATS message translation layer",
+    "Implement Bevy command translation",
+    "Create integration tests"
+  ],
+  "references": [
+    "doc/design/domain-design-principles.md",
+    "doc/qa/cim-domain-user-stories.md",
+    "doc/plan/core-entities-implementation.md"
+  ]
+}

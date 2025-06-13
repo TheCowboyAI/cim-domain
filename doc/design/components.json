@@ -1,0 +1,558 @@
+{
+  "module": "cim-domain",
+  "version": "0.1.0",
+  "description": "Core DDD components and traits for CIM",
+  "components": {
+    "component": {
+      "file": "component.rs",
+      "description": "Base component system",
+      "exports": [
+        {
+          "name": "Component",
+          "type": "trait",
+          "description": "Base trait for attachable components with type erasure"
+        },
+        {
+          "name": "ComponentStorage",
+          "type": "struct",
+          "description": "Storage for type-erased components"
+        }
+      ]
+    },
+    "entity": {
+      "file": "entity.rs",
+      "description": "Entity and aggregate definitions",
+      "exports": [
+        {
+          "name": "Entity",
+          "type": "trait",
+          "description": "Types with identity and lifecycle"
+        },
+        {
+          "name": "EntityId",
+          "type": "struct",
+          "description": "Unique entity identifier"
+        },
+        {
+          "name": "AggregateRoot",
+          "type": "trait",
+          "description": "Consistency boundary marker"
+        },
+        {
+          "name": "GraphMarker",
+          "type": "struct",
+          "description": "Phantom type marker for graphs"
+        },
+        {
+          "name": "AggregateMarker",
+          "type": "struct",
+          "description": "Phantom type marker for aggregates"
+        },
+        {
+          "name": "BoundedContextMarker",
+          "type": "struct",
+          "description": "Phantom type marker for bounded contexts"
+        },
+        {
+          "name": "EntityMarker",
+          "type": "struct",
+          "description": "Phantom type marker for entities"
+        },
+        {
+          "name": "ValueObjectMarker",
+          "type": "struct",
+          "description": "Phantom type marker for value objects"
+        },
+        {
+          "name": "ServiceMarker",
+          "type": "struct",
+          "description": "Phantom type marker for services"
+        },
+        {
+          "name": "EventMarker",
+          "type": "struct",
+          "description": "Phantom type marker for events"
+        },
+        {
+          "name": "CommandMarker",
+          "type": "struct",
+          "description": "Phantom type marker for commands"
+        },
+        {
+          "name": "QueryMarker",
+          "type": "struct",
+          "description": "Phantom type marker for queries"
+        }
+      ]
+    },
+    "identifiers": {
+      "file": "identifiers.rs",
+      "description": "Domain identifiers",
+      "exports": [
+        {
+          "name": "NodeId",
+          "type": "struct",
+          "description": "Graph node identifier"
+        },
+        {
+          "name": "EdgeId",
+          "type": "struct",
+          "description": "Graph edge identifier"
+        },
+        {
+          "name": "GraphId",
+          "type": "struct",
+          "description": "Graph identifier"
+        }
+      ]
+    },
+    "node_types": {
+      "file": "node_types.rs",
+      "description": "Node type definitions",
+      "exports": [
+        {
+          "name": "NodeType",
+          "type": "enum",
+          "description": "Types of nodes in graphs"
+        }
+      ]
+    },
+    "relationship_types": {
+      "file": "relationship_types.rs",
+      "description": "Relationship type definitions",
+      "exports": [
+        {
+          "name": "RelationshipType",
+          "type": "enum",
+          "description": "Types of relationships/edges"
+        }
+      ]
+    },
+    "context_types": {
+      "file": "context_types.rs",
+      "description": "DDD context types",
+      "exports": [
+        {
+          "name": "ContextType",
+          "type": "enum",
+          "description": "Bounded context types"
+        },
+        {
+          "name": "SubdomainType",
+          "type": "enum",
+          "description": "Subdomain classifications"
+        },
+        {
+          "name": "ServiceType",
+          "type": "enum",
+          "description": "Service types"
+        }
+      ]
+    },
+    "composition_types": {
+      "file": "composition_types.rs",
+      "description": "Composition patterns",
+      "exports": [
+        {
+          "name": "CompositionType",
+          "type": "enum",
+          "description": "How components compose"
+        },
+        {
+          "name": "DomainCompositionType",
+          "type": "enum",
+          "description": "Domain-specific composition"
+        }
+      ]
+    },
+    "cqrs": {
+      "file": "cqrs.rs",
+      "description": "CQRS pattern implementation",
+      "exports": [
+        {
+          "name": "Command",
+          "type": "trait",
+          "description": "Command interface - returns only acknowledgments"
+        },
+        {
+          "name": "Query",
+          "type": "trait",
+          "description": "Query interface - returns only acknowledgments"
+        },
+        {
+          "name": "CommandId",
+          "type": "struct",
+          "description": "Command identifier"
+        },
+        {
+          "name": "QueryId",
+          "type": "struct",
+          "description": "Query identifier"
+        },
+        {
+          "name": "EventId",
+          "type": "struct",
+          "description": "Event identifier"
+        },
+        {
+          "name": "IdType",
+          "type": "enum",
+          "description": "Uuid or Cid variants"
+        },
+        {
+          "name": "CorrelationId",
+          "type": "struct",
+          "description": "Correlation tracking"
+        },
+        {
+          "name": "CausationId",
+          "type": "struct",
+          "description": "Causation tracking"
+        },
+        {
+          "name": "CommandEnvelope",
+          "type": "struct",
+          "description": "Command with metadata"
+        },
+        {
+          "name": "QueryEnvelope",
+          "type": "struct",
+          "description": "Query with metadata"
+        },
+        {
+          "name": "CommandHandler",
+          "type": "trait",
+          "description": "Processes commands"
+        },
+        {
+          "name": "QueryHandler",
+          "type": "trait",
+          "description": "Processes queries"
+        },
+        {
+          "name": "CommandStatus",
+          "type": "enum",
+          "description": "Accepted/Rejected"
+        },
+        {
+          "name": "QueryStatus",
+          "type": "enum",
+          "description": "Accepted/Rejected"
+        },
+        {
+          "name": "CommandAcknowledgment",
+          "type": "struct",
+          "description": "Command response"
+        },
+        {
+          "name": "QueryAcknowledgment",
+          "type": "struct",
+          "description": "Query response"
+        },
+        {
+          "name": "EventStreamSubscription",
+          "type": "struct",
+          "description": "For async results"
+        }
+      ]
+    },
+    "state_machine": {
+      "file": "state_machine.rs",
+      "description": "State machine implementation",
+      "exports": [
+        {
+          "name": "State",
+          "type": "trait",
+          "description": "State interface"
+        },
+        {
+          "name": "StateTransitions",
+          "type": "trait",
+          "description": "Valid transitions"
+        },
+        {
+          "name": "StateMachine",
+          "type": "struct",
+          "generic": "S",
+          "description": "Generic state machine"
+        },
+        {
+          "name": "StateTransition",
+          "type": "struct",
+          "generic": "S",
+          "description": "Transition record"
+        },
+        {
+          "name": "OrderState",
+          "type": "enum",
+          "description": "Example order states"
+        },
+        {
+          "name": "PersonState",
+          "type": "enum",
+          "description": "Example person states"
+        }
+      ]
+    },
+    "subjects": {
+      "file": "subjects.rs",
+      "description": "NATS subject routing",
+      "exports": [
+        {
+          "name": "SubjectParts",
+          "type": "struct",
+          "description": "Parsed subject components"
+        },
+        {
+          "name": "SubjectPattern",
+          "type": "struct",
+          "description": "Pattern with wildcards"
+        },
+        {
+          "name": "SubjectPermissions",
+          "type": "struct",
+          "description": "Access control"
+        },
+        {
+          "name": "PropagationScope",
+          "type": "enum",
+          "description": "Local/Cluster/Global"
+        },
+        {
+          "name": "EventEnvelope",
+          "type": "struct",
+          "description": "Event with routing info"
+        },
+        {
+          "name": "MessageTranslator",
+          "type": "trait",
+          "description": "Translation interface"
+        },
+        {
+          "name": "SubjectParser",
+          "type": "trait",
+          "description": "Subject parsing"
+        }
+      ]
+    },
+    "events": {
+      "file": "events.rs",
+      "description": "Domain events",
+      "exports": [
+        {
+          "name": "DomainEvent",
+          "type": "trait",
+          "description": "Base event interface"
+        },
+        {
+          "name": "EventMetadata",
+          "type": "struct",
+          "description": "Event metadata"
+        },
+        {
+          "name": "DomainEventEnvelope",
+          "type": "struct",
+          "generic": "T",
+          "description": "Generic event wrapper"
+        },
+        {
+          "name": "PersonRegistered",
+          "type": "struct",
+          "description": "Person registration event",
+          "entity": "Person"
+        },
+        {
+          "name": "OrganizationCreated",
+          "type": "struct",
+          "description": "Organization creation event",
+          "entity": "Organization"
+        },
+        {
+          "name": "AgentDeployed",
+          "type": "struct",
+          "description": "Agent deployment event",
+          "entity": "Agent"
+        },
+        {
+          "name": "LocationDefined",
+          "type": "struct",
+          "description": "Location definition event",
+          "entity": "Location"
+        },
+        {
+          "name": "PolicyEnacted",
+          "type": "struct",
+          "description": "Policy enactment event",
+          "entity": "Policy"
+        }
+      ]
+    },
+    "commands": {
+      "file": "commands.rs",
+      "description": "Domain commands",
+      "exports": [
+        {
+          "name": "RegisterPerson",
+          "type": "struct",
+          "description": "Register a new person",
+          "entity": "Person"
+        },
+        {
+          "name": "UpdatePersonProfile",
+          "type": "struct",
+          "description": "Update person profile",
+          "entity": "Person"
+        },
+        {
+          "name": "CreateOrganization",
+          "type": "struct",
+          "description": "Create new organization",
+          "entity": "Organization"
+        },
+        {
+          "name": "AddOrganizationMember",
+          "type": "struct",
+          "description": "Add member to organization",
+          "entity": "Organization"
+        },
+        {
+          "name": "DeployAgent",
+          "type": "struct",
+          "description": "Deploy new agent",
+          "entity": "Agent"
+        },
+        {
+          "name": "UpdateAgentCapabilities",
+          "type": "struct",
+          "description": "Update agent capabilities",
+          "entity": "Agent"
+        },
+        {
+          "name": "DefineLocation",
+          "type": "struct",
+          "description": "Define new location",
+          "entity": "Location"
+        },
+        {
+          "name": "EnactPolicy",
+          "type": "struct",
+          "description": "Enact new policy",
+          "entity": "Policy"
+        },
+        {
+          "name": "UpdatePolicyRules",
+          "type": "struct",
+          "description": "Update policy rules",
+          "entity": "Policy"
+        }
+      ]
+    },
+    "bevy_bridge": {
+      "file": "bevy_bridge.rs",
+      "description": "Bevy ECS integration",
+      "exports": [
+        {
+          "name": "ComponentData",
+          "type": "struct",
+          "description": "Generic component representation"
+        },
+        {
+          "name": "BevyCommand",
+          "type": "enum",
+          "description": "ECS commands",
+          "variants": ["SpawnEntity", "UpdateEntity", "DespawnEntity", "CreateRelationship"]
+        },
+        {
+          "name": "BevyEvent",
+          "type": "enum",
+          "description": "UI events",
+          "variants": ["EntitySelected", "EntityMoved", "EntityCreationRequested"]
+        },
+        {
+          "name": "ComponentMapper",
+          "type": "struct",
+          "description": "Maps domain to ECS"
+        },
+        {
+          "name": "NatsMessage",
+          "type": "struct",
+          "description": "NATS message wrapper"
+        },
+        {
+          "name": "TranslationError",
+          "type": "enum",
+          "description": "Translation errors"
+        },
+        {
+          "name": "NatsToBevyTranslator",
+          "type": "struct",
+          "description": "NATS to Bevy translation"
+        },
+        {
+          "name": "BevyEventRouter",
+          "type": "struct",
+          "description": "Routes Bevy events to subjects"
+        }
+      ]
+    },
+    "errors": {
+      "file": "errors.rs",
+      "description": "Error types",
+      "exports": [
+        {
+          "name": "DomainError",
+          "type": "enum",
+          "description": "Domain-specific errors"
+        },
+        {
+          "name": "DomainResult",
+          "type": "type_alias",
+          "generic": "T",
+          "description": "Result type alias"
+        }
+      ]
+    }
+  },
+  "statistics": {
+    "traits": 11,
+    "enums": 15,
+    "structs": 35,
+    "type_aliases": 1,
+    "core_entities": 5,
+    "event_types": 5,
+    "command_types": 9,
+    "total_public_types": 66
+  },
+  "core_entities": [
+    {
+      "name": "Person",
+      "description": "Individual users in the system",
+      "events": ["PersonRegistered"],
+      "commands": ["RegisterPerson", "UpdatePersonProfile"]
+    },
+    {
+      "name": "Organization",
+      "description": "Groups, companies, or teams",
+      "events": ["OrganizationCreated"],
+      "commands": ["CreateOrganization", "AddOrganizationMember"]
+    },
+    {
+      "name": "Agent",
+      "description": "AI or automated entities",
+      "events": ["AgentDeployed"],
+      "commands": ["DeployAgent", "UpdateAgentCapabilities"]
+    },
+    {
+      "name": "Location",
+      "description": "Physical or logical locations",
+      "events": ["LocationDefined"],
+      "commands": ["DefineLocation"]
+    },
+    {
+      "name": "Policy",
+      "description": "Rules and permissions",
+      "events": ["PolicyEnacted"],
+      "commands": ["EnactPolicy", "UpdatePolicyRules"]
+    }
+  ]
+}
