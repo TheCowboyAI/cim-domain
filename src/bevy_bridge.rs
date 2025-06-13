@@ -5,7 +5,7 @@
 //! between event-driven domain logic and ECS component updates.
 
 use crate::{
-    PersonRegistered, OrganizationCreated, AgentDeployed, PolicyEnacted,
+    OrganizationCreated, AgentDeployed, PolicyEnacted,
     DomainEventEnvelope,
 };
 use cim_subject::{Subject as SubjectParts, MessageTranslator};
@@ -102,47 +102,7 @@ impl ComponentMapper {
         Self { }
     }
 
-    /// Map a person to Bevy components
-    pub fn map_person(&self, person: &PersonRegistered) -> Vec<ComponentData> {
-        let mut components = vec![
-            ComponentData {
-                component_type: "PersonEntity".to_string(),
-                data: serde_json::json!({
-                    "person_id": person.person_id,
-                }),
-            },
-            ComponentData {
-                component_type: "Name".to_string(),
-                data: serde_json::json!({
-                    "name": person.identity.legal_name,
-                }),
-            },
-        ];
 
-        // Add email component if contact info is available
-        if let Some(contact) = &person.contact {
-            if let Some(primary_email) = contact.emails.iter().find(|e| e.is_primary) {
-                components.push(ComponentData {
-                    component_type: "Email".to_string(),
-                    data: serde_json::json!({
-                        "email": primary_email.email,
-                    }),
-                });
-            }
-        }
-
-        // Add transform component
-        components.push(ComponentData {
-            component_type: "Transform".to_string(),
-            data: serde_json::json!({
-                "translation": [0.0, 0.0, 0.0],
-                "rotation": [0.0, 0.0, 0.0, 1.0],
-                "scale": [1.0, 1.0, 1.0],
-            }),
-        });
-
-        components
-    }
 
     /// Map an organization to Bevy components
     pub fn map_organization(&self, org: &OrganizationCreated) -> Vec<ComponentData> {
@@ -317,14 +277,6 @@ impl MessageTranslator<NatsMessage, BevyCommand> for NatsToBevyTranslator {
 
         // Route based on subject pattern
         match (subject_parts.context(), subject_parts.event_type()) {
-            ("people", "registered") => {
-                let event: PersonRegistered = serde_json::from_value(envelope.event)?;
-                Ok(BevyCommand::SpawnEntity {
-                    entity_id: event.person_id,
-                    components: self.component_mapper.map_person(&event),
-                    parent: None,
-                })
-            }
             ("organizations", "created") => {
                 let event: OrganizationCreated = serde_json::from_value(envelope.event)?;
                 Ok(BevyCommand::SpawnEntity {
@@ -367,7 +319,6 @@ impl MessageTranslator<NatsMessage, BevyCommand> for NatsToBevyTranslator {
 
                 // Generate appropriate subject based on entity type
                 let subject = match entity_type.as_str() {
-                    "PersonEntity" => "people.person.created.v1",
                     "OrganizationEntity" => "organizations.organization.created.v1",
                     "AgentEntity" => "agents.agent.created.v1",
                     "PolicyEntity" => "policies.policy.created.v1",
@@ -425,63 +376,6 @@ impl Default for BevyEventRouter {
 mod tests {
     use super::*;
     use crate::{EventMetadata, PropagationScope};
-
-    #[test]
-    fn test_person_translation() {
-        let translator = NatsToBevyTranslator::new();
-
-        let event = PersonRegistered {
-            person_id: Uuid::new_v4(),
-            identity: crate::IdentityComponent {
-                legal_name: "Alice Smith".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: Some(crate::ContactComponent {
-                emails: vec![crate::EmailAddress {
-                    email: "alice@example.com".to_string(),
-                    email_type: "personal".to_string(),
-                    is_primary: true,
-                    is_verified: false,
-                }],
-                phones: vec![],
-                addresses: vec![],
-            }),
-            location_id: Some(Uuid::new_v4()),
-            registered_at: chrono::Utc::now(),
-        };
-
-        let metadata = EventMetadata {
-            source: "test".to_string(),
-            version: "v1".to_string(),
-            propagation_scope: PropagationScope::LocalOnly,
-            properties: std::collections::HashMap::new(),
-        };
-
-        let envelope = DomainEventEnvelope {
-            metadata,
-            event: serde_json::to_value(&event).unwrap(),
-            subject: "people.person.registered.v1".to_string(),
-        };
-
-        let nats_msg = NatsMessage {
-            subject: envelope.subject.clone(),
-            payload: serde_json::to_vec(&envelope).unwrap(),
-            headers: HashMap::new(),
-        };
-
-        let bevy_cmd = translator.translate(nats_msg).unwrap();
-
-        match bevy_cmd {
-            BevyCommand::SpawnEntity { entity_id, components, .. } => {
-                assert_eq!(entity_id, event.person_id);
-                assert!(components.iter().any(|c| c.component_type == "PersonEntity"));
-                assert!(components.iter().any(|c| c.component_type == "Name"));
-            }
-            _ => panic!("Expected SpawnEntity command"),
-        }
-    }
 
     #[test]
     fn test_bevy_event_routing() {

@@ -12,7 +12,7 @@
 //! ## Relationship to Enriched Categories
 //!
 //! In our domain model, aggregates are **Enriched Categories** where:
-//! - **Objects**: The states of the aggregate (DocumentState, PersonState, etc.)
+//! - **Objects**: The states of the aggregate (DocumentState, etc.)
 //! - **Morphisms**: State transitions (provided by the state machines)
 //!   - **Enrichment**: The "cost" or "distance" of transitions, captured by:
 //!     - Event count (number of events generated)
@@ -395,158 +395,7 @@ impl MooreStateTransitions for DocumentState {
     }
 }
 
-// Example: Person state machine (Mealy)
-/// Represents the lifecycle states of a person in the system
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PersonState {
-    /// Initial state - person has registered but not verified
-    Registered,
-    /// Person is undergoing verification process
-    PendingVerification,
-    /// Person has been verified but not yet activated
-    Verified,
-    /// Person is active and can use the system
-    Active,
-    /// Person is temporarily suspended
-    Suspended,
-    /// Person has been deactivated but can be reactivated
-    Deactivated,
-    /// Terminal state - person is permanently archived
-    Archived,
-}
 
-impl State for PersonState {
-    fn name(&self) -> &'static str {
-        match self {
-            Self::Registered => "Registered",
-            Self::PendingVerification => "PendingVerification",
-            Self::Verified => "Verified",
-            Self::Active => "Active",
-            Self::Suspended => "Suspended",
-            Self::Deactivated => "Deactivated",
-            Self::Archived => "Archived",
-        }
-    }
-
-    fn is_terminal(&self) -> bool {
-        matches!(self, Self::Archived)
-    }
-}
-
-/// Input for person state transitions
-#[derive(Debug, Clone)]
-pub enum PersonTransitionInput {
-    /// Start the verification process for a person
-    StartVerification {
-        /// The method of verification (e.g., "email", "phone", "document")
-        method: String
-    },
-    /// Complete the verification process
-    CompleteVerification {
-        /// The unique identifier of the verification process
-        verification_id: String
-    },
-    /// Activate a verified person
-    Activate {
-        /// The ID of the user who activated this person
-        activated_by: Uuid
-    },
-    /// Suspend an active person
-    Suspend {
-        /// The reason for suspension
-        reason: String,
-        /// The ID of the user who suspended this person
-        suspended_by: Uuid
-    },
-    /// Reactivate a suspended or deactivated person
-    Reactivate {
-        /// The ID of the user who reactivated this person
-        reactivated_by: Uuid
-    },
-    /// Deactivate a person
-    Deactivate {
-        /// The reason for deactivation
-        reason: String
-    },
-    /// Archive a person permanently
-    Archive {
-        /// The ID of the user who archived this person
-        archived_by: Uuid
-    },
-}
-
-impl TransitionInput for PersonTransitionInput {
-    fn description(&self) -> String {
-        match self {
-            Self::StartVerification { method } => format!("Start verification via {}", method),
-            Self::CompleteVerification { .. } => "Complete verification".to_string(),
-            Self::Activate { .. } => "Activate person".to_string(),
-            Self::Suspend { reason, .. } => format!("Suspend: {}", reason),
-            Self::Reactivate { .. } => "Reactivate person".to_string(),
-            Self::Deactivate { reason } => format!("Deactivate: {}", reason),
-            Self::Archive { .. } => "Archive person".to_string(),
-        }
-    }
-}
-
-impl MealyStateTransitions for PersonState {
-    type Input = PersonTransitionInput;
-    type Output = EventOutput;
-
-    fn can_transition_to(&self, target: &Self, input: &Self::Input) -> bool {
-        use PersonState::*;
-        use PersonTransitionInput::*;
-
-        match (self, target, input) {
-            (Registered, PendingVerification, StartVerification { .. }) => true,
-            (Registered, Archived, Archive { .. }) => true,
-            (PendingVerification, Verified, CompleteVerification { .. }) => true,
-            (PendingVerification, Archived, Archive { .. }) => true,
-            (Verified, Active, Activate { .. }) => true,
-            (Verified, Archived, Archive { .. }) => true,
-            (Active, Suspended, Suspend { .. }) => true,
-            (Active, Deactivated, Deactivate { .. }) => true,
-            (Active, Archived, Archive { .. }) => true,
-            (Suspended, Active, Reactivate { .. }) => true,
-            (Suspended, Deactivated, Deactivate { .. }) => true,
-            (Suspended, Archived, Archive { .. }) => true,
-            (Deactivated, Active, Reactivate { .. }) => true,
-            (Deactivated, Archived, Archive { .. }) => true,
-            _ => false,
-        }
-    }
-
-    fn valid_transitions(&self, input: &Self::Input) -> Vec<Self> {
-        use PersonState::*;
-        use PersonTransitionInput::*;
-
-        match (self, input) {
-            (Registered, StartVerification { .. }) => vec![PendingVerification],
-            (Registered, Archive { .. }) => vec![Archived],
-            (PendingVerification, CompleteVerification { .. }) => vec![Verified],
-            (PendingVerification, Archive { .. }) => vec![Archived],
-            (Verified, Activate { .. }) => vec![Active],
-            (Verified, Archive { .. }) => vec![Archived],
-            (Active, Suspend { .. }) => vec![Suspended],
-            (Active, Deactivate { .. }) => vec![Deactivated],
-            (Active, Archive { .. }) => vec![Archived],
-            (Suspended, Reactivate { .. }) => vec![Active],
-            (Suspended, Deactivate { .. }) => vec![Deactivated],
-            (Suspended, Archive { .. }) => vec![Archived],
-            (Deactivated, Reactivate { .. }) => vec![Active],
-            (Deactivated, Archive { .. }) => vec![Archived],
-            _ => vec![],
-        }
-    }
-
-    fn transition_output(&self, _target: &Self, _input: &Self::Input) -> Self::Output {
-        // In a real implementation, these would create actual domain events
-        // based on the transition and input
-        EventOutput {
-            events: vec![], // Placeholder
-        }
-    }
-}
 
 /// Macro to define Moore state transitions more concisely
 #[macro_export]
@@ -646,42 +495,7 @@ mod tests {
         assert!(machine.transition_to(DocumentState::Draft).is_err()); // Can't transition from terminal
     }
 
-    #[test]
-    fn test_mealy_machine_person_state() {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        struct PersonAggregate;
-        impl AggregateRoot for PersonAggregate {
-            type Id = EntityId<PersonAggregate>;
-            fn id(&self) -> Self::Id { unimplemented!() }
-            fn version(&self) -> u64 { 0 }
-            fn increment_version(&mut self) {}
-        }
 
-        let aggregate_id = EntityId::<PersonAggregate>::new();
-        let mut machine = MealyMachine::new(PersonState::Registered, aggregate_id);
-
-        // Valid transition with input
-        let input = PersonTransitionInput::StartVerification {
-            method: "email".to_string(),
-        };
-        assert!(machine.transition_to(PersonState::PendingVerification, input).is_ok());
-
-        // Invalid transition
-        let invalid_input = PersonTransitionInput::Suspend {
-            reason: "test".to_string(),
-            suspended_by: Uuid::new_v4(),
-        };
-        assert!(machine.transition_to(PersonState::Suspended, invalid_input).is_err());
-
-        // Complete verification
-        let verify_input = PersonTransitionInput::CompleteVerification {
-            verification_id: "123".to_string(),
-        };
-        assert!(machine.transition_to(PersonState::Verified, verify_input).is_ok());
-
-        // Check history
-        assert_eq!(machine.history().len(), 2);
-    }
 
     #[test]
     fn test_moore_machine() {

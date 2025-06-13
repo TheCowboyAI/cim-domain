@@ -5,7 +5,6 @@
 
 use crate::{
     cqrs::{CorrelationId, CausationId, EventId, IdType},
-    person::IdentityComponent,
     location::{Address, LocationType, GeoCoordinates, VirtualLocation},
     organization::{OrganizationType, OrganizationRole, OrganizationStatus},
 };
@@ -1450,43 +1449,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_person_registered_event() {
-        let event = PersonRegistered {
-            person_id: Uuid::new_v4(),
-            identity: IdentityComponent {
-                legal_name: "Alice Smith".to_string(),
-                preferred_name: Some("Alice".to_string()),
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
-        };
-
-        assert_eq!(event.aggregate_id(), event.person_id);
-        assert_eq!(event.event_type(), "PersonRegistered");
-        assert_eq!(event.subject(), "people.person.registered.v1");
-        assert_eq!(event.version(), "v1");
-    }
-
-    #[test]
     fn test_domain_event_subjects() {
-        let person_event = PersonRegistered {
-            person_id: Uuid::new_v4(),
-            identity: IdentityComponent {
-                legal_name: "John Doe".to_string(),
-                preferred_name: Some("John".to_string()),
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
-        };
-
-        assert_eq!(person_event.subject(), "people.person.registered.v1");
-
         let org_event = OrganizationCreated {
             organization_id: Uuid::new_v4(),
             name: "Acme Corp".to_string(),

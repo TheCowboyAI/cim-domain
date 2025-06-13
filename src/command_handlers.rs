@@ -8,7 +8,6 @@ use crate::{
     cqrs::{CommandAcknowledgment, CommandEnvelope, CommandHandler, CommandStatus, CorrelationId},
     entity::EntityId,
     domain_events::DomainEventEnum,
-    person::Person,
     organization::Organization,
     agent::Agent,
     location::Location,
