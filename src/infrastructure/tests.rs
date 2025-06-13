@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::domain_events::DomainEventEnum;
-use crate::events::{PersonRegistered, OrganizationCreated, AgentDeployed};
+// Domain-specific events have been moved to their respective submodules
 use crate::infrastructure::event_store::{EventStream, EventStore};
 use crate::person::IdentityComponent;
 use crate::organization::OrganizationType;
@@ -16,6 +16,8 @@ use uuid::Uuid;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures::stream::Stream;
+use crate::identifiers::{GraphId, NodeId};
+use crate::domain_events::{GraphCreated, NodeAdded, EdgeAdded};
 
 /// Mock event store for testing
 #[derive(Debug, Clone)]
@@ -127,9 +129,9 @@ impl EventStore for MockEventStore {
             .values()
             .flatten()
             .filter(|e| match &e.event {
-                DomainEventEnum::PersonRegistered(_) => event_type == "PersonRegistered",
-                DomainEventEnum::OrganizationCreated(_) => event_type == "OrganizationCreated",
-                DomainEventEnum::AgentDeployed(_) => event_type == "AgentDeployed",
+                            DomainEventEnum::GraphCreated(_) => event_type == "GraphCreated",
+            DomainEventEnum::NodeAdded(_) => event_type == "NodeAdded",
+            DomainEventEnum::EdgeAdded(_) => event_type == "EdgeAdded",
                 _ => false,
             })
             .take(limit)
@@ -273,6 +275,36 @@ fn create_test_agent_event() -> DomainEventEnum {
     })
 }
 
+fn create_test_graph_event() -> DomainEventEnum {
+    DomainEventEnum::GraphCreated(GraphCreated {
+        graph_id: GraphId::new(),
+        name: "Test Graph".to_string(),
+        description: "A test graph for testing".to_string(),
+        metadata: HashMap::new(),
+        created_at: chrono::Utc::now(),
+    })
+}
+
+fn create_test_node_event() -> DomainEventEnum {
+    DomainEventEnum::NodeAdded(NodeAdded {
+        graph_id: GraphId::new(),
+        node_id: NodeId::new(),
+        node_type: "task".to_string(),
+        metadata: HashMap::new(),
+    })
+}
+
+fn create_test_edge_event() -> DomainEventEnum {
+    DomainEventEnum::EdgeAdded(EdgeAdded {
+        graph_id: GraphId::new(),
+        edge_id: crate::identifiers::EdgeId::new(),
+        source_id: NodeId::new(),
+        target_id: NodeId::new(),
+        edge_type: "sequence".to_string(),
+        metadata: HashMap::new(),
+    })
+}
+
 #[cfg(test)]
 mod event_store_tests {
     use super::*;
@@ -293,7 +325,7 @@ mod event_store_tests {
         let aggregate_type = "Person";
 
         // Create test event
-        let event = create_test_person_event();
+        let event = create_test_graph_event();
 
         let metadata = EventMetadata {
             correlation_id: Some("corr-123".to_string()),

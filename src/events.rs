@@ -5,7 +5,6 @@
 
 use crate::{
     cqrs::{CorrelationId, CausationId, EventId, IdType},
-    location::{Address, LocationType, GeoCoordinates, VirtualLocation},
 };
 use cim_subject::Subject as SubjectParts;
 use cid::Cid;
@@ -197,92 +196,11 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
     }
 }
 
-// Example domain events for core entities
-
-/// Location defined
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LocationDefined {
-    /// The unique identifier of the location
-    pub location_id: Uuid,
-    /// The name of the location
-    pub name: String,
-    /// The type of location (physical, virtual, etc.)
-    pub location_type: LocationType,
-    /// The physical address (if applicable)
-    pub address: Option<Address>,
-    /// The geographic coordinates (if applicable)
-    pub coordinates: Option<GeoCoordinates>,
-    /// Virtual location details (if applicable)
-    pub virtual_location: Option<VirtualLocation>,
-    /// The parent location ID (for hierarchical locations)
-    pub parent_id: Option<Uuid>,
-}
-
-impl DomainEvent for LocationDefined {
-    fn aggregate_id(&self) -> Uuid {
-        self.location_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "LocationDefined"
-    }
-
-    fn subject(&self) -> String {
-        format!("location.{}.defined", self.location_id)
-    }
-}
-
-
-
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_domain_event_subjects() {
-        let location_event = LocationDefined {
-            location_id: Uuid::new_v4(),
-            name: "Test Location".to_string(),
-            location_type: LocationType::Physical,
-            address: None,
-            coordinates: None,
-            virtual_location: None,
-            parent_id: None,
-        };
-
-        assert!(location_event.subject().contains("location"));
-        assert_eq!(location_event.event_type(), "LocationDefined");
-    }
-
-    #[test]
-    fn test_event_envelope() {
-        let event = LocationDefined {
-            location_id: Uuid::new_v4(),
-            name: "Test Location".to_string(),
-            location_type: LocationType::Physical,
-            address: None,
-            coordinates: None,
-            virtual_location: None,
-            parent_id: None,
-        };
-
-        let metadata = EventMetadata {
-            source: "system".to_string(),
-            version: "v1".to_string(),
-            propagation_scope: PropagationScope::Cluster,
-            properties: std::collections::HashMap::new(),
-        };
-
-        let envelope = DomainEventEnvelope::new(event.clone(), metadata);
-
-        assert_eq!(envelope.subject, event.subject());
-        assert_eq!(envelope.metadata.propagation_scope, PropagationScope::Cluster);
-
-        let subject = cim_subject::Subject::new(&envelope.subject).unwrap();
-        assert_eq!(subject.context(), "location");
-        assert!(subject.aggregate().contains(&event.location_id.to_string()));
-        assert_eq!(subject.event_type(), "defined");
-    }
-}
+// All domain-specific events have been moved to their respective domain submodules:
+// - Person events: cim-domain-person
+// - Organization events: cim-domain-organization
+// - Agent events: cim-domain-agent
+// - Workflow events: cim-domain-workflow
+// - Location events: cim-domain-location
+// - Document events: cim-domain-document
+// - Policy events: cim-domain-policy

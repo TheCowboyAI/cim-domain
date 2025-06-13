@@ -40,9 +40,9 @@ mod commands;
 mod command_handlers;
 mod query_handlers;
 mod bevy_bridge;
-mod location;
-mod concept_graph;
-pub mod domain_graph;
+mod event_handler;
+// Location module has been extracted to cim-domain-location
+// Graph modules have been extracted to cim-domain-graph
 // Workflow module has been extracted to cim-domain-workflow
 pub mod infrastructure;
 pub mod projections;
@@ -64,6 +64,10 @@ pub use cqrs::{
     CommandAcknowledgment, QueryAcknowledgment,
     EventStreamSubscription,
 };
+
+// Export QueryHandler without alias for compatibility
+pub use cqrs::QueryHandler;
+
 pub use errors::{DomainError, DomainResult};
 pub use state_machine::{
     State, MooreStateTransitions, MealyStateTransitions,
@@ -90,43 +94,23 @@ pub use events::{
 pub use events::{
     DomainEvent, EventMetadata, DomainEventEnvelope,
     DomainEventEnvelopeWithMetadata,
-    LocationDefined,
 };
-pub use commands::{
-    DefineLocation,
-};
+// Location commands have been extracted to cim-domain-location
 pub use command_handlers::{
     EventPublisher, MockEventPublisher,
     AggregateRepository, InMemoryRepository,
-    LocationCommandHandler,
 };
 pub use query_handlers::{
     DirectQueryHandler, QueryResult, ReadModelStorage, InMemoryReadModel, QueryCriteria,
-
-    LocationView, FindLocationsByType, LocationQueryHandler,
 };
 pub use bevy_bridge::{
     BevyCommand, BevyEvent, ComponentData,
     NatsToBevyTranslator, BevyEventRouter,
     NatsMessage, TranslationError,
 };
-pub use location::{
-    Location, LocationMarker, LocationType,
-    Address, GeoCoordinates, VirtualLocation,
-};
+// Location types have been extracted to cim-domain-location
 
-pub use concept_graph::{
-    ConceptGraph, ConceptGraphMarker,
-    GraphMetadataComponent, GraphPurpose, ConceptNodeComponent, ConceptType,
-    SourceReference, ConceptRelationshipComponent, ConceptRelationshipType,
-    TemporalRelation, CausalRelation, ConceptualSpaceMappingComponent,
-    ConceptualDimension, DimensionType, ConceptualPosition,
-    LayoutConfigComponent, LayoutAlgorithm, AssemblyRulesComponent,
-    InclusionRule, Condition, ConditionOperator, ConceptMapping,
-    RelationshipRule, RelationshipDetection, FilterCriteria, FilterTarget,
-    ConceptGraphView, ConceptNodeView, ConceptRelationshipView,
-    LayoutInfo, BoundingBox,
-};
+// ConceptGraph types have been extracted to cim-domain-graph
 pub use domain_events::{
     DomainEventEnum,
     WorkflowStarted, WorkflowTransitionExecuted, WorkflowCompleted,
@@ -141,8 +125,15 @@ pub mod markers {
         EntityMarker, ValueObjectMarker, ServiceMarker,
         EventMarker, CommandMarker, QueryMarker
     };
-    pub use crate::location::LocationMarker;
-    pub use crate::concept_graph::ConceptGraphMarker;
+    // LocationMarker has been moved to cim-domain-location
+    // ConceptGraphMarker has been moved to cim-domain-graph
 }
+
+// Export infrastructure types that domains need
+pub use infrastructure::event_replay::EventHandler as ReplayEventHandler;
+pub use event_handler::EventHandler;
+
+// Type alias for AggregateId (using EntityId with AggregateMarker)
+pub type AggregateId = EntityId<markers::AggregateMarker>;
 
 

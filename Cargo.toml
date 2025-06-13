@@ -9,15 +9,12 @@ repository = "https://github.com/thecowboyai/alchemist"
 keywords = ["ddd", "domain", "component", "entity", "aggregate"]
 categories = ["data-structures", "rust-patterns"]
 
-[[bin]]
-name = "generate-domain-graph"
-path = "src/bin/generate_domain_graph.rs"
+# generate-domain-graph binary has been moved to cim-domain-graph
 
 [dependencies]
 # Core dependencies
-cim-core-domain = { path = "../cim-core-domain" }
-cim-infrastructure = { path = "../cim-infrastructure" }
 cim-subject = { path = "../cim-subject" }
+uuid = { version = "1.11", features = ["v4", "serde"] }
 cim-component = { path = "../cim-component" }
 cim-ipld = { path = "../cim-ipld" }
 
@@ -44,9 +41,6 @@ tracing = "0.1"
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
-
-# UUID generation
-uuid = { version = "1.11", features = ["v4", "serde"] }
 
 # Collections
 indexmap = "2.7"

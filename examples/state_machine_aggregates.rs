@@ -4,10 +4,10 @@
 //! in domain aggregates for managing state transitions.
 
 use cim_domain::{
-    entity::{AggregateRoot, Entity, EntityId},
+    AggregateRoot, Entity, EntityId,
     state_machine::*,
     DomainEvent, DomainError, DomainResult,
-    component::{Component, ComponentStorage},
+    Component, ComponentStorage,
 };
 use serde::{Deserialize, Serialize};
 use std::any::Any;

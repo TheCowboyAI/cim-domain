@@ -3,13 +3,13 @@
 //! Projections are optimized read models that are updated by handling domain events.
 //! They provide efficient queries without needing to replay all events.
 
-pub mod graph_summary;
-pub mod node_list;
+// graph_summary has been moved to cim-domain-graph
+// node_list has been moved to cim-domain-graph
 // workflow_status has been moved to cim-domain-workflow
 
-pub use graph_summary::GraphSummaryProjection;
-pub use node_list::NodeListProjection;
-// WorkflowStatusProjection is now re-exported from cim-domain-workflow
+// GraphSummaryProjection is now in cim-domain-graph
+// NodeListProjection is now in cim-domain-graph
+// WorkflowStatusProjection is now in cim-domain-workflow
 
 use crate::domain_events::DomainEventEnum;
 use async_trait::async_trait;
