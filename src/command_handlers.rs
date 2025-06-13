@@ -16,7 +16,6 @@ use crate::{
     document::Document,
     workflow::{WorkflowAggregate, SimpleState, SimpleInput, SimpleOutput, WorkflowCommand},
     AggregateRoot,
-    GraphId,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
