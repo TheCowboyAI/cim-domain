@@ -5,7 +5,7 @@
 //! between event-driven domain logic and ECS component updates.
 
 use crate::{
-    OrganizationCreated, AgentDeployed, PolicyEnacted,
+    AgentDeployed, PolicyEnacted,
     DomainEventEnvelope,
 };
 use cim_subject::{Subject as SubjectParts, MessageTranslator};
@@ -104,32 +104,7 @@ impl ComponentMapper {
 
 
 
-    /// Map an organization to Bevy components
-    pub fn map_organization(&self, org: &OrganizationCreated) -> Vec<ComponentData> {
-        vec![
-            ComponentData {
-                component_type: "OrganizationEntity".to_string(),
-                data: serde_json::json!({
-                    "id": org.organization_id,
-                    "org_type": org.org_type,
-                }),
-            },
-            ComponentData {
-                component_type: "Name".to_string(),
-                data: serde_json::json!({
-                    "name": org.name,
-                }),
-            },
-            ComponentData {
-                component_type: "Transform".to_string(),
-                data: serde_json::json!({
-                    "translation": [0.0, 1.0, 0.0],
-                    "rotation": [0.0, 0.0, 0.0, 1.0],
-                    "scale": [1.5, 1.5, 1.5],
-                }),
-            },
-        ]
-    }
+
 
     /// Map an agent to Bevy components
     pub fn map_agent(&self, agent: &AgentDeployed) -> Vec<ComponentData> {
@@ -277,14 +252,6 @@ impl MessageTranslator<NatsMessage, BevyCommand> for NatsToBevyTranslator {
 
         // Route based on subject pattern
         match (subject_parts.context(), subject_parts.event_type()) {
-            ("organizations", "created") => {
-                let event: OrganizationCreated = serde_json::from_value(envelope.event)?;
-                Ok(BevyCommand::SpawnEntity {
-                    entity_id: event.organization_id,
-                    components: self.component_mapper.map_organization(&event),
-                    parent: None,
-                })
-            }
             ("agents", "deployed") => {
                 let event: AgentDeployed = serde_json::from_value(envelope.event)?;
                 Ok(BevyCommand::SpawnEntity {
@@ -319,7 +286,6 @@ impl MessageTranslator<NatsMessage, BevyCommand> for NatsToBevyTranslator {
 
                 // Generate appropriate subject based on entity type
                 let subject = match entity_type.as_str() {
-                    "OrganizationEntity" => "organizations.organization.created.v1",
                     "AgentEntity" => "agents.agent.created.v1",
                     "PolicyEntity" => "policies.policy.created.v1",
                     _ => return Err(TranslationError::UnsupportedCommand),

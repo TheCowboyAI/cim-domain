@@ -27,35 +27,7 @@ pub enum DomainEventEnum {
 
 
 
-    // Organization events
-    /// An organization was created
-    OrganizationCreated(OrganizationCreated),
-    /// A member was added to an organization
-    OrganizationMemberAdded(OrganizationMemberAdded),
-    /// A member was removed from an organization
-    OrganizationMemberRemoved(OrganizationMemberRemoved),
-    /// A role was removed from a member
-    MemberRoleRemoved(MemberRoleRemoved),
-    /// A role was assigned to a member
-    MemberRoleAssigned(MemberRoleAssigned),
-    /// An organization's parent was removed
-    OrganizationParentRemoved(OrganizationParentRemoved),
-    /// An organization's parent was set
-    OrganizationParentSet(OrganizationParentSet),
-    /// Child units were added to an organization
-    OrganizationChildUnitsAdded(OrganizationChildUnitsAdded),
-    /// Child units were removed from an organization
-    OrganizationChildUnitsRemoved(OrganizationChildUnitsRemoved),
-    /// Locations were added to an organization
-    OrganizationLocationsAdded(OrganizationLocationsAdded),
-    /// Locations were removed from an organization
-    OrganizationLocationsRemoved(OrganizationLocationsRemoved),
-    /// An organization's primary location was removed
-    OrganizationPrimaryLocationRemoved(OrganizationPrimaryLocationRemoved),
-    /// An organization's primary location was set
-    OrganizationPrimaryLocationSet(OrganizationPrimaryLocationSet),
-    /// An organization's status changed
-    OrganizationStatusChanged(OrganizationStatusChanged),
+
 
     // Agent events
     /// An agent was deployed
@@ -544,20 +516,7 @@ impl DomainEvent for DomainEventEnum {
             Self::EdgeAdded(e) => e.subject(),
             Self::EdgeRemoved(e) => e.subject(),
 
-            Self::OrganizationCreated(e) => e.subject(),
-            Self::OrganizationMemberAdded(e) => e.subject(),
-            Self::OrganizationMemberRemoved(e) => e.subject(),
-            Self::MemberRoleRemoved(e) => e.subject(),
-            Self::MemberRoleAssigned(e) => e.subject(),
-            Self::OrganizationParentRemoved(e) => e.subject(),
-            Self::OrganizationParentSet(e) => e.subject(),
-            Self::OrganizationChildUnitsAdded(e) => e.subject(),
-            Self::OrganizationChildUnitsRemoved(e) => e.subject(),
-            Self::OrganizationLocationsAdded(e) => e.subject(),
-            Self::OrganizationLocationsRemoved(e) => e.subject(),
-            Self::OrganizationPrimaryLocationRemoved(e) => e.subject(),
-            Self::OrganizationPrimaryLocationSet(e) => e.subject(),
-            Self::OrganizationStatusChanged(e) => e.subject(),
+
             Self::AgentDeployed(e) => e.subject(),
             Self::AgentActivated(e) => e.subject(),
             Self::AgentSuspended(e) => e.subject(),
@@ -612,20 +571,7 @@ impl DomainEvent for DomainEventEnum {
             Self::EdgeAdded(e) => e.aggregate_id(),
             Self::EdgeRemoved(e) => e.aggregate_id(),
 
-            Self::OrganizationCreated(e) => e.aggregate_id(),
-            Self::OrganizationMemberAdded(e) => e.aggregate_id(),
-            Self::OrganizationMemberRemoved(e) => e.aggregate_id(),
-            Self::MemberRoleRemoved(e) => e.aggregate_id(),
-            Self::MemberRoleAssigned(e) => e.aggregate_id(),
-            Self::OrganizationParentRemoved(e) => e.aggregate_id(),
-            Self::OrganizationParentSet(e) => e.aggregate_id(),
-            Self::OrganizationChildUnitsAdded(e) => e.aggregate_id(),
-            Self::OrganizationChildUnitsRemoved(e) => e.aggregate_id(),
-            Self::OrganizationLocationsAdded(e) => e.aggregate_id(),
-            Self::OrganizationLocationsRemoved(e) => e.aggregate_id(),
-            Self::OrganizationPrimaryLocationRemoved(e) => e.aggregate_id(),
-            Self::OrganizationPrimaryLocationSet(e) => e.aggregate_id(),
-            Self::OrganizationStatusChanged(e) => e.aggregate_id(),
+
             Self::AgentDeployed(e) => e.aggregate_id(),
             Self::AgentActivated(e) => e.aggregate_id(),
             Self::AgentSuspended(e) => e.aggregate_id(),
@@ -680,20 +626,7 @@ impl DomainEvent for DomainEventEnum {
             Self::EdgeAdded(e) => e.event_type(),
             Self::EdgeRemoved(e) => e.event_type(),
 
-            Self::OrganizationCreated(e) => e.event_type(),
-            Self::OrganizationMemberAdded(e) => e.event_type(),
-            Self::OrganizationMemberRemoved(e) => e.event_type(),
-            Self::MemberRoleRemoved(e) => e.event_type(),
-            Self::MemberRoleAssigned(e) => e.event_type(),
-            Self::OrganizationParentRemoved(e) => e.event_type(),
-            Self::OrganizationParentSet(e) => e.event_type(),
-            Self::OrganizationChildUnitsAdded(e) => e.event_type(),
-            Self::OrganizationChildUnitsRemoved(e) => e.event_type(),
-            Self::OrganizationLocationsAdded(e) => e.event_type(),
-            Self::OrganizationLocationsRemoved(e) => e.event_type(),
-            Self::OrganizationPrimaryLocationRemoved(e) => e.event_type(),
-            Self::OrganizationPrimaryLocationSet(e) => e.event_type(),
-            Self::OrganizationStatusChanged(e) => e.event_type(),
+
             Self::AgentDeployed(e) => e.event_type(),
             Self::AgentActivated(e) => e.event_type(),
             Self::AgentSuspended(e) => e.event_type(),

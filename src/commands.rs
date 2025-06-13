@@ -7,121 +7,9 @@
 use crate::{
     cqrs::Command,
     entity::EntityId,
-    organization::{Organization, OrganizationType, OrganizationRole},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-// Organization Commands
-
-/// Command to create a new organization
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateOrganization {
-    /// The unique identifier for the organization
-    pub organization_id: Uuid,
-    /// The name of the organization
-    pub name: String,
-    /// The type of organization (e.g., Company, Department, Team)
-    pub org_type: OrganizationType,
-    /// The parent organization ID if this is a sub-organization
-    pub parent_id: Option<Uuid>,
-    /// The primary location ID for this organization
-    pub primary_location_id: Option<Uuid>,
-}
-
-impl Command for CreateOrganization {
-    type Aggregate = Organization;
-
-    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
-        Some(EntityId::from_uuid(self.organization_id))
-    }
-}
-
-/// Command to add a member to an organization
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AddOrganizationMember {
-    /// The organization to add the member to
-    pub organization_id: Uuid,
-    /// The person to add as a member
-    pub person_id: Uuid,
-    /// The role to assign to the member
-    pub role: OrganizationRole,
-    /// The ID of the person this member reports to (if applicable)
-    pub reports_to: Option<Uuid>,
-}
-
-impl Command for AddOrganizationMember {
-    type Aggregate = Organization;
-
-    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
-        Some(EntityId::from_uuid(self.organization_id))
-    }
-}
-
-/// Command to update organization structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateOrganizationStructure {
-    pub organization_id: Uuid,
-    pub parent_id: Option<Uuid>,
-    pub add_child_units: Vec<Uuid>,
-    pub remove_child_units: Vec<Uuid>,
-}
-
-impl Command for UpdateOrganizationStructure {
-    type Aggregate = Organization;
-
-    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
-        Some(EntityId::from_uuid(self.organization_id))
-    }
-}
-
-/// Command to assign organization locations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AssignOrganizationLocations {
-    pub organization_id: Uuid,
-    pub add_locations: Vec<Uuid>,
-    pub remove_locations: Vec<Uuid>,
-    pub primary_location_id: Option<Uuid>,
-}
-
-impl Command for AssignOrganizationLocations {
-    type Aggregate = Organization;
-
-    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
-        Some(EntityId::from_uuid(self.organization_id))
-    }
-}
-
-/// Command to update member role
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateMemberRole {
-    pub organization_id: Uuid,
-    pub person_id: Uuid,
-    pub new_role: OrganizationRole,
-}
-
-impl Command for UpdateMemberRole {
-    type Aggregate = Organization;
-
-    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
-        Some(EntityId::from_uuid(self.organization_id))
-    }
-}
-
-/// Command to remove organization member
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RemoveOrganizationMember {
-    pub organization_id: Uuid,
-    pub person_id: Uuid,
-}
-
-impl Command for RemoveOrganizationMember {
-    type Aggregate = Organization;
-
-    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
-        Some(EntityId::from_uuid(self.organization_id))
-    }
-}
 
 // Agent Commands
 
@@ -775,17 +663,22 @@ mod tests {
 
     #[test]
     fn test_command_aggregate_ids() {
-        let org_id = Uuid::new_v4();
-        let cmd = CreateOrganization {
-            organization_id: org_id,
-            name: "Acme Corp".to_string(),
-            org_type: crate::OrganizationType::Company,
-            parent_id: None,
-            primary_location_id: None,
+        let agent_id = Uuid::new_v4();
+        let cmd = DeployAgent {
+            agent_id,
+            agent_type: crate::AgentType::Assistant,
+            owner_id: Uuid::new_v4(),
+            metadata: crate::AgentMetadata {
+                name: "Test Agent".to_string(),
+                description: "Test agent for unit tests".to_string(),
+                version: "1.0.0".to_string(),
+                created_at: chrono::Utc::now(),
+                created_by: Uuid::new_v4(),
+            },
         };
 
         let agg_id = cmd.aggregate_id();
-        assert_eq!(agg_id.unwrap().as_uuid(), &org_id);
+        assert_eq!(agg_id.unwrap().as_uuid(), &agent_id);
     }
 }
 

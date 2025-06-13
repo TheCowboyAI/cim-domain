@@ -8,7 +8,6 @@ use crate::{
     cqrs::{CommandAcknowledgment, CommandEnvelope, CommandHandler, CommandStatus, CorrelationId},
     entity::EntityId,
     domain_events::DomainEventEnum,
-    organization::Organization,
     agent::Agent,
     location::Location,
     policy::Policy,
@@ -97,90 +96,6 @@ where
     fn save(&self, aggregate: &A) -> Result<(), String> {
         self.storage.write().unwrap().insert(aggregate.id(), aggregate.clone());
         Ok(())
-    }
-}
-
-// Organization Command Handlers
-
-/// Handler for organization-related commands
-pub struct OrganizationCommandHandler<R: AggregateRepository<Organization>> {
-    repository: R,
-    event_publisher: Box<dyn EventPublisher>,
-}
-
-impl<R: AggregateRepository<Organization>> OrganizationCommandHandler<R> {
-    /// Create a new organization command handler
-    pub fn new(repository: R, event_publisher: Box<dyn EventPublisher>) -> Self {
-        Self {
-            repository,
-            event_publisher,
-        }
-    }
-}
-
-impl<R: AggregateRepository<Organization>> CommandHandler<CreateOrganization> for OrganizationCommandHandler<R> {
-    fn handle(&mut self, envelope: CommandEnvelope<CreateOrganization>) -> CommandAcknowledgment {
-        let cmd = &envelope.command;
-        let org_id = EntityId::from_uuid(cmd.organization_id);
-
-        // Check if organization already exists
-        match self.repository.load(org_id) {
-            Ok(Some(_)) => CommandAcknowledgment {
-                command_id: envelope.id,
-                correlation_id: envelope.correlation_id,
-                status: CommandStatus::Rejected,
-                reason: Some("Organization already exists".to_string()),
-            },
-            Ok(None) => {
-                // Create new organization
-                let organization = Organization::new(
-                    cmd.name.clone(),
-                    cmd.org_type.clone(),
-                );
-
-                // Save organization
-                if let Err(e) = self.repository.save(&organization) {
-                    return CommandAcknowledgment {
-                        command_id: envelope.id,
-                        correlation_id: envelope.correlation_id,
-                        status: CommandStatus::Rejected,
-                        reason: Some(format!("Failed to save organization: {}", e)),
-                    };
-                }
-
-                // Emit event
-                let event = DomainEventEnum::OrganizationCreated(crate::OrganizationCreated {
-                    organization_id: cmd.organization_id,
-                    name: cmd.name.clone(),
-                    org_type: cmd.org_type.clone(),
-                    parent_id: cmd.parent_id,
-                    primary_location_id: cmd.primary_location_id,
-                    created_at: chrono::Utc::now(),
-                });
-
-                if let Err(e) = self.event_publisher.publish_events(vec![event], envelope.correlation_id.clone()) {
-                    return CommandAcknowledgment {
-                        command_id: envelope.id,
-                        correlation_id: envelope.correlation_id,
-                        status: CommandStatus::Rejected,
-                        reason: Some(format!("Failed to publish event: {}", e)),
-                    };
-                }
-
-                CommandAcknowledgment {
-                    command_id: envelope.id,
-                    correlation_id: envelope.correlation_id,
-                    status: CommandStatus::Accepted,
-                    reason: None,
-                }
-            }
-            Err(e) => CommandAcknowledgment {
-                command_id: envelope.id,
-                correlation_id: envelope.correlation_id,
-                status: CommandStatus::Rejected,
-                reason: Some(format!("Repository error: {}", e)),
-            },
-        }
     }
 }
 

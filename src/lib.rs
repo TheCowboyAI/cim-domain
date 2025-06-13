@@ -41,7 +41,6 @@ mod command_handlers;
 mod query_handlers;
 mod bevy_bridge;
 mod location;
-mod organization;
 mod agent;
 mod policy;
 mod document;
@@ -94,7 +93,7 @@ pub use events::{
 pub use events::{
     DomainEvent, EventMetadata, DomainEventEnvelope,
     DomainEventEnvelopeWithMetadata,
-    OrganizationCreated, OrganizationMemberAdded, AgentDeployed,
+    AgentDeployed,
     LocationDefined, PolicyEnacted,
     AgentActivated, AgentSuspended, AgentWentOffline, AgentDecommissioned,
     AgentCapabilitiesAdded, AgentCapabilitiesRemoved,
@@ -110,7 +109,6 @@ pub use events::{
     DocumentVersionCreated, DocumentArchived,
 };
 pub use commands::{
-    CreateOrganization, AddOrganizationMember,
     DeployAgent, UpdateAgentCapabilities,
     DefineLocation, EnactPolicy, UpdatePolicyRules,
     ActivateAgent, SuspendAgent, SetAgentOffline, DecommissionAgent,
@@ -127,13 +125,13 @@ pub use commands::{
 pub use command_handlers::{
     EventPublisher, MockEventPublisher,
     AggregateRepository, InMemoryRepository,
-    OrganizationCommandHandler, AgentCommandHandler,
+    AgentCommandHandler,
     LocationCommandHandler, PolicyCommandHandler, DocumentCommandHandler,
     WorkflowCommandHandler,
 };
 pub use query_handlers::{
     DirectQueryHandler, QueryResult, ReadModelStorage, InMemoryReadModel, QueryCriteria,
-    OrganizationView, GetOrganizationHierarchy, OrganizationHierarchyView, OrganizationQueryHandler,
+
     LocationView, FindLocationsByType, LocationQueryHandler,
     PolicyView, FindActivePolicies, PolicyQueryHandler,
     DocumentView, SearchDocuments, DocumentQueryHandler,
@@ -150,12 +148,7 @@ pub use location::{
     Address, GeoCoordinates, VirtualLocation,
 };
 
-pub use organization::{
-    Organization, OrganizationMarker,
-    OrganizationType, OrganizationStatus,
-    OrganizationMember, OrganizationRole, RoleLevel,
-    OrganizationMetadata, BudgetComponent, SizeCategory,
-};
+
 pub use agent::{
     Agent, AgentMarker,
     AgentType, AgentStatus,
@@ -206,7 +199,6 @@ pub mod markers {
         EventMarker, CommandMarker, QueryMarker
     };
     pub use crate::location::LocationMarker;
-    pub use crate::organization::OrganizationMarker;
     pub use crate::agent::AgentMarker;
     pub use crate::policy::PolicyMarker;
     pub use crate::document::DocumentMarker;

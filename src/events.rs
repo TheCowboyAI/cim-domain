@@ -6,7 +6,6 @@
 use crate::{
     cqrs::{CorrelationId, CausationId, EventId, IdType},
     location::{Address, LocationType, GeoCoordinates, VirtualLocation},
-    organization::{OrganizationType, OrganizationRole, OrganizationStatus},
 };
 use cim_subject::Subject as SubjectParts;
 use cid::Cid;
@@ -200,333 +199,9 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
 
 // Example domain events for core entities
 
-/// Organization was created
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationCreated {
-    /// The unique identifier of the organization
-    pub organization_id: Uuid,
-    /// The name of the organization
-    pub name: String,
-    /// The type of organization (e.g., Company, Department, Team)
-    pub org_type: OrganizationType,
-    /// The parent organization ID if this is a sub-organization
-    pub parent_id: Option<Uuid>,
-    /// The primary location ID for this organization
-    pub primary_location_id: Option<Uuid>,
-    /// When the organization was created
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
 
-impl DomainEvent for OrganizationCreated {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
 
-    fn event_type(&self) -> &'static str {
-        "OrganizationCreated"
-    }
 
-    fn subject(&self) -> String {
-        format!("organizations.organization.created.v1")
-    }
-}
-
-/// Member was added to organization
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationMemberAdded {
-    /// The organization receiving the new member
-    pub organization_id: Uuid,
-    /// The person being added as a member
-    pub person_id: Uuid,
-    /// The role assigned to the member in this organization
-    pub role: OrganizationRole,
-    /// The ID of the person this member reports to (if applicable)
-    pub reports_to: Option<Uuid>,
-    /// When the member joined the organization
-    pub joined_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationMemberAdded {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationMemberAdded"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.member_added.v1")
-    }
-}
-
-/// Member was removed from organization
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationMemberRemoved {
-    pub organization_id: Uuid,
-    pub person_id: Uuid,
-    pub removed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationMemberRemoved {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationMemberRemoved"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.member_removed.v1")
-    }
-}
-
-/// Member role was removed (before adding new role)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MemberRoleRemoved {
-    pub organization_id: Uuid,
-    pub person_id: Uuid,
-    pub role: OrganizationRole,
-    pub removed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for MemberRoleRemoved {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "MemberRoleRemoved"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.member_role_removed.v1")
-    }
-}
-
-/// Member role was assigned (after removing old role)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MemberRoleAssigned {
-    pub organization_id: Uuid,
-    pub person_id: Uuid,
-    pub role: OrganizationRole,
-    pub assigned_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for MemberRoleAssigned {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "MemberRoleAssigned"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.member_role_assigned.v1")
-    }
-}
-
-/// Organization parent was removed
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationParentRemoved {
-    pub organization_id: Uuid,
-    pub parent_id: Uuid,
-    pub removed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationParentRemoved {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationParentRemoved"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.parent_removed.v1")
-    }
-}
-
-/// Organization parent was set
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationParentSet {
-    pub organization_id: Uuid,
-    pub parent_id: Uuid,
-    pub set_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationParentSet {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationParentSet"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.parent_set.v1")
-    }
-}
-
-/// Organization child units were added
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationChildUnitsAdded {
-    pub organization_id: Uuid,
-    pub child_units: Vec<Uuid>,
-    pub added_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationChildUnitsAdded {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationChildUnitsAdded"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.child_units_added.v1")
-    }
-}
-
-/// Organization child units were removed
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationChildUnitsRemoved {
-    pub organization_id: Uuid,
-    pub child_units: Vec<Uuid>,
-    pub removed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationChildUnitsRemoved {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationChildUnitsRemoved"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.child_units_removed.v1")
-    }
-}
-
-/// Organization locations were added
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationLocationsAdded {
-    pub organization_id: Uuid,
-    pub locations: Vec<Uuid>,
-    pub added_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationLocationsAdded {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationLocationsAdded"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.locations_added.v1")
-    }
-}
-
-/// Organization locations were removed
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationLocationsRemoved {
-    pub organization_id: Uuid,
-    pub locations: Vec<Uuid>,
-    pub removed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationLocationsRemoved {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationLocationsRemoved"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.locations_removed.v1")
-    }
-}
-
-/// Organization primary location was removed
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationPrimaryLocationRemoved {
-    pub organization_id: Uuid,
-    pub location_id: Uuid,
-    pub removed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationPrimaryLocationRemoved {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationPrimaryLocationRemoved"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.primary_location_removed.v1")
-    }
-}
-
-/// Organization primary location was set
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationPrimaryLocationSet {
-    pub organization_id: Uuid,
-    pub location_id: Uuid,
-    pub set_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationPrimaryLocationSet {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationPrimaryLocationSet"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.primary_location_set.v1")
-    }
-}
-
-/// Organization status changed
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationStatusChanged {
-    pub organization_id: Uuid,
-    pub old_status: OrganizationStatus,
-    pub new_status: OrganizationStatus,
-    pub reason: Option<String>,
-    pub changed_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl DomainEvent for OrganizationStatusChanged {
-    fn aggregate_id(&self) -> Uuid {
-        self.organization_id
-    }
-
-    fn event_type(&self) -> &'static str {
-        "OrganizationStatusChanged"
-    }
-
-    fn subject(&self) -> String {
-        format!("organizations.organization.status_changed.v1")
-    }
-}
 
 /// Agent deployed
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1450,27 +1125,37 @@ mod tests {
 
     #[test]
     fn test_domain_event_subjects() {
-        let org_event = OrganizationCreated {
-            organization_id: Uuid::new_v4(),
-            name: "Acme Corp".to_string(),
-            org_type: OrganizationType::Company,
-            parent_id: None,
-            primary_location_id: None,
-            created_at: chrono::Utc::now(),
+        let agent_event = AgentDeployed {
+            agent_id: Uuid::new_v4(),
+            agent_type: crate::AgentType::Assistant,
+            owner_id: Uuid::new_v4(),
+            metadata: crate::AgentMetadata {
+                name: "Test Agent".to_string(),
+                description: "Test agent".to_string(),
+                version: "1.0.0".to_string(),
+                created_at: chrono::Utc::now(),
+                created_by: Uuid::new_v4(),
+            },
+            deployed_at: chrono::Utc::now(),
         };
 
-        assert_eq!(org_event.subject(), "organizations.organization.created.v1");
+        assert_eq!(agent_event.subject(), "agents.agent.deployed.v1");
     }
 
     #[test]
     fn test_event_envelope() {
-        let event = OrganizationCreated {
-            organization_id: Uuid::new_v4(),
-            name: "Acme Corp".to_string(),
-            org_type: OrganizationType::Company,
-            parent_id: None,
-            primary_location_id: None,
-            created_at: chrono::Utc::now(),
+        let event = AgentDeployed {
+            agent_id: Uuid::new_v4(),
+            agent_type: crate::AgentType::Assistant,
+            owner_id: Uuid::new_v4(),
+            metadata: crate::AgentMetadata {
+                name: "Test Agent".to_string(),
+                description: "Test agent".to_string(),
+                version: "1.0.0".to_string(),
+                created_at: chrono::Utc::now(),
+                created_by: Uuid::new_v4(),
+            },
+            deployed_at: chrono::Utc::now(),
         };
 
         let metadata = EventMetadata {
@@ -1482,13 +1167,13 @@ mod tests {
 
         let envelope = DomainEventEnvelope::new(event, metadata);
 
-        assert_eq!(envelope.subject, "organizations.organization.created.v1");
+        assert_eq!(envelope.subject, "agents.agent.deployed.v1");
         assert_eq!(envelope.metadata.propagation_scope, PropagationScope::Cluster);
 
         let subject = cim_subject::Subject::new(&envelope.subject).unwrap();
-        assert_eq!(subject.context(), "organizations");
-        assert_eq!(subject.aggregate(), "organization");
-        assert_eq!(subject.event_type(), "created");
+        assert_eq!(subject.context(), "agents");
+        assert_eq!(subject.aggregate(), "agent");
+        assert_eq!(subject.event_type(), "deployed");
         assert_eq!(subject.version(), "v1");
     }
 }
