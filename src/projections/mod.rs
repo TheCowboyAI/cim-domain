@@ -5,11 +5,11 @@
 
 pub mod graph_summary;
 pub mod node_list;
-pub mod workflow_status;
+// workflow_status has been moved to cim-domain-workflow
 
 pub use graph_summary::GraphSummaryProjection;
 pub use node_list::NodeListProjection;
-pub use workflow_status::WorkflowStatusProjection;
+// WorkflowStatusProjection is now re-exported from cim-domain-workflow
 
 use crate::domain_events::DomainEventEnum;
 use async_trait::async_trait;

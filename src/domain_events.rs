@@ -25,85 +25,13 @@ pub enum DomainEventEnum {
     /// An edge was removed from the graph
     EdgeRemoved(EdgeRemoved),
 
-
-
-
-
-    // Agent events
-    /// An agent was deployed
-    AgentDeployed(AgentDeployed),
-    /// An agent was activated
-    AgentActivated(AgentActivated),
-    /// An agent was suspended
-    AgentSuspended(AgentSuspended),
-    /// An agent went offline
-    AgentWentOffline(AgentWentOffline),
-    /// An agent was decommissioned
-    AgentDecommissioned(AgentDecommissioned),
-    /// Capabilities were added to an agent
-    AgentCapabilitiesAdded(AgentCapabilitiesAdded),
-    /// Capabilities were removed from an agent
-    AgentCapabilitiesRemoved(AgentCapabilitiesRemoved),
-    /// Permissions were granted to an agent
-    AgentPermissionsGranted(AgentPermissionsGranted),
-    /// Permissions were revoked from an agent
-    AgentPermissionsRevoked(AgentPermissionsRevoked),
-    /// Tools were enabled for an agent
-    AgentToolsEnabled(AgentToolsEnabled),
-    /// Tools were disabled for an agent
-    AgentToolsDisabled(AgentToolsDisabled),
-    /// An agent's configuration was removed
-    AgentConfigurationRemoved(AgentConfigurationRemoved),
-    /// An agent's configuration was set
-    AgentConfigurationSet(AgentConfigurationSet),
-
     // Location events
     /// A location was defined
     LocationDefined(LocationDefined),
 
-    // Policy events
-    /// A policy was enacted
-    PolicyEnacted(PolicyEnacted),
-    /// A policy was submitted for approval
-    PolicySubmittedForApproval(PolicySubmittedForApproval),
-    /// A policy was approved
-    PolicyApproved(PolicyApproved),
-    /// A policy was rejected
-    PolicyRejected(PolicyRejected),
-    /// A policy was suspended
-    PolicySuspended(PolicySuspended),
-    /// A policy was reactivated
-    PolicyReactivated(PolicyReactivated),
-    /// A policy was superseded by another
-    PolicySuperseded(PolicySuperseded),
-    /// A policy was archived
-    PolicyArchived(PolicyArchived),
-    /// External approval was requested for a policy
-    PolicyExternalApprovalRequested(PolicyExternalApprovalRequested),
-    /// External approval was received for a policy
-    PolicyExternalApprovalReceived(PolicyExternalApprovalReceived),
 
-    // Document events
-    /// A document was uploaded
-    DocumentUploaded(DocumentUploaded),
-    /// A document was classified
-    DocumentClassified(DocumentClassified),
-    /// Ownership was assigned to a document
-    DocumentOwnershipAssigned(DocumentOwnershipAssigned),
-    /// Access control was set on a document
-    DocumentAccessControlSet(DocumentAccessControlSet),
-    /// A document's status was set
-    DocumentStatusSet(DocumentStatusSet),
-    /// A document was processed
-    DocumentProcessed(DocumentProcessed),
-    /// A relationship was added between documents
-    DocumentRelationshipAdded(DocumentRelationshipAdded),
-    /// A relationship was removed between documents
-    DocumentRelationshipRemoved(DocumentRelationshipRemoved),
-    /// A new version of a document was created
-    DocumentVersionCreated(DocumentVersionCreated),
-    /// A document was archived
-    DocumentArchived(DocumentArchived),
+
+
 
     // Workflow events
     /// A workflow was started
@@ -515,42 +443,7 @@ impl DomainEvent for DomainEventEnum {
             Self::NodeUpdated(e) => e.subject(),
             Self::EdgeAdded(e) => e.subject(),
             Self::EdgeRemoved(e) => e.subject(),
-
-
-            Self::AgentDeployed(e) => e.subject(),
-            Self::AgentActivated(e) => e.subject(),
-            Self::AgentSuspended(e) => e.subject(),
-            Self::AgentWentOffline(e) => e.subject(),
-            Self::AgentDecommissioned(e) => e.subject(),
-            Self::AgentCapabilitiesAdded(e) => e.subject(),
-            Self::AgentCapabilitiesRemoved(e) => e.subject(),
-            Self::AgentPermissionsGranted(e) => e.subject(),
-            Self::AgentPermissionsRevoked(e) => e.subject(),
-            Self::AgentToolsEnabled(e) => e.subject(),
-            Self::AgentToolsDisabled(e) => e.subject(),
-            Self::AgentConfigurationRemoved(e) => e.subject(),
-            Self::AgentConfigurationSet(e) => e.subject(),
             Self::LocationDefined(e) => e.subject(),
-            Self::PolicyEnacted(e) => e.subject(),
-            Self::PolicySubmittedForApproval(e) => e.subject(),
-            Self::PolicyApproved(e) => e.subject(),
-            Self::PolicyRejected(e) => e.subject(),
-            Self::PolicySuspended(e) => e.subject(),
-            Self::PolicyReactivated(e) => e.subject(),
-            Self::PolicySuperseded(e) => e.subject(),
-            Self::PolicyArchived(e) => e.subject(),
-            Self::PolicyExternalApprovalRequested(e) => e.subject(),
-            Self::PolicyExternalApprovalReceived(e) => e.subject(),
-            Self::DocumentUploaded(e) => e.subject(),
-            Self::DocumentClassified(e) => e.subject(),
-            Self::DocumentOwnershipAssigned(e) => e.subject(),
-            Self::DocumentAccessControlSet(e) => e.subject(),
-            Self::DocumentStatusSet(e) => e.subject(),
-            Self::DocumentProcessed(e) => e.subject(),
-            Self::DocumentRelationshipAdded(e) => e.subject(),
-            Self::DocumentRelationshipRemoved(e) => e.subject(),
-            Self::DocumentVersionCreated(e) => e.subject(),
-            Self::DocumentArchived(e) => e.subject(),
             Self::WorkflowStarted(e) => e.subject(),
             Self::WorkflowTransitionExecuted(e) => e.subject(),
             Self::WorkflowTransitioned(e) => e.subject(),
@@ -570,42 +463,7 @@ impl DomainEvent for DomainEventEnum {
             Self::NodeUpdated(e) => e.aggregate_id(),
             Self::EdgeAdded(e) => e.aggregate_id(),
             Self::EdgeRemoved(e) => e.aggregate_id(),
-
-
-            Self::AgentDeployed(e) => e.aggregate_id(),
-            Self::AgentActivated(e) => e.aggregate_id(),
-            Self::AgentSuspended(e) => e.aggregate_id(),
-            Self::AgentWentOffline(e) => e.aggregate_id(),
-            Self::AgentDecommissioned(e) => e.aggregate_id(),
-            Self::AgentCapabilitiesAdded(e) => e.aggregate_id(),
-            Self::AgentCapabilitiesRemoved(e) => e.aggregate_id(),
-            Self::AgentPermissionsGranted(e) => e.aggregate_id(),
-            Self::AgentPermissionsRevoked(e) => e.aggregate_id(),
-            Self::AgentToolsEnabled(e) => e.aggregate_id(),
-            Self::AgentToolsDisabled(e) => e.aggregate_id(),
-            Self::AgentConfigurationRemoved(e) => e.aggregate_id(),
-            Self::AgentConfigurationSet(e) => e.aggregate_id(),
             Self::LocationDefined(e) => e.aggregate_id(),
-            Self::PolicyEnacted(e) => e.aggregate_id(),
-            Self::PolicySubmittedForApproval(e) => e.aggregate_id(),
-            Self::PolicyApproved(e) => e.aggregate_id(),
-            Self::PolicyRejected(e) => e.aggregate_id(),
-            Self::PolicySuspended(e) => e.aggregate_id(),
-            Self::PolicyReactivated(e) => e.aggregate_id(),
-            Self::PolicySuperseded(e) => e.aggregate_id(),
-            Self::PolicyArchived(e) => e.aggregate_id(),
-            Self::PolicyExternalApprovalRequested(e) => e.aggregate_id(),
-            Self::PolicyExternalApprovalReceived(e) => e.aggregate_id(),
-            Self::DocumentUploaded(e) => e.aggregate_id(),
-            Self::DocumentClassified(e) => e.aggregate_id(),
-            Self::DocumentOwnershipAssigned(e) => e.aggregate_id(),
-            Self::DocumentAccessControlSet(e) => e.aggregate_id(),
-            Self::DocumentStatusSet(e) => e.aggregate_id(),
-            Self::DocumentProcessed(e) => e.aggregate_id(),
-            Self::DocumentRelationshipAdded(e) => e.aggregate_id(),
-            Self::DocumentRelationshipRemoved(e) => e.aggregate_id(),
-            Self::DocumentVersionCreated(e) => e.aggregate_id(),
-            Self::DocumentArchived(e) => e.aggregate_id(),
             Self::WorkflowStarted(e) => e.aggregate_id(),
             Self::WorkflowTransitionExecuted(e) => e.aggregate_id(),
             Self::WorkflowTransitioned(e) => e.aggregate_id(),
@@ -625,42 +483,7 @@ impl DomainEvent for DomainEventEnum {
             Self::NodeUpdated(e) => e.event_type(),
             Self::EdgeAdded(e) => e.event_type(),
             Self::EdgeRemoved(e) => e.event_type(),
-
-
-            Self::AgentDeployed(e) => e.event_type(),
-            Self::AgentActivated(e) => e.event_type(),
-            Self::AgentSuspended(e) => e.event_type(),
-            Self::AgentWentOffline(e) => e.event_type(),
-            Self::AgentDecommissioned(e) => e.event_type(),
-            Self::AgentCapabilitiesAdded(e) => e.event_type(),
-            Self::AgentCapabilitiesRemoved(e) => e.event_type(),
-            Self::AgentPermissionsGranted(e) => e.event_type(),
-            Self::AgentPermissionsRevoked(e) => e.event_type(),
-            Self::AgentToolsEnabled(e) => e.event_type(),
-            Self::AgentToolsDisabled(e) => e.event_type(),
-            Self::AgentConfigurationRemoved(e) => e.event_type(),
-            Self::AgentConfigurationSet(e) => e.event_type(),
             Self::LocationDefined(e) => e.event_type(),
-            Self::PolicyEnacted(e) => e.event_type(),
-            Self::PolicySubmittedForApproval(e) => e.event_type(),
-            Self::PolicyApproved(e) => e.event_type(),
-            Self::PolicyRejected(e) => e.event_type(),
-            Self::PolicySuspended(e) => e.event_type(),
-            Self::PolicyReactivated(e) => e.event_type(),
-            Self::PolicySuperseded(e) => e.event_type(),
-            Self::PolicyArchived(e) => e.event_type(),
-            Self::PolicyExternalApprovalRequested(e) => e.event_type(),
-            Self::PolicyExternalApprovalReceived(e) => e.event_type(),
-            Self::DocumentUploaded(e) => e.event_type(),
-            Self::DocumentClassified(e) => e.event_type(),
-            Self::DocumentOwnershipAssigned(e) => e.event_type(),
-            Self::DocumentAccessControlSet(e) => e.event_type(),
-            Self::DocumentStatusSet(e) => e.event_type(),
-            Self::DocumentProcessed(e) => e.event_type(),
-            Self::DocumentRelationshipAdded(e) => e.event_type(),
-            Self::DocumentRelationshipRemoved(e) => e.event_type(),
-            Self::DocumentVersionCreated(e) => e.event_type(),
-            Self::DocumentArchived(e) => e.event_type(),
             Self::WorkflowStarted(e) => e.event_type(),
             Self::WorkflowTransitionExecuted(e) => e.event_type(),
             Self::WorkflowTransitioned(e) => e.event_type(),

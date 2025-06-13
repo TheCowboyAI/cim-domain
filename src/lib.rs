@@ -41,12 +41,9 @@ mod command_handlers;
 mod query_handlers;
 mod bevy_bridge;
 mod location;
-mod agent;
-mod policy;
-mod document;
 mod concept_graph;
 pub mod domain_graph;
-pub mod workflow;
+// Workflow module has been extracted to cim-domain-workflow
 pub mod infrastructure;
 pub mod projections;
 
@@ -93,50 +90,20 @@ pub use events::{
 pub use events::{
     DomainEvent, EventMetadata, DomainEventEnvelope,
     DomainEventEnvelopeWithMetadata,
-    AgentDeployed,
-    LocationDefined, PolicyEnacted,
-    AgentActivated, AgentSuspended, AgentWentOffline, AgentDecommissioned,
-    AgentCapabilitiesAdded, AgentCapabilitiesRemoved,
-    AgentPermissionsGranted, AgentPermissionsRevoked,
-    AgentToolsEnabled, AgentToolsDisabled,
-    AgentConfigurationRemoved, AgentConfigurationSet,
-    PolicySubmittedForApproval, PolicyApproved, PolicyRejected,
-    PolicySuspended, PolicyReactivated, PolicySuperseded, PolicyArchived,
-    PolicyExternalApprovalRequested, PolicyExternalApprovalReceived,
-    DocumentUploaded, DocumentClassified, DocumentOwnershipAssigned,
-    DocumentAccessControlSet, DocumentStatusSet, DocumentProcessed,
-    DocumentRelationshipAdded, DocumentRelationshipRemoved,
-    DocumentVersionCreated, DocumentArchived,
+    LocationDefined,
 };
 pub use commands::{
-    DeployAgent, UpdateAgentCapabilities,
-    DefineLocation, EnactPolicy, UpdatePolicyRules,
-    ActivateAgent, SuspendAgent, SetAgentOffline, DecommissionAgent,
-    GrantAgentPermissions, RevokeAgentPermissions,
-    EnableAgentTools, DisableAgentTools, UpdateAgentConfiguration,
-    SubmitPolicyForApproval, ApprovePolicy, RejectPolicy,
-    SuspendPolicy, ReactivatePolicy, SupersedePolicy, ArchivePolicy,
-    RequestPolicyExternalApproval, RecordPolicyExternalApproval,
-    UploadDocument, ClassifyDocument, AssignDocumentOwnership,
-    SetDocumentAccessControl, SetDocumentStatus, ProcessDocument,
-    AddDocumentRelationship, RemoveDocumentRelationship,
-    CreateDocumentVersion, ArchiveDocument,
+    DefineLocation,
 };
 pub use command_handlers::{
     EventPublisher, MockEventPublisher,
     AggregateRepository, InMemoryRepository,
-    AgentCommandHandler,
-    LocationCommandHandler, PolicyCommandHandler, DocumentCommandHandler,
-    WorkflowCommandHandler,
+    LocationCommandHandler,
 };
 pub use query_handlers::{
     DirectQueryHandler, QueryResult, ReadModelStorage, InMemoryReadModel, QueryCriteria,
 
     LocationView, FindLocationsByType, LocationQueryHandler,
-    PolicyView, FindActivePolicies, PolicyQueryHandler,
-    DocumentView, SearchDocuments, DocumentQueryHandler,
-    AgentView, FindAgentsByCapability, AgentQueryHandler,
-    WorkflowView, FindWorkflowsByStatus, WorkflowQueryHandler,
 };
 pub use bevy_bridge::{
     BevyCommand, BevyEvent, ComponentData,
@@ -148,30 +115,6 @@ pub use location::{
     Address, GeoCoordinates, VirtualLocation,
 };
 
-
-pub use agent::{
-    Agent, AgentMarker,
-    AgentType, AgentStatus,
-    CapabilitiesComponent, AuthenticationComponent, AuthMethod,
-    PermissionsComponent, ToolAccessComponent, ToolDefinition, ToolUsageStats,
-    ConfigurationComponent, AgentMetadata,
-};
-pub use policy::{
-    Policy, PolicyMarker,
-    PolicyType, PolicyStatus, PolicyScope,
-    RulesComponent, ApprovalRequirementsComponent, ExternalApprovalRequirement,
-    ApprovalStateComponent, Approval, PendingExternalApproval, ExternalVerification, Rejection,
-    EnforcementComponent, EnforcementMode, ViolationAction, ViolationSeverity, PolicyException,
-    PolicyMetadata,
-};
-pub use document::{
-    Document, DocumentMarker,
-    DocumentInfoComponent, ContentAddressComponent, ClassificationComponent,
-    ConfidentialityLevel, OwnershipComponent, LifecycleComponent, DocumentStatus,
-    AccessControlComponent, RelationshipsComponent, DocumentRelation, RelationType,
-    ExternalReference, ProcessingComponent, ThumbnailInfo,
-    PublicDocumentView, SearchIndexProjection,
-};
 pub use concept_graph::{
     ConceptGraph, ConceptGraphMarker,
     GraphMetadataComponent, GraphPurpose, ConceptNodeComponent, ConceptType,
@@ -199,9 +142,6 @@ pub mod markers {
         EventMarker, CommandMarker, QueryMarker
     };
     pub use crate::location::LocationMarker;
-    pub use crate::agent::AgentMarker;
-    pub use crate::policy::PolicyMarker;
-    pub use crate::document::DocumentMarker;
     pub use crate::concept_graph::ConceptGraphMarker;
 }
 

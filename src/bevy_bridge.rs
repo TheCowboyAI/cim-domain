@@ -5,7 +5,6 @@
 //! between event-driven domain logic and ECS component updates.
 
 use crate::{
-    AgentDeployed, PolicyEnacted,
     DomainEventEnvelope,
 };
 use cim_subject::{Subject as SubjectParts, MessageTranslator};
@@ -103,86 +102,6 @@ impl ComponentMapper {
     }
 
 
-
-
-
-    /// Map an agent to Bevy components
-    pub fn map_agent(&self, agent: &AgentDeployed) -> Vec<ComponentData> {
-        vec![
-            ComponentData {
-                component_type: "AgentEntity".to_string(),
-                data: serde_json::json!({
-                    "id": agent.agent_id,
-                    "agent_type": agent.agent_type,
-                    "owner_id": agent.owner_id,
-                }),
-            },
-            ComponentData {
-                component_type: "Name".to_string(),
-                data: serde_json::json!({
-                    "name": agent.metadata.name,
-                }),
-            },
-            ComponentData {
-                component_type: "Description".to_string(),
-                data: serde_json::json!({
-                    "description": agent.metadata.description,
-                }),
-            },
-            ComponentData {
-                component_type: "Owner".to_string(),
-                data: serde_json::json!({
-                    "owner_id": agent.owner_id,
-                }),
-            },
-            ComponentData {
-                component_type: "Transform".to_string(),
-                data: serde_json::json!({
-                    "translation": [1.0, 0.0, 0.0],
-                    "rotation": [0.0, 0.0, 0.0, 1.0],
-                    "scale": [0.8, 0.8, 0.8],
-                }),
-            },
-        ]
-    }
-
-    /// Map a policy to Bevy components
-    pub fn map_policy(&self, policy: &PolicyEnacted) -> Vec<ComponentData> {
-        vec![
-            ComponentData {
-                component_type: "PolicyEntity".to_string(),
-                data: serde_json::json!({
-                    "id": policy.policy_id,
-                    "policy_type": policy.policy_type,
-                    "owner_id": policy.owner_id,
-                }),
-            },
-            ComponentData {
-                component_type: "Name".to_string(),
-                data: serde_json::json!({
-                    "name": policy.metadata.name,
-                }),
-            },
-            ComponentData {
-                component_type: "Description".to_string(),
-                data: serde_json::json!({
-                    "description": policy.metadata.description,
-                }),
-            },
-            ComponentData {
-                component_type: "PolicyScope".to_string(),
-                data: serde_json::to_value(&policy.scope).unwrap_or(serde_json::Value::Null),
-            },
-            ComponentData {
-                component_type: "Transform".to_string(),
-                data: serde_json::json!({
-                    "translation": [0.0, 2.0, 0.0],
-                    "rotation": [0.0, 0.0, 0.0, 1.0],
-                    "scale": [1.2, 1.2, 1.2],
-                }),
-            },
-        ]
-    }
 }
 
 /// NATS message for Bevy translation
@@ -246,67 +165,22 @@ impl MessageTranslator<NatsMessage, BevyCommand> for NatsToBevyTranslator {
             .map_err(|e| TranslationError::DeserializationError(e.to_string()))?;
 
         // Deserialize the domain event envelope
-        let envelope: DomainEventEnvelope<serde_json::Value> =
+        let _envelope: DomainEventEnvelope<serde_json::Value> =
             serde_json::from_slice(&msg.payload)
                 .map_err(|e| TranslationError::DeserializationError(e.to_string()))?;
 
         // Route based on subject pattern
         match (subject_parts.context(), subject_parts.event_type()) {
-            ("agents", "deployed") => {
-                let event: AgentDeployed = serde_json::from_value(envelope.event)?;
-                Ok(BevyCommand::SpawnEntity {
-                    entity_id: event.agent_id,
-                    components: self.component_mapper.map_agent(&event),
-                    parent: Some(event.owner_id),
-                })
-            }
-            ("policies", "enacted") => {
-                let event: PolicyEnacted = serde_json::from_value(envelope.event)?;
-                Ok(BevyCommand::SpawnEntity {
-                    entity_id: event.policy_id,
-                    components: self.component_mapper.map_policy(&event),
-                    parent: Some(event.owner_id),
-                })
-            }
             _ => Err(TranslationError::UnsupportedEventType(
                 format!("{}.{}", subject_parts.context(), subject_parts.event_type())
             )),
         }
     }
 
-    fn reverse(&self, cmd: BevyCommand) -> Result<NatsMessage, Self::Error> {
+    fn reverse(&self, _cmd: BevyCommand) -> Result<NatsMessage, Self::Error> {
         // Translate Bevy commands back to NATS messages
-        match cmd {
-            BevyCommand::SpawnEntity { entity_id, components, .. } => {
-                // Determine entity type from components
-                let entity_type = components.iter()
-                    .find(|c| c.component_type.ends_with("Entity"))
-                    .map(|c| &c.component_type)
-                    .ok_or(TranslationError::UnsupportedCommand)?;
-
-                // Generate appropriate subject based on entity type
-                let subject = match entity_type.as_str() {
-                    "AgentEntity" => "agents.agent.created.v1",
-                    "PolicyEntity" => "policies.policy.created.v1",
-                    _ => return Err(TranslationError::UnsupportedCommand),
-                };
-
-                // Create event payload
-                let event = serde_json::json!({
-                    "entity_id": entity_id,
-                    "components": components,
-                });
-
-                Ok(NatsMessage {
-                    subject: subject.to_string(),
-                    payload: serde_json::to_vec(&event)
-                        .map_err(|e| TranslationError::DeserializationError(e.to_string()))?,
-                    headers: HashMap::new(),
-                })
-            }
-
-            _ => Err(TranslationError::UnsupportedCommand),
-        }
+        // Currently no supported reverse translations
+        Err(TranslationError::UnsupportedCommand)
     }
 }
 

@@ -14,22 +14,56 @@ name = "generate-domain-graph"
 path = "src/bin/generate_domain_graph.rs"
 
 [dependencies]
-async-nats = "0.35"
-async-trait = "0.1"
-chrono = { version = "0.4", features = ["serde"] }
-cid = { version = "0.11", features = ["serde"] }
-cim-ipld = { path = "../cim-ipld" }
+# Core dependencies
+cim-core-domain = { path = "../cim-core-domain" }
+cim-infrastructure = { path = "../cim-infrastructure" }
 cim-subject = { path = "../cim-subject" }
+cim-component = { path = "../cim-component" }
+cim-ipld = { path = "../cim-ipld" }
+
+# Content addressing
+cid = { version = "0.11", features = ["serde"] }
+
+# Async utilities
 futures = "0.3"
-lru = "0.12"
+
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.41", features = ["full"] }
+async-trait = "0.1"
+
+# Error handling
 thiserror = "2.0"
-tokio = { version = "1", features = ["sync"] }
-uuid = { version = "1.11", features = ["v4", "v7", "serde"] }
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Collections
+indexmap = "2.7"
+lru = "0.12"
+
+# NATS messaging
+async-nats = { version = "0.41", features = ["service"] }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
+# Testing
+tokio-test = "0.4"
+proptest = "1.6"
+test-case = "3.3"
+pretty_assertions = "1.4"
+
+# Mocking
+mockall = "0.13"
 
 [[test]]
 name = "jetstream_event_store_tests"
@@ -70,3 +104,7 @@ path = "examples/demos/cqrs_pattern_demo.rs"
 [[example]]
 name = "event_stream_example"
 path = "examples/event_stream_example.rs"
+
+[features]
+default = []
+test-utils = []

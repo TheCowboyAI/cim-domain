@@ -205,13 +205,9 @@ pub mod markers {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct AgentMarker;
 
-    /// Marker for Policy entities
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct PolicyMarker;
 
-    /// Marker for Document entities
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct DocumentMarker;
+
+
 
     /// Marker for ConceptGraph entities
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
