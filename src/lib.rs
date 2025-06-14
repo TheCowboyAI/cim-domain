@@ -133,7 +133,7 @@ pub mod markers {
 pub use infrastructure::event_replay::EventHandler as ReplayEventHandler;
 pub use event_handler::EventHandler;
 
-// Type alias for AggregateId (using EntityId with AggregateMarker)
+/// Type alias for aggregate identifiers using EntityId with AggregateMarker
 pub type AggregateId = EntityId<markers::AggregateMarker>;
 
 

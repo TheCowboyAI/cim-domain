@@ -3,20 +3,17 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        domain_events::DomainEventEnum,
         infrastructure::{
-            event_store::{EventStore, StoredEvent, EventMetadata},
+            event_store::{EventStore, StoredEvent},
             event_stream::{
-                EventStream, EventStreamId, EventQuery, CausationOrder,
-                EventOrdering, EventStreamOperations, EventStreamError,
-                StreamComposition,
+                EventStream, EventStreamId, EventStreamOperations,
+                EventQuery, EventOrdering, CausationOrder, StreamComposition,
+                EventStreamError,
             },
             tests::MockEventStore,
         },
-        events::{PersonRegistered, OrganizationCreated},
-        workflow::WorkflowStarted,
-        person::IdentityComponent,
-        organization::OrganizationType,
+        domain_events::{DomainEventEnum, WorkflowStarted, WorkflowCompleted, WorkflowTransitioned},
+        infrastructure::event_store::EventMetadata,
         identifiers::{WorkflowId, GraphId},
     };
     use async_trait::async_trait;
@@ -176,31 +173,23 @@ mod tests {
         causation_id: Option<String>,
     ) -> StoredEvent {
         let event = match event_type {
-            "PersonRegistered" => DomainEventEnum::PersonRegistered(PersonRegistered {
-                person_id: Uuid::new_v4(),
-                identity: IdentityComponent {
-                    legal_name: "Test Person".to_string(),
-                    preferred_name: None,
-                    date_of_birth: None,
-                    government_id: None,
-                },
-                contact: None,
-                location_id: None,
-                registered_at: Utc::now(),
-            }),
-            "OrganizationCreated" => DomainEventEnum::OrganizationCreated(OrganizationCreated {
-                organization_id: Uuid::new_v4(),
-                name: "Test Org".to_string(),
-                org_type: OrganizationType::Company,
-                parent_id: None,
-                primary_location_id: None,
-                created_at: Utc::now(),
-            }),
             "WorkflowStarted" => DomainEventEnum::WorkflowStarted(WorkflowStarted {
                 workflow_id: WorkflowId::new(),
                 definition_id: GraphId::new(),
                 initial_state: "Start".to_string(),
                 started_at: Utc::now(),
+            }),
+            "WorkflowCompleted" => DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
+                workflow_id: WorkflowId::new(),
+                final_state: "End".to_string(),
+                total_duration: std::time::Duration::from_secs(60),
+                completed_at: Utc::now(),
+            }),
+            "WorkflowTransitioned" => DomainEventEnum::WorkflowTransitioned(WorkflowTransitioned {
+                workflow_id: WorkflowId::new(),
+                from_state: "Start".to_string(),
+                to_state: "Processing".to_string(),
+                transition_id: "transition-1".to_string(),
             }),
             _ => panic!("Unknown event type"),
         };
@@ -245,34 +234,26 @@ mod tests {
         };
 
         event_store.append_events(
-            "person-1",
-            "Person",
-            vec![DomainEventEnum::PersonRegistered(PersonRegistered {
-                person_id: Uuid::new_v4(),
-                identity: IdentityComponent {
-                    legal_name: "Test Person".to_string(),
-                    preferred_name: None,
-                    date_of_birth: None,
-                    government_id: None,
-                },
-                contact: None,
-                location_id: None,
-                registered_at: Utc::now(),
+            "workflow-1",
+            "Workflow",
+            vec![DomainEventEnum::WorkflowStarted(WorkflowStarted {
+                workflow_id: WorkflowId::new(),
+                definition_id: GraphId::new(),
+                initial_state: "Start".to_string(),
+                started_at: Utc::now(),
             })],
             None,
             metadata.clone(),
         ).await.unwrap();
 
         event_store.append_events(
-            "org-1",
-            "Organization",
-            vec![DomainEventEnum::OrganizationCreated(OrganizationCreated {
-                organization_id: Uuid::new_v4(),
-                name: "Test Org".to_string(),
-                org_type: OrganizationType::Company,
-                parent_id: None,
-                primary_location_id: None,
-                created_at: Utc::now(),
+            "workflow-2",
+            "Workflow",
+            vec![DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
+                workflow_id: WorkflowId::new(),
+                final_state: "End".to_string(),
+                total_duration: std::time::Duration::from_secs(60),
+                completed_at: Utc::now(),
             })],
             None,
             metadata,
@@ -292,9 +273,8 @@ mod tests {
         assert_eq!(stream.events.len(), 2);
         assert_eq!(stream.metadata.event_count, 2);
         assert!(stream.metadata.correlation_ids.contains(&correlation_id));
-        assert_eq!(stream.metadata.aggregate_types.len(), 2);
-        assert!(stream.metadata.aggregate_types.contains("Person"));
-        assert!(stream.metadata.aggregate_types.contains("Organization"));
+        assert_eq!(stream.metadata.aggregate_types.len(), 1);
+        assert!(stream.metadata.aggregate_types.contains("Workflow"));
     }
 
     /// Test causation ordering of events
@@ -311,26 +291,26 @@ mod tests {
     async fn test_causation_ordering() {
         let mut events = vec![
             create_test_stored_event(
-                "PersonRegistered",
-                "person-1",
-                "Person",
+                "WorkflowStarted",
+                "workflow-1",
+                "Workflow",
                 1,
                 Some("corr-1".to_string()),
                 None, // Root event
             ),
             create_test_stored_event(
-                "OrganizationCreated",
-                "org-1",
-                "Organization",
-                1,
+                "WorkflowTransitioned",
+                "workflow-1",
+                "Workflow",
+                2,
                 Some("corr-1".to_string()),
                 Some("event-1".to_string()), // Caused by first event
             ),
             create_test_stored_event(
-                "WorkflowStarted",
+                "WorkflowCompleted",
                 "workflow-1",
                 "Workflow",
-                1,
+                3,
                 Some("corr-1".to_string()),
                 Some("event-2".to_string()), // Caused by second event
             ),
@@ -380,10 +360,10 @@ mod tests {
     #[tokio::test]
     async fn test_stream_filtering() {
         let events = vec![
-            create_test_stored_event("PersonRegistered", "person-1", "Person", 1, None, None),
-            create_test_stored_event("OrganizationCreated", "org-1", "Organization", 1, None, None),
-            create_test_stored_event("PersonRegistered", "person-2", "Person", 1, None, None),
             create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None),
+            create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, None, None),
+            create_test_stored_event("WorkflowStarted", "workflow-2", "Workflow", 1, None, None),
+            create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None),
         ];
 
         let stream = EventStream::new(
@@ -398,13 +378,13 @@ mod tests {
         );
 
         // Filter by event type
-        let person_stream = stream.filter(|e| e.event_type() == "PersonRegistered");
-        assert_eq!(person_stream.events.len(), 2);
+        let started_stream = stream.filter(|e| e.event_type() == "WorkflowStarted");
+        assert_eq!(started_stream.events.len(), 2);
 
-        // Filter by aggregate type
-        let org_stream = stream.filter(|e| e.aggregate_type == "Organization");
-        assert_eq!(org_stream.events.len(), 1);
-        assert_eq!(org_stream.events[0].event_type(), "OrganizationCreated");
+        // Filter by aggregate ID
+        let workflow1_stream = stream.filter(|e| e.aggregate_id == "workflow-1");
+        assert_eq!(workflow1_stream.events.len(), 3);
+        assert_eq!(workflow1_stream.events[0].event_type(), "WorkflowStarted");
     }
 
     /// Test stream composition operations
@@ -425,9 +405,9 @@ mod tests {
         let service = EventStreamService::new(event_store);
 
         // Create test events
-        let event1 = create_test_stored_event("PersonRegistered", "person-1", "Person", 1, None, None);
-        let event2 = create_test_stored_event("OrganizationCreated", "org-1", "Organization", 1, None, None);
-        let event3 = create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None);
+        let event1 = create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None);
+        let event2 = create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, None, None);
+        let event3 = create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None);
 
         let stream1 = EventStream::new(
             "Stream 1".to_string(),
@@ -491,7 +471,7 @@ mod tests {
         let service = EventStreamService::new(event_store);
 
         let events = vec![
-            create_test_stored_event("PersonRegistered", "person-1", "Person", 1, None, None),
+            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None),
         ];
 
         let stream = EventStream::new(
@@ -534,10 +514,10 @@ mod tests {
     #[test]
     fn test_group_by_correlation() {
         let events = vec![
-            create_test_stored_event("PersonRegistered", "person-1", "Person", 1, Some("corr-1".to_string()), None),
-            create_test_stored_event("OrganizationCreated", "org-1", "Organization", 1, Some("corr-1".to_string()), None),
-            create_test_stored_event("PersonRegistered", "person-2", "Person", 1, Some("corr-2".to_string()), None),
-            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None),
+            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, Some("corr-1".to_string()), None),
+            create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, Some("corr-1".to_string()), None),
+            create_test_stored_event("WorkflowStarted", "workflow-2", "Workflow", 1, Some("corr-2".to_string()), None),
+            create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None),
         ];
 
         let stream = EventStream::new(
@@ -571,9 +551,9 @@ mod tests {
     #[test]
     fn test_metadata_calculation() {
         let mut events = vec![
-            create_test_stored_event("PersonRegistered", "person-1", "Person", 1, Some("corr-1".to_string()), None),
-            create_test_stored_event("OrganizationCreated", "org-1", "Organization", 1, Some("corr-1".to_string()), None),
-            create_test_stored_event("PersonRegistered", "person-2", "Person", 2, Some("corr-2".to_string()), None),
+            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, Some("corr-1".to_string()), None),
+            create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, Some("corr-1".to_string()), None),
+            create_test_stored_event("WorkflowStarted", "workflow-2", "Workflow", 1, Some("corr-2".to_string()), None),
         ];
 
         // Set different timestamps
@@ -595,9 +575,8 @@ mod tests {
 
         // Verify metadata
         assert_eq!(stream.metadata.event_count, 3);
-        assert_eq!(stream.metadata.aggregate_types.len(), 2);
-        assert!(stream.metadata.aggregate_types.contains("Person"));
-        assert!(stream.metadata.aggregate_types.contains("Organization"));
+        assert_eq!(stream.metadata.aggregate_types.len(), 1);
+        assert!(stream.metadata.aggregate_types.contains("Workflow"));
         assert_eq!(stream.metadata.correlation_ids.len(), 2);
         assert!(stream.metadata.correlation_ids.contains("corr-1"));
         assert!(stream.metadata.correlation_ids.contains("corr-2"));

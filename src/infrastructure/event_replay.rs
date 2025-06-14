@@ -417,10 +417,9 @@ mod tests {
     use super::*;
     use crate::infrastructure::tests::MockEventStore;
     use crate::infrastructure::EventMetadata;
-    use crate::events::PersonRegistered;
-    use crate::person::IdentityComponent;
+    use crate::domain_events::WorkflowStarted;
+    use crate::identifiers::{WorkflowId, GraphId};
     use std::sync::atomic::{AtomicU64, Ordering};
-    use uuid::Uuid;
 
     struct TestHandler {
         events_handled: AtomicU64,
@@ -440,23 +439,17 @@ mod tests {
         let service = EventReplayService::new(event_store.clone());
 
         // Add some test events
-        let person_id = Uuid::new_v4();
-        let event = DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id,
-            identity: IdentityComponent {
-                legal_name: "Test Person".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
+        let workflow_id = WorkflowId::new();
+        let event = DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id,
+            definition_id: GraphId::new(),
+            initial_state: "Start".to_string(),
+            started_at: chrono::Utc::now(),
         });
 
         event_store.append_events(
-            &person_id.to_string(),
-            "Person",
+            &workflow_id.to_string(),
+            "Workflow",
             vec![event],
             None,
             EventMetadata::default(),
@@ -482,24 +475,18 @@ mod tests {
         let service = EventReplayService::new(event_store.clone());
 
         // Add events of different types
-        let person_id = Uuid::new_v4();
-        let person_event = DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id,
-            identity: IdentityComponent {
-                legal_name: "Test Person".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
+        let workflow_id = WorkflowId::new();
+        let workflow_event = DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id,
+            definition_id: GraphId::new(),
+            initial_state: "Start".to_string(),
+            started_at: chrono::Utc::now(),
         });
 
         event_store.append_events(
-            &person_id.to_string(),
-            "Person",
-            vec![person_event],
+            &workflow_id.to_string(),
+            "Workflow",
+            vec![workflow_event],
             None,
             EventMetadata::default(),
         ).await.unwrap();
@@ -510,7 +497,7 @@ mod tests {
         };
 
         let options = ReplayOptions {
-            event_types: Some(vec!["PersonRegistered".to_string()]),
+            event_types: Some(vec!["WorkflowStarted".to_string()]),
             ..Default::default()
         };
 
@@ -527,30 +514,24 @@ mod tests {
         let event_store = Arc::new(MockEventStore::new());
         let service = EventReplayService::new(event_store.clone());
 
-        let aggregate_id = Uuid::new_v4();
-        let event = DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id: aggregate_id,
-            identity: IdentityComponent {
-                legal_name: "Test Person".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
+        let workflow_id = WorkflowId::new();
+        let event = DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id,
+            definition_id: GraphId::new(),
+            initial_state: "Start".to_string(),
+            started_at: chrono::Utc::now(),
         });
 
         event_store.append_events(
-            &aggregate_id.to_string(),
-            "Person",
+            &workflow_id.to_string(),
+            "Workflow",
             vec![event],
             None,
             EventMetadata::default(),
         ).await.unwrap();
 
         // Replay specific aggregate
-        let events = service.replay_aggregate(&aggregate_id.to_string()).await.unwrap();
+        let events = service.replay_aggregate(&workflow_id.to_string()).await.unwrap();
         assert_eq!(events.len(), 1);
     }
 }

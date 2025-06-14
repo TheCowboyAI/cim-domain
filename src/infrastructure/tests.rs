@@ -4,9 +4,6 @@ use super::*;
 use crate::domain_events::DomainEventEnum;
 // Domain-specific events have been moved to their respective submodules
 use crate::infrastructure::event_store::{EventStream, EventStore};
-use crate::person::IdentityComponent;
-use crate::organization::OrganizationType;
-use crate::AgentType;
 use async_trait::async_trait;
 use chrono::Utc;
 use std::collections::HashMap;
@@ -16,8 +13,8 @@ use uuid::Uuid;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures::stream::Stream;
-use crate::identifiers::{GraphId, NodeId};
-use crate::domain_events::{GraphCreated, NodeAdded, EdgeAdded};
+use crate::identifiers::{GraphId, WorkflowId};
+use crate::domain_events::{WorkflowStarted, WorkflowCompleted, WorkflowTransitioned};
 
 /// Mock event store for testing
 #[derive(Debug, Clone)]
@@ -129,10 +126,14 @@ impl EventStore for MockEventStore {
             .values()
             .flatten()
             .filter(|e| match &e.event {
-                            DomainEventEnum::GraphCreated(_) => event_type == "GraphCreated",
-            DomainEventEnum::NodeAdded(_) => event_type == "NodeAdded",
-            DomainEventEnum::EdgeAdded(_) => event_type == "EdgeAdded",
-                _ => false,
+                DomainEventEnum::WorkflowStarted(_) => event_type == "WorkflowStarted",
+                DomainEventEnum::WorkflowTransitioned(_) => event_type == "WorkflowTransitioned",
+                DomainEventEnum::WorkflowCompleted(_) => event_type == "WorkflowCompleted",
+                DomainEventEnum::WorkflowSuspended(_) => event_type == "WorkflowSuspended",
+                DomainEventEnum::WorkflowResumed(_) => event_type == "WorkflowResumed",
+                DomainEventEnum::WorkflowCancelled(_) => event_type == "WorkflowCancelled",
+                DomainEventEnum::WorkflowFailed(_) => event_type == "WorkflowFailed",
+                DomainEventEnum::WorkflowTransitionExecuted(_) => event_type == "WorkflowTransitionExecuted",
             })
             .take(limit)
             .cloned()
@@ -233,77 +234,34 @@ impl EventStream for MockEventStream {
 }
 
 // Helper function to create test events
-fn create_test_person_event() -> DomainEventEnum {
-    DomainEventEnum::PersonRegistered(PersonRegistered {
-        person_id: Uuid::new_v4(),
-        identity: IdentityComponent {
-            legal_name: "John Doe".to_string(),
-            preferred_name: Some("John".to_string()),
-            date_of_birth: None,
-            government_id: None,
-        },
-        contact: None,
-        location_id: None,
-        registered_at: chrono::Utc::now(),
+fn create_test_workflow_started_event() -> DomainEventEnum {
+    DomainEventEnum::WorkflowStarted(WorkflowStarted {
+        workflow_id: WorkflowId::new(),
+        definition_id: GraphId::new(),
+        initial_state: "Start".to_string(),
+        started_at: chrono::Utc::now(),
     })
 }
 
-fn create_test_org_event() -> DomainEventEnum {
-    DomainEventEnum::OrganizationCreated(OrganizationCreated {
-        organization_id: Uuid::new_v4(),
-        name: "Test Org".to_string(),
-        org_type: OrganizationType::Company,
-        parent_id: None,
-        primary_location_id: None,
-        created_at: chrono::Utc::now(),
+fn create_test_workflow_completed_event() -> DomainEventEnum {
+    DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
+        workflow_id: WorkflowId::new(),
+        final_state: "End".to_string(),
+        total_duration: std::time::Duration::from_secs(60),
+        completed_at: chrono::Utc::now(),
     })
 }
 
-fn create_test_agent_event() -> DomainEventEnum {
-    DomainEventEnum::AgentDeployed(AgentDeployed {
-        agent_id: Uuid::new_v4(),
-        agent_type: AgentType::System,
-        owner_id: Uuid::new_v4(),
-        metadata: crate::AgentMetadata {
-            name: "Test Agent".to_string(),
-            description: "Test agent for testing".to_string(),
-            tags: std::collections::HashSet::from(["test".to_string()]),
-            created_at: chrono::Utc::now(),
-            last_active: None,
-        },
-        deployed_at: chrono::Utc::now(),
+fn create_test_workflow_transitioned_event() -> DomainEventEnum {
+    DomainEventEnum::WorkflowTransitioned(WorkflowTransitioned {
+        workflow_id: WorkflowId::new(),
+        from_state: "Start".to_string(),
+        to_state: "Processing".to_string(),
+        transition_id: "transition-1".to_string(),
     })
 }
 
-fn create_test_graph_event() -> DomainEventEnum {
-    DomainEventEnum::GraphCreated(GraphCreated {
-        graph_id: GraphId::new(),
-        name: "Test Graph".to_string(),
-        description: "A test graph for testing".to_string(),
-        metadata: HashMap::new(),
-        created_at: chrono::Utc::now(),
-    })
-}
 
-fn create_test_node_event() -> DomainEventEnum {
-    DomainEventEnum::NodeAdded(NodeAdded {
-        graph_id: GraphId::new(),
-        node_id: NodeId::new(),
-        node_type: "task".to_string(),
-        metadata: HashMap::new(),
-    })
-}
-
-fn create_test_edge_event() -> DomainEventEnum {
-    DomainEventEnum::EdgeAdded(EdgeAdded {
-        graph_id: GraphId::new(),
-        edge_id: crate::identifiers::EdgeId::new(),
-        source_id: NodeId::new(),
-        target_id: NodeId::new(),
-        edge_type: "sequence".to_string(),
-        metadata: HashMap::new(),
-    })
-}
 
 #[cfg(test)]
 mod event_store_tests {
@@ -313,7 +271,7 @@ mod event_store_tests {
     ///
     /// ```mermaid
     /// graph TD
-    ///     A[Create Event Store] --> B[Create Person Event]
+    ///     A[Create Event Store] --> B[Create Workflow Event]
     ///     B --> C[Append Event]
     ///     C --> D[Verify Storage]
     ///     D --> E[Check Version]
@@ -321,11 +279,11 @@ mod event_store_tests {
     #[tokio::test]
     async fn test_append_and_retrieve_events() {
         let store = MockEventStore::new();
-        let aggregate_id = "person-123";
-        let aggregate_type = "Person";
+        let aggregate_id = "workflow-123";
+        let aggregate_type = "Workflow";
 
         // Create test event
-        let event = create_test_graph_event();
+        let event = create_test_workflow_started_event();
 
         let metadata = EventMetadata {
             correlation_id: Some("corr-123".to_string()),
@@ -364,10 +322,10 @@ mod event_store_tests {
     #[tokio::test]
     async fn test_optimistic_concurrency_control() {
         let store = MockEventStore::new();
-        let aggregate_id = "person-456";
-        let aggregate_type = "Person";
+        let aggregate_id = "workflow-456";
+        let aggregate_type = "Workflow";
 
-        let event1 = create_test_person_event();
+        let event1 = create_test_workflow_started_event();
         let metadata = EventMetadata::default();
 
         // Append first event
@@ -410,12 +368,14 @@ mod event_store_tests {
     #[tokio::test]
     async fn test_get_events_from_version() {
         let store = MockEventStore::new();
-        let aggregate_id = "org-789";
-        let aggregate_type = "Organization";
+        let aggregate_id = "workflow-789";
+        let aggregate_type = "Workflow";
 
-        let events: Vec<DomainEventEnum> = (0..3)
-            .map(|_| create_test_org_event())
-            .collect();
+        let events: Vec<DomainEventEnum> = vec![
+            create_test_workflow_started_event(),
+            create_test_workflow_transitioned_event(),
+            create_test_workflow_completed_event(),
+        ];
 
         let metadata = EventMetadata::default();
 
@@ -444,49 +404,49 @@ mod event_store_tests {
     ///
     /// ```mermaid
     /// graph TD
-    ///     A[Create Mixed Events] --> B[Store Person Events]
-    ///     B --> C[Store Org Events]
-    ///     C --> D[Query by Type: PersonRegistered]
-    ///     D --> E[Verify Only Person Events]
-    ///     C --> F[Query by Type: OrganizationCreated]
-    ///     F --> G[Verify Only Org Events]
+    ///     A[Create Mixed Events] --> B[Store Started Events]
+    ///     B --> C[Store Completed Events]
+    ///     C --> D[Query by Type: WorkflowStarted]
+    ///     D --> E[Verify Only Started Events]
+    ///     C --> F[Query by Type: WorkflowCompleted]
+    ///     F --> G[Verify Only Completed Events]
     /// ```
     #[tokio::test]
     async fn test_get_events_by_type() {
         let store = MockEventStore::new();
         let metadata = EventMetadata::default();
 
-        // Add person events
+        // Add workflow started events
         for i in 0..3 {
-            let event = create_test_person_event();
+            let event = create_test_workflow_started_event();
             store
-                .append_events(&format!("person-{}", i), "Person", vec![event], None, metadata.clone())
+                .append_events(&format!("workflow-{}", i), "Workflow", vec![event], None, metadata.clone())
                 .await
                 .unwrap();
         }
 
-        // Add organization events
+        // Add workflow completed events
         for i in 0..2 {
-            let event = create_test_org_event();
+            let event = create_test_workflow_completed_event();
             store
-                .append_events(&format!("org-{}", i), "Organization", vec![event], None, metadata.clone())
+                .append_events(&format!("workflow-comp-{}", i), "Workflow", vec![event], None, metadata.clone())
                 .await
                 .unwrap();
         }
 
-        // Query person events
-        let person_events = store
-            .get_events_by_type("PersonRegistered", 10, None)
+        // Query started events
+        let started_events = store
+            .get_events_by_type("WorkflowStarted", 10, None)
             .await
             .unwrap();
-        assert_eq!(person_events.len(), 3);
+        assert_eq!(started_events.len(), 3);
 
-        // Query organization events
-        let org_events = store
-            .get_events_by_type("OrganizationCreated", 10, None)
+        // Query completed events
+        let completed_events = store
+            .get_events_by_type("WorkflowCompleted", 10, None)
             .await
             .unwrap();
-        assert_eq!(org_events.len(), 2);
+        assert_eq!(completed_events.len(), 2);
     }
 
     /// Test event metadata handling
@@ -503,9 +463,9 @@ mod event_store_tests {
     async fn test_event_metadata() {
         let store = MockEventStore::new();
         let aggregate_id = "test-metadata";
-        let aggregate_type = "Person";
+        let aggregate_type = "Workflow";
 
-        let event = create_test_person_event();
+        let event = create_test_workflow_started_event();
 
         let metadata = EventMetadata {
             correlation_id: Some("correlation-123".to_string()),
@@ -551,8 +511,8 @@ mod cid_chain_tests {
     /// ```
     #[test]
     fn test_cid_chain_creation() {
-        let event1 = create_test_person_event();
-        let event2 = create_test_agent_event();
+        let event1 = create_test_workflow_started_event();
+        let event2 = create_test_workflow_transitioned_event();
 
         // Create first event with CID
         let event_with_cid1 = create_event_with_cid(event1, None).unwrap();
@@ -578,8 +538,8 @@ mod cid_chain_tests {
     /// ```
     #[test]
     fn test_cid_chain_tampering_detection() {
-        let event1 = create_test_person_event();
-        let event2 = create_test_org_event();
+        let event1 = create_test_workflow_started_event();
+        let event2 = create_test_workflow_completed_event();
 
         // Create valid chain
         let event_with_cid1 = create_event_with_cid(event1, None).unwrap();
@@ -605,7 +565,7 @@ mod cid_chain_tests {
     /// ```
     #[test]
     fn test_event_wrapper_typed_content() {
-        let event = create_test_person_event();
+        let event = create_test_workflow_started_event();
         let _wrapper = cid_chain::EventWrapper { event };
 
         // Verify TypedContent implementation
@@ -636,11 +596,11 @@ mod integration_tests {
 
         // Create multiple events
         let events: Vec<DomainEventEnum> = vec![
-            create_test_person_event(),
-            create_test_org_event(),
-            create_test_agent_event(),
-            create_test_person_event(),
-            create_test_org_event(),
+            create_test_workflow_started_event(),
+            create_test_workflow_transitioned_event(),
+            create_test_workflow_completed_event(),
+            create_test_workflow_started_event(),
+            create_test_workflow_transitioned_event(),
         ];
 
         let metadata = EventMetadata {
@@ -686,7 +646,7 @@ mod integration_tests {
         let aggregate_id = "error-test";
         let aggregate_type = "ErrorTest";
 
-        let event = create_test_person_event();
+        let event = create_test_workflow_started_event();
         let metadata = EventMetadata::default();
 
         // Configure to fail

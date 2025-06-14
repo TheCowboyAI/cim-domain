@@ -91,19 +91,6 @@ pub enum BevyEvent {
     },
 }
 
-/// Maps component types to their Bevy representations
-pub struct ComponentMapper {
-}
-
-impl ComponentMapper {
-    /// Create a new component mapper
-    pub fn new() -> Self {
-        Self { }
-    }
-
-
-}
-
 /// NATS message for Bevy translation
 #[derive(Debug, Clone)]
 pub struct NatsMessage {
@@ -143,15 +130,12 @@ impl From<serde_json::Error> for TranslationError {
 
 /// NATS to Bevy translator implementation
 pub struct NatsToBevyTranslator {
-    /// Component mapper
-    component_mapper: ComponentMapper,
 }
 
 impl NatsToBevyTranslator {
     /// Create a new translator
     pub fn new() -> Self {
         Self {
-            component_mapper: ComponentMapper::new(),
         }
     }
 }

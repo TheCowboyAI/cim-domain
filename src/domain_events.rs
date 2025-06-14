@@ -6,7 +6,6 @@ use crate::events::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::identifiers::{WorkflowId};
-use std::collections::HashMap;
 
 /// Enum wrapper for all domain events
 #[derive(Debug, Clone, Serialize, Deserialize)]

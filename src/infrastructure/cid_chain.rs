@@ -237,22 +237,15 @@ pub fn verify_event_chain(events: &[EventWithCid]) -> Result<(), CidError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::events::PersonRegistered;
-    use crate::person::IdentityComponent;
-    use uuid::Uuid;
+    use crate::domain_events::WorkflowStarted;
+    use crate::identifiers::{WorkflowId, GraphId};
 
     fn create_test_event() -> DomainEventEnum {
-        DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id: Uuid::new_v4(),
-            identity: IdentityComponent {
-                legal_name: "Test User".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
+        DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id: WorkflowId::new(),
+            definition_id: GraphId::new(),
+            initial_state: "Start".to_string(),
+            started_at: chrono::Utc::now(),
         })
     }
 

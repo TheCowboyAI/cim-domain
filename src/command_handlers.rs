@@ -4,9 +4,7 @@
 //! They return only acknowledgments, not data - use queries for data retrieval.
 
 use crate::{
-    commands::*,
-    cqrs::{CommandAcknowledgment, CommandEnvelope, CommandHandler, CommandStatus, CorrelationId},
-    entity::EntityId,
+    cqrs::CorrelationId,
     domain_events::DomainEventEnum,
     AggregateRoot,
 };
@@ -96,10 +94,6 @@ where
 
 // Location Command Handler has been moved to cim-domain-location
 
-
-
-
-
 // Workflow Command Handler has been moved to cim-domain-workflow
 
 #[cfg(test)]
@@ -107,10 +101,6 @@ mod tests {
     use super::*;
 
     // Location command handler tests have been moved to cim-domain-location
-
-
-
-
 
     // Workflow command handler tests have been moved to cim-domain-workflow
 }

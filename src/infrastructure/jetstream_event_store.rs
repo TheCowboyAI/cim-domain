@@ -643,15 +643,15 @@ mod tests {
 
     #[test]
     fn test_default_config() {
-        let config = JetStreamConfig::default();
-        assert_eq!(config.stream_name, "event-store");
-        assert_eq!(config.cache_size, 1000);
-        assert_eq!(config.subject_prefix, "events");
+        let _config = JetStreamConfig::default();
+        assert_eq!(_config.stream_name, "event-store");
+        assert_eq!(_config.cache_size, 1000);
+        assert_eq!(_config.subject_prefix, "events");
     }
 
     #[test]
     fn test_subject_generation() {
-        let config = JetStreamConfig::default();
+        let _config = JetStreamConfig::default();
         // Note: This would fail without a real NATS connection
         // let client = Arc::new(NatsClient::connect(Default::default()));
         // let store = JetStreamEventStore::new(client, config).await.unwrap();

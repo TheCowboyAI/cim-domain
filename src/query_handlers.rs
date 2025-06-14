@@ -3,33 +3,12 @@
 //! Query handlers process queries and return data from read models/projections.
 //! They implement the read side of CQRS, providing optimized data access.
 
-use crate::{
-    cqrs::{Query, QueryHandler as CqrsQueryHandler, QueryEnvelope, QueryAcknowledgment, QueryStatus, QueryId},
-    errors::DomainResult,
-};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 
-/// Query result type
+/// Query result type - represents the outcome of a query operation
 pub type QueryResult<T> = Result<T, String>;
-
-/// Event publisher trait for publishing query results
-pub trait EventPublisher: Send + Sync {
-    /// Publish query results as events
-    fn publish_query_result(&self, query_id: QueryId, result: serde_json::Value) -> DomainResult<()>;
-}
-
-/// Mock event publisher for testing
-#[derive(Clone)]
-pub struct MockEventPublisher;
-
-impl EventPublisher for MockEventPublisher {
-    fn publish_query_result(&self, _query_id: QueryId, _result: serde_json::Value) -> DomainResult<()> {
-        Ok(())
-    }
-}
 
 /// Query handler trait that returns data directly (for internal use)
 pub trait DirectQueryHandler<Q, R> {
@@ -130,19 +109,11 @@ impl<T: Clone + Send + Sync> ReadModelStorage<T> for InMemoryReadModel<T> {
 
 // Location Queries and Views have been moved to cim-domain-location
 
-
-
-
-
 // Workflow Queries and Views have been moved to cim-domain-workflow
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-
-
-
 
     // Workflow query tests have been moved to cim-domain-workflow
 
