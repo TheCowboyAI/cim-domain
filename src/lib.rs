@@ -50,7 +50,7 @@ pub mod projections;
 // Re-export core types
 pub use component::{Component, ComponentStorage};
 pub use entity::{Entity, EntityId, AggregateRoot};
-pub use identifiers::{NodeId, EdgeId, GraphId, StateId, TransitionId, WorkflowId};
+pub use identifiers::{NodeId, EdgeId, GraphId, StateId, TransitionId, WorkflowId, WorkflowIdExt};
 pub use node_types::NodeType;
 pub use relationship_types::RelationshipType;
 pub use context_types::{ContextType, SubdomainType, ServiceType};

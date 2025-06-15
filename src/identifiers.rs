@@ -218,6 +218,18 @@ pub mod markers {
     pub struct WorkflowMarker;
 }
 
+/// Extension trait for WorkflowId to provide convenient methods
+pub trait WorkflowIdExt {
+    /// Convert to UUID
+    fn to_uuid(&self) -> Uuid;
+}
+
+impl WorkflowIdExt for EntityId<markers::WorkflowMarker> {
+    fn to_uuid(&self) -> Uuid {
+        Uuid::from(*self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
