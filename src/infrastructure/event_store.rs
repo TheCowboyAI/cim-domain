@@ -96,6 +96,7 @@ impl StoredEvent {
 
 /// Event metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct EventMetadata {
     /// Correlation ID for tracking related events
     pub correlation_id: Option<String>,
@@ -117,16 +118,6 @@ impl EventMetadata {
     }
 }
 
-impl Default for EventMetadata {
-    fn default() -> Self {
-        Self {
-            correlation_id: None,
-            causation_id: None,
-            triggered_by: None,
-            custom: None,
-        }
-    }
-}
 
 /// Event store trait for persisting and retrieving events
 #[async_trait]

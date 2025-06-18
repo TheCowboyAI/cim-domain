@@ -284,7 +284,7 @@ impl EventStreamOperations for EventStreamService {
                                 (None, Some(_)) => std::cmp::Ordering::Less,
                                 (Some(_), None) => std::cmp::Ordering::Greater,
                                 (Some(a_caus), Some(b_caus)) => {
-                                    a_caus.cmp(&b_caus).then_with(|| a.stored_at.cmp(&b.stored_at))
+                                    a_caus.cmp(b_caus).then_with(|| a.stored_at.cmp(&b.stored_at))
                                 }
                             }
                         });

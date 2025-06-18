@@ -85,6 +85,12 @@ pub struct EventChain {
     chain: ContentChain<EventWrapper>,
 }
 
+impl Default for EventChain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventChain {
     /// Create a new event chain
     pub fn new() -> Self {
@@ -99,7 +105,7 @@ impl EventChain {
         let content = self.chain.append(wrapper)?;
         Ok(EventWithCid {
             event: content.content.event.clone(),
-            cid: content.cid.parse().map_err(|e| CidError::InvalidCid(format!("{:?}", e)))?,
+            cid: content.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
             previous_cid: content.previous_cid.clone().and_then(|s| s.parse().ok()),
         })
     }
@@ -108,7 +114,7 @@ impl EventChain {
     pub fn verify_and_add(&mut self, event_with_cid: EventWithCid) -> Result<(), CidError> {
         // Verify the chain
         if let Some(head) = self.chain.head() {
-            if event_with_cid.previous_cid != Some(head.cid.parse().map_err(|e| CidError::InvalidCid(format!("{:?}", e)))?) {
+            if event_with_cid.previous_cid != Some(head.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?) {
                 return Err(CidError::ChainError(format!(
                     "Previous CID mismatch: expected {:?}, got {:?}",
                     head.cid,
@@ -127,11 +133,10 @@ impl EventChain {
 
         // Verify the CID matches
         let expected_cid = event_with_cid.cid;
-        let actual_cid = chained.cid.parse().map_err(|e| CidError::InvalidCid(format!("{:?}", e)))?;
+        let actual_cid = chained.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?;
         if expected_cid != actual_cid {
             return Err(CidError::ChainError(format!(
-                "CID mismatch: expected {:?}, got {:?}",
-                expected_cid, actual_cid
+                "CID mismatch: expected {expected_cid:?}, got {actual_cid:?}"
             )));
         }
 
@@ -167,7 +172,7 @@ pub fn create_event_with_cid(
 
     Ok(EventWithCid {
         event,
-        cid: chained.cid.parse().map_err(|e| CidError::InvalidCid(format!("{:?}", e)))?,
+        cid: chained.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
         previous_cid: chained.previous_cid.and_then(|s| s.parse().ok()),
     })
 }
@@ -222,8 +227,7 @@ pub fn verify_event_chain(events: &[EventWithCid]) -> Result<(), CidError> {
             }
             _ => {
                 return Err(CidError::ChainError(format!(
-                    "CID chain mismatch at index {}",
-                    i
+                    "CID chain mismatch at index {i}"
                 )));
             }
         }

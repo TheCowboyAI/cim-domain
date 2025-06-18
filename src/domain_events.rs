@@ -152,7 +152,7 @@ impl DomainEvent for WorkflowStarted {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.started.v1")
+        "workflows.workflow.started.v1".to_string()
     }
 }
 
@@ -166,7 +166,7 @@ impl DomainEvent for WorkflowTransitioned {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.transitioned.v1")
+        "workflows.workflow.transitioned.v1".to_string()
     }
 }
 
@@ -180,7 +180,7 @@ impl DomainEvent for WorkflowTransitionExecuted {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.transition_executed.v1")
+        "workflows.workflow.transition_executed.v1".to_string()
     }
 }
 
@@ -194,7 +194,7 @@ impl DomainEvent for WorkflowCompleted {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.completed.v1")
+        "workflows.workflow.completed.v1".to_string()
     }
 }
 
@@ -208,7 +208,7 @@ impl DomainEvent for WorkflowSuspended {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.suspended.v1")
+        "workflows.workflow.suspended.v1".to_string()
     }
 }
 
@@ -222,7 +222,7 @@ impl DomainEvent for WorkflowResumed {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.resumed.v1")
+        "workflows.workflow.resumed.v1".to_string()
     }
 }
 
@@ -236,7 +236,7 @@ impl DomainEvent for WorkflowCancelled {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.cancelled.v1")
+        "workflows.workflow.cancelled.v1".to_string()
     }
 }
 
@@ -250,7 +250,7 @@ impl DomainEvent for WorkflowFailed {
     }
 
     fn subject(&self) -> String {
-        format!("workflows.workflow.failed.v1")
+        "workflows.workflow.failed.v1".to_string()
     }
 }
 

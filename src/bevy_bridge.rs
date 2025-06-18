@@ -132,6 +132,12 @@ impl From<serde_json::Error> for TranslationError {
 pub struct NatsToBevyTranslator {
 }
 
+impl Default for NatsToBevyTranslator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NatsToBevyTranslator {
     /// Create a new translator
     pub fn new() -> Self {
@@ -169,6 +175,7 @@ impl MessageTranslator<NatsMessage, BevyCommand> for NatsToBevyTranslator {
 }
 
 /// Subject-based routing for Bevy events
+#[derive(Default)]
 pub struct BevyEventRouter {
 }
 
@@ -190,11 +197,6 @@ impl BevyEventRouter {
     }
 }
 
-impl Default for BevyEventRouter {
-    fn default() -> Self {
-        Self { }
-    }
-}
 
 #[cfg(test)]
 mod tests {

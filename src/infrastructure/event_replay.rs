@@ -252,7 +252,7 @@ impl EventReplayService {
         let mut event_stream = self.event_store
             .stream_all_events(options.from_sequence)
             .await
-            .map_err(|e| ReplayError::EventStoreError(e))?;
+            .map_err(ReplayError::EventStoreError)?;
 
         let mut batch = Vec::with_capacity(options.batch_size);
         let mut total_processed = 0u64;
@@ -365,7 +365,7 @@ impl EventReplayService {
         let events = self.event_store
             .get_events(aggregate_id, None)
             .await
-            .map_err(|e| ReplayError::EventStoreError(e))?;
+            .map_err(ReplayError::EventStoreError)?;
 
         if events.is_empty() {
             return Err(ReplayError::AggregateNotFound(aggregate_id.to_string()));
@@ -381,7 +381,7 @@ impl EventReplayService {
     ) -> Result<Option<u64>, ReplayError> {
         // Query the checkpoint from the event store metadata
         // This would typically be stored in a separate checkpoint stream
-        let _checkpoint_key = format!("checkpoint.{}", projection_name);
+        let _checkpoint_key = format!("checkpoint.{projection_name}");
 
         // For now, we'll use a simple in-memory approach
         // In production, this would query NATS KV store or similar
@@ -395,7 +395,7 @@ impl EventReplayService {
         sequence: u64,
     ) -> Result<(), ReplayError> {
         // Save the checkpoint to persistent storage
-        let _checkpoint_key = format!("checkpoint.{}", projection_name);
+        let _checkpoint_key = format!("checkpoint.{projection_name}");
         let _checkpoint_data = serde_json::json!({
             "projection": projection_name,
             "sequence": sequence,

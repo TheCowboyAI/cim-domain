@@ -23,6 +23,12 @@ pub struct MockEventPublisher {
     published_events: Arc<RwLock<Vec<(DomainEventEnum, CorrelationId)>>>,
 }
 
+impl Default for MockEventPublisher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockEventPublisher {
     /// Create a new mock event publisher for testing
     pub fn new() -> Self {
@@ -64,6 +70,15 @@ pub trait AggregateRepository<A: AggregateRoot>: Send + Sync {
 /// In-memory repository for testing
 pub struct InMemoryRepository<A: AggregateRoot + Clone + Send + Sync> {
     storage: Arc<RwLock<HashMap<A::Id, A>>>,
+}
+
+impl<A: AggregateRoot + Clone + Send + Sync> Default for InMemoryRepository<A>
+where
+    A::Id: std::hash::Hash + Eq + Clone,
+ {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<A: AggregateRoot + Clone + Send + Sync> InMemoryRepository<A>

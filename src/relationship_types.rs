@@ -195,7 +195,7 @@ impl RelationshipType {
             RelationshipType::QueryReads => "query reads".to_string(),
             RelationshipType::PolicyAppliesTo => "policy applies to".to_string(),
             RelationshipType::FlowsTo => "flows to".to_string(),
-            RelationshipType::ConditionalFlow { condition } => format!("flows to if {}", condition),
+            RelationshipType::ConditionalFlow { condition } => format!("flows to if {condition}"),
             RelationshipType::ParallelFlow => "parallel flow".to_string(),
             RelationshipType::LoopBack => "loops back".to_string(),
             RelationshipType::SharedKernel => "shared kernel".to_string(),

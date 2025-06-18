@@ -26,8 +26,8 @@ pub enum IdType {
 impl Display for IdType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IdType::Uuid(uuid) => write!(f, "{}", uuid),
-            IdType::Cid(cid) => write!(f, "{}", cid),
+            IdType::Uuid(uuid) => write!(f, "{uuid}"),
+            IdType::Cid(cid) => write!(f, "{cid}"),
         }
     }
 }

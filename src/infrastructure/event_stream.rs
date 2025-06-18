@@ -397,7 +397,7 @@ impl EventStream {
         for (idx, event) in self.events.iter().enumerate() {
             if let Some(causation_id) = event.causation_id() {
                 causation_map.entry(causation_id.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(idx);
             } else {
                 roots.push(idx);

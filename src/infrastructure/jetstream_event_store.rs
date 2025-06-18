@@ -82,7 +82,7 @@ impl JetStreamEventStore {
         let _stream = js
             .create_stream(stream_config)
             .await
-            .map_err(|e| EventStoreError::ConnectionError(format!("Failed to create stream: {}", e)))?;
+            .map_err(|e| EventStoreError::ConnectionError(format!("Failed to create stream: {e}")))?;
 
         Ok(Self {
             client,
@@ -119,7 +119,7 @@ impl JetStreamEventStore {
 
             // Add event to chain
             let event_with_cid = chain.add(event.clone())
-                .map_err(|e| EventStoreError::InvalidEventData(format!("Failed to add to chain: {}", e)))?;
+                .map_err(|e| EventStoreError::InvalidEventData(format!("Failed to add to chain: {e}")))?;
 
             // Update the chain in cache
             chains.insert(aggregate_id.to_string(), chain);
@@ -159,7 +159,7 @@ impl JetStreamEventStore {
         let js = jetstream::new(self.client.clone());
         js.publish(subject, payload.into())
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to publish: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to publish: {e}")))?;
 
         Ok((stored_event, event_with_cid))
     }
@@ -283,18 +283,18 @@ impl EventStore for JetStreamEventStore {
 
         let js = jetstream::new(self.client.clone());
         let stream = js.get_stream(&self.stream_name).await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
         let consumer = stream
             .create_consumer(consumer_config)
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
 
         // Fetch messages
         let mut messages = consumer
             .messages()
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {e}")))?;
 
         let mut events = Vec::new();
         let mut event_chain = EventChain::new();
@@ -318,11 +318,11 @@ impl EventStore for JetStreamEventStore {
                 found_aggregate = true;
                 messages_without_aggregate = 0; // Reset counter
 
-                if from_version.map_or(true, |v| envelope.stored_event.sequence > v) {
+                if from_version.is_none_or(|v| envelope.stored_event.sequence > v) {
                     // Try to verify CID chain, but don't fail for demo
                     // In production, you would want strict verification
                     if let Err(e) = event_chain.verify_and_add(envelope.event_with_cid.clone()) {
-                        eprintln!("Warning: CID verification failed for aggregate {}: {}", aggregate_id, e);
+                        eprintln!("Warning: CID verification failed for aggregate {aggregate_id}: {e}");
                     }
 
                     events.push(envelope.stored_event);
@@ -417,18 +417,18 @@ impl EventStore for JetStreamEventStore {
 
         let js = jetstream::new(self.client.clone());
         let stream = js.get_stream(&self.stream_name).await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
         let consumer = stream
             .create_consumer(consumer_config)
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
 
         // Create stream wrapper
         let messages = consumer
             .messages()
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {e}")))?;
 
         Ok(Box::new(JetStreamEventStream::new(messages)))
     }
@@ -459,18 +459,18 @@ impl EventStore for JetStreamEventStore {
 
         let js = jetstream::new(self.client.clone());
         let stream = js.get_stream(&self.stream_name).await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
         let consumer = stream
             .create_consumer(consumer_config)
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
 
         // Create stream wrapper
         let messages = consumer
             .messages()
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {e}")))?;
 
         Ok(Box::new(JetStreamEventStream::new(messages)))
     }
@@ -500,18 +500,18 @@ impl EventStore for JetStreamEventStore {
 
         let js = jetstream::new(self.client.clone());
         let stream = js.get_stream(&self.stream_name).await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
         let consumer = stream
             .create_consumer(consumer_config)
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
 
         // Create stream wrapper with event type filter
         let messages = consumer
             .messages()
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {e}")))?;
 
         // Note: In production, you would implement a filtered stream that only
         // returns events matching the specified type
@@ -541,18 +541,18 @@ impl EventStore for JetStreamEventStore {
 
         let js = jetstream::new(self.client.clone());
         let stream = js.get_stream(&self.stream_name).await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
         let consumer = stream
             .create_consumer(consumer_config)
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
 
         // Create stream wrapper
         let messages = consumer
             .messages()
             .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {}", e)))?;
+            .map_err(|e| EventStoreError::StorageError(format!("Failed to get messages: {e}")))?;
 
         Ok(Box::new(JetStreamEventStream::new(messages)))
     }
@@ -593,14 +593,14 @@ impl JetStreamEventStream {
                                 // In production, you would want strict verification
                                 if let Err(e) = event_chain.verify_and_add(envelope.event_with_cid) {
                                     // Log the error but continue
-                                    eprintln!("Warning: CID verification failed: {}", e);
+                                    eprintln!("Warning: CID verification failed: {e}");
                                 }
                                 Ok(envelope.stored_event)
                             }
-                            Err(e) => Err(EventStoreError::InvalidEventData(format!("Failed to deserialize: {}", e))),
+                            Err(e) => Err(EventStoreError::InvalidEventData(format!("Failed to deserialize: {e}"))),
                         }
                     }
-                    Err(e) => Err(EventStoreError::StorageError(format!("Stream error: {}", e))),
+                    Err(e) => Err(EventStoreError::StorageError(format!("Stream error: {e}"))),
                 };
 
                 if sender.send(event_result).await.is_err() {

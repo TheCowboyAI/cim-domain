@@ -41,6 +41,12 @@ pub struct QueryCriteria {
     pub order_by: Option<String>,
 }
 
+impl Default for QueryCriteria {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QueryCriteria {
     /// Create a new empty query criteria
     pub fn new() -> Self {
@@ -69,6 +75,12 @@ impl QueryCriteria {
 #[derive(Clone)]
 pub struct InMemoryReadModel<T: Clone> {
     storage: Arc<RwLock<HashMap<String, T>>>,
+}
+
+impl<T: Clone> Default for InMemoryReadModel<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T: Clone> InMemoryReadModel<T> {

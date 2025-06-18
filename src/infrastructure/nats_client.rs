@@ -114,7 +114,7 @@ impl NatsClient {
                 match event {
                     async_nats::Event::Disconnected => eprintln!("NATS disconnected"),
                     async_nats::Event::Connected => eprintln!("NATS connected"),
-                    async_nats::Event::ClientError(err) => eprintln!("NATS client error: {}", err),
+                    async_nats::Event::ClientError(err) => eprintln!("NATS client error: {err}"),
                     _ => {}
                 }
             });

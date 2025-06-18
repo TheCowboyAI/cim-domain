@@ -57,6 +57,12 @@ pub struct JetStreamSnapshotStore {
     // TODO: Implement JetStream-based snapshot storage
 }
 
+impl Default for JetStreamSnapshotStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JetStreamSnapshotStore {
     /// Create a new JetStream snapshot store
     pub fn new() -> Self {

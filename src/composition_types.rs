@@ -118,12 +118,12 @@ impl CompositionType {
     /// Get a human-readable name for the composition type
     pub fn display_name(&self) -> String {
         match self {
-            CompositionType::Atomic { value_type } => format!("Atomic {}", value_type),
-            CompositionType::Composite { structure_type } => format!("Composite {}", structure_type),
+            CompositionType::Atomic { value_type } => format!("Atomic {value_type}"),
+            CompositionType::Composite { structure_type } => format!("Composite {structure_type}"),
             CompositionType::Functor { source_type, target_type } => {
-                format!("Functor {} → {}", source_type, target_type)
+                format!("Functor {source_type} → {target_type}")
             }
-            CompositionType::Monad { context_type } => format!("Monad {}", context_type),
+            CompositionType::Monad { context_type } => format!("Monad {context_type}"),
             CompositionType::Domain(domain_type) => domain_type.display_name(),
         }
     }
@@ -165,16 +165,16 @@ impl DomainCompositionType {
     /// Get a human-readable name
     pub fn display_name(&self) -> String {
         match self {
-            DomainCompositionType::Entity { entity_type } => format!("Entity: {}", entity_type),
-            DomainCompositionType::ValueObject { value_type } => format!("Value Object: {}", value_type),
-            DomainCompositionType::Aggregate { aggregate_type } => format!("Aggregate: {}", aggregate_type),
-            DomainCompositionType::Service { service_type } => format!("Service: {}", service_type),
-            DomainCompositionType::Event { event_type } => format!("Event: {}", event_type),
-            DomainCompositionType::Command { command_type } => format!("Command: {}", command_type),
-            DomainCompositionType::Query { query_type } => format!("Query: {}", query_type),
-            DomainCompositionType::BoundedContext { domain } => format!("Bounded Context: {}", domain),
-            DomainCompositionType::Policy { policy_type } => format!("Policy: {}", policy_type),
-            DomainCompositionType::Workflow { workflow_type } => format!("Workflow: {}", workflow_type),
+            DomainCompositionType::Entity { entity_type } => format!("Entity: {entity_type}"),
+            DomainCompositionType::ValueObject { value_type } => format!("Value Object: {value_type}"),
+            DomainCompositionType::Aggregate { aggregate_type } => format!("Aggregate: {aggregate_type}"),
+            DomainCompositionType::Service { service_type } => format!("Service: {service_type}"),
+            DomainCompositionType::Event { event_type } => format!("Event: {event_type}"),
+            DomainCompositionType::Command { command_type } => format!("Command: {command_type}"),
+            DomainCompositionType::Query { query_type } => format!("Query: {query_type}"),
+            DomainCompositionType::BoundedContext { domain } => format!("Bounded Context: {domain}"),
+            DomainCompositionType::Policy { policy_type } => format!("Policy: {policy_type}"),
+            DomainCompositionType::Workflow { workflow_type } => format!("Workflow: {workflow_type}"),
         }
     }
 
