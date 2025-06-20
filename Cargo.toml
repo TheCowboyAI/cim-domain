@@ -1,6 +1,6 @@
 [package]
 name = "cim-domain"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["The Cowboy AI"]
 description = "Core DDD components and traits for CIM - Domain-Driven Design building blocks"
