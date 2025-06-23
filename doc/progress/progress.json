@@ -87,18 +87,34 @@
       "status": "COMPLETE",
       "date": "2024-12-30",
       "description": "Created bidirectional translation between NATS events and Bevy ECS commands using subject-based routing"
+    },
+    {
+      "id": "correlation-causation-migration",
+      "name": "Correlation/Causation to cim-subject",
+      "status": "COMPLETE",
+      "date": "2025-01-04",
+      "deliverables": [
+        "Moved correlation/causation types to cim-subject module",
+        "Created SerializableCid wrapper for Cid serialization",
+        "Implemented MessageFactory for proper message creation",
+        "Created message algebra for correlation chains",
+        "Updated cim-domain to use cim-subject types",
+        "Updated 8 domain modules to use new API",
+        "All domains have passing tests"
+      ]
     }
   ],
-  "current_phase": "core-domain-implementation",
+  "current_phase": "correlation-causation-migration",
   "next_steps": [
-    "Implement aggregates for core entities",
-    "Create NATS message translation layer",
-    "Implement Bevy command translation",
-    "Create integration tests"
+    "Update remaining domains (Dialog, Document, Nix, Organization, Workflow)",
+    "Create comprehensive correlation/causation tests",
+    "Update documentation with new patterns",
+    "Implement correlation tracking in NATS bridge"
   ],
   "references": [
     "doc/design/domain-design-principles.md",
     "doc/qa/cim-domain-user-stories.md",
-    "doc/plan/core-entities-implementation.md"
+    "doc/plan/core-entities-implementation.md",
+    "doc/design/event-correlation-causation-algebra.md"
   ]
 }

@@ -6,7 +6,7 @@
 use crate::{
     cqrs::{CorrelationId, CausationId, EventId, IdType},
 };
-use cim_subject::Subject as SubjectParts;
+use cim_subject::{Subject as SubjectParts, SerializableCid};
 use cid::Cid;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
@@ -173,7 +173,7 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
             event,
             occurred_at: SystemTime::now(),
             correlation_id,
-            causation_id: CausationId(IdType::Cid(causing_event)),
+            causation_id: CausationId(IdType::Cid(SerializableCid(causing_event))),
             metadata: EventMetadata {
                 source: triggered_by,
                 version: "v1".to_string(),

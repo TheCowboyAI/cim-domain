@@ -13,40 +13,32 @@ categories = ["data-structures", "rust-patterns"]
 
 [dependencies]
 # Core dependencies
-cim-subject = { path = "../cim-subject" }
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 uuid = { version = "1.11", features = ["v4", "serde"] }
-cim-component = { path = "../cim-component" }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+async-trait = "0.1"
+tokio = { version = "1.35", features = ["full"] }
+futures = "0.3"
+
+# Domain dependencies
 cim-ipld = { path = "../cim-ipld" }
+cim-subject = { path = "../cim-subject" }
 
 # Content addressing
 cid = { version = "0.11", features = ["serde"] }
 
 # Async utilities
-futures = "0.3"
+cim-component = { path = "../cim-component" }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Async runtime
-tokio = { version = "1.41", features = ["full"] }
-async-trait = "0.1"
-
-# Error handling
-thiserror = "2.0"
-anyhow = "1.0"
-
-# Logging
-tracing = "0.1"
-
-# Time handling
-chrono = { version = "0.4", features = ["serde"] }
-
-# Collections
 indexmap = "2.7"
 lru = "0.12"
 
-# NATS messaging
+# Async runtime
 async-nats = { version = "0.41", features = ["service"] }
 
 [dev-dependencies]

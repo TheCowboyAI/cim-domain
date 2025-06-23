@@ -61,7 +61,7 @@ pub use cqrs::{
     CommandHandler, QueryHandler as CqrsQueryHandler,
     CorrelationId, CausationId, IdType,
     CommandStatus, QueryStatus,
-    CommandAcknowledgment, QueryAcknowledgment,
+    CommandAcknowledgment, QueryAcknowledgment, QueryResponse,
     EventStreamSubscription,
 };
 
