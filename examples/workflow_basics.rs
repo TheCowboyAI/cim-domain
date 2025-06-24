@@ -1,159 +1,191 @@
-//! Basic workflow example demonstrating category theory-based workflows
+//! Basic state machine example demonstrating category theory-based state transitions
 //!
 //! This example shows:
-//! - Creating injectable workflow states
+//! - Creating injectable states
 //! - Defining transitions with guards
 //! - Composing transitions using category operations
 //! - Verifying category laws
 
-use cim_domain::workflow::{
-    WorkflowState, WorkflowCategory, SimpleState, SimpleInput, SimpleOutput,
-    SimpleTransition, WorkflowContext, ContextKeyGuard, ActorGuard,
-    WorkflowTransition,
+use cim_domain::state_machine::{
+    State, Transition, Input, Output, StateMachine,
+    MealyStateTransitions, MealyMachine,
 };
+use cim_domain::{AggregateRoot, EntityId, AggregateMarker};
+use std::collections::HashMap;
+
+// Define a simple state enum
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum DocumentState {
+    Draft,
+    Review,
+    Approved,
+    Published,
+    Rejected,
+}
+
+impl State for DocumentState {
+    fn is_terminal(&self) -> bool {
+        matches!(self, DocumentState::Published | DocumentState::Rejected)
+    }
+}
+
+// Define inputs
+#[derive(Debug, Clone)]
+enum DocumentInput {
+    Submit,
+    Approve,
+    Publish,
+    Reject,
+}
+
+impl Input for DocumentInput {}
+
+// Define outputs
+#[derive(Debug, Clone)]
+enum DocumentOutput {
+    Submitted,
+    Approved,
+    Published,
+    Rejected,
+}
+
+impl Output for DocumentOutput {}
+
+// Define a simple aggregate for the example
+#[derive(Debug, Clone)]
+struct DocumentAggregate {
+    id: EntityId<AggregateMarker>,
+    current_state: DocumentState,
+}
+
+impl AggregateRoot for DocumentAggregate {
+    type Id = EntityId<AggregateMarker>;
+    
+    fn id(&self) -> Self::Id {
+        self.id.clone()
+    }
+}
+
+// Define transitions
+struct DocumentTransitions;
+
+impl MealyStateTransitions for DocumentTransitions {
+    type State = DocumentState;
+    type Input = DocumentInput;
+    type Output = DocumentOutput;
+    
+    fn transition(
+        &self,
+        state: &Self::State,
+        input: &Self::Input,
+    ) -> Option<(Self::State, Self::Output)> {
+        match (state, input) {
+            (DocumentState::Draft, DocumentInput::Submit) => {
+                Some((DocumentState::Review, DocumentOutput::Submitted))
+            }
+            (DocumentState::Review, DocumentInput::Approve) => {
+                Some((DocumentState::Approved, DocumentOutput::Approved))
+            }
+            (DocumentState::Review, DocumentInput::Reject) => {
+                Some((DocumentState::Rejected, DocumentOutput::Rejected))
+            }
+            (DocumentState::Approved, DocumentInput::Publish) => {
+                Some((DocumentState::Published, DocumentOutput::Published))
+            }
+            _ => None,
+        }
+    }
+}
 
 fn main() {
-    println!("=== Workflow Category Theory Example ===\n");
+    println!("=== State Machine Category Theory Example ===\n");
 
-    // Create workflow states (injectable by users)
-    let draft = SimpleState::new("Draft")
-        .with_description("Document is being created");
-    let review = SimpleState::new("Review")
-        .with_description("Document is under review");
-    let approved = SimpleState::new("Approved")
-        .with_description("Document has been approved");
-    let published = SimpleState::terminal("Published")
-        .with_description("Document is published and immutable");
-    let rejected = SimpleState::terminal("Rejected")
-        .with_description("Document was rejected");
+    // Create states
+    let states = vec![
+        DocumentState::Draft,
+        DocumentState::Review,
+        DocumentState::Approved,
+        DocumentState::Published,
+        DocumentState::Rejected,
+    ];
 
     println!("Created workflow states:");
-    println!("- {} (terminal: {})", draft.name(), draft.is_terminal());
-    println!("- {} (terminal: {})", review.name(), review.is_terminal());
-    println!("- {} (terminal: {})", approved.name(), approved.is_terminal());
-    println!("- {} (terminal: {})", published.name(), published.is_terminal());
-    println!("- {} (terminal: {})", rejected.name(), rejected.is_terminal());
+    for state in &states {
+        println!("- {:?} (terminal: {})", state, state.is_terminal());
+    }
 
-    // Create transitions
-    let submit = SimpleTransition::new(
-        "Submit for Review",
-        draft.clone(),
-        review.clone(),
-        SimpleInput::new("submit"),
-        SimpleOutput::new("submitted"),
-    ).with_guard(Box::new(ContextKeyGuard::new("document_id")));
+    // Create a document aggregate
+    let mut document = DocumentAggregate {
+        id: EntityId::new(),
+        current_state: DocumentState::Draft,
+    };
 
-    let approve = SimpleTransition::new(
-        "Approve",
-        review.clone(),
-        approved.clone(),
-        SimpleInput::new("approve"),
-        SimpleOutput::new("approved"),
-    ).with_guard(Box::new(ActorGuard::single("reviewer")));
-
-    let publish = SimpleTransition::new(
-        "Publish",
-        approved.clone(),
-        published.clone(),
-        SimpleInput::new("publish"),
-        SimpleOutput::new("published"),
-    ).with_guard(Box::new(ActorGuard::single("publisher")));
-
-    let reject = SimpleTransition::new(
-        "Reject",
-        review.clone(),
-        rejected.clone(),
-        SimpleInput::new("reject"),
-        SimpleOutput::new("rejected"),
-    ).with_guard(Box::new(ActorGuard::single("reviewer")));
-
-    println!("\nCreated transitions:");
-    println!("- {}: {} -> {}", submit.name(), submit.source().name(), submit.target().name());
-    println!("- {}: {} -> {}", approve.name(), approve.source().name(), approve.target().name());
-    println!("- {}: {} -> {}", publish.name(), publish.source().name(), publish.target().name());
-    println!("- {}: {} -> {}", reject.name(), reject.source().name(), reject.target().name());
-
-    // Test guards
-    println!("\nTesting transition guards:");
-
-    let mut ctx = WorkflowContext::new();
-    println!("Empty context - submit guard: {}", submit.guard(&ctx));
-
-    ctx.set("document_id", "doc123").unwrap();
-    println!("With document_id - submit guard: {}", submit.guard(&ctx));
-
-    println!("Without actor - approve guard: {}", approve.guard(&ctx));
-
-    ctx.set_actor("user".to_string());
-    println!("With wrong actor - approve guard: {}", approve.guard(&ctx));
-
-    ctx.set_actor("reviewer".to_string());
-    println!("With correct actor - approve guard: {}", approve.guard(&ctx));
-
-    // Demonstrate category operations
-    println!("\n=== Category Theory Operations ===");
-
-    let category = WorkflowCategory::new();
-
-    // Create identity transition
-    let id_review = category.identity_transition(review.clone());
-    println!("\nIdentity transition: {} -> {}",
-        id_review.source().name(),
-        id_review.target().name()
+    // Create state machine
+    let transitions = DocumentTransitions;
+    let mut machine = MealyMachine::new(
+        document.current_state.clone(),
+        transitions,
+        document,
     );
 
-    // Compose transitions
-    println!("\nComposing transitions:");
-    let submit_box = Box::new(submit);
-    let approve_box = Box::new(approve);
+    println!("\nInitial state: {:?}", machine.current_state());
 
-    match category.compose_transitions(submit_box, approve_box) {
-        Ok(composed) => {
-            println!("Successfully composed: {} -> {} -> {}",
-                composed.source().name(),
-                "Review", // intermediate state
-                composed.target().name()
+    // Test transitions
+    println!("\nTesting transitions:");
+
+    // Submit for review
+    match machine.process(&DocumentInput::Submit) {
+        Some(output) => {
+            println!("Submit: {:?} -> {:?} (output: {:?})", 
+                DocumentState::Draft, 
+                machine.current_state(),
+                output
             );
         }
-        Err(e) => println!("Composition failed: {}", e),
+        None => println!("Submit: Transition not allowed"),
     }
 
-    // Try invalid composition
-    let publish_box = Box::new(publish);
-    let reject_box = Box::new(reject);
-
-    match category.compose_transitions(publish_box, reject_box) {
-        Ok(_) => println!("Unexpected success!"),
-        Err(e) => println!("Expected failure: {}", e),
+    // Try invalid transition
+    match machine.process(&DocumentInput::Publish) {
+        Some(_) => println!("Publish: Unexpected success!"),
+        None => println!("Publish: Transition not allowed from Review state"),
     }
 
-    // Verify category laws
-    println!("\n=== Category Laws ===");
-    println!("Associativity holds by construction: {}",
-        category.verify_associativity_conceptual()
-    );
+    // Approve
+    match machine.process(&DocumentInput::Approve) {
+        Some(output) => {
+            println!("Approve: {:?} -> {:?} (output: {:?})", 
+                DocumentState::Review,
+                machine.current_state(),
+                output
+            );
+        }
+        None => println!("Approve: Transition not allowed"),
+    }
 
-    println!("\n=== Workflow Execution Context ===");
+    // Publish
+    match machine.process(&DocumentInput::Publish) {
+        Some(output) => {
+            println!("Publish: {:?} -> {:?} (output: {:?})", 
+                DocumentState::Approved,
+                machine.current_state(),
+                output
+            );
+        }
+        None => println!("Publish: Transition not allowed"),
+    }
 
-    // Create a workflow context with metadata
-    let mut workflow_ctx = WorkflowContext::with_actor("alice".to_string());
-    workflow_ctx.set_correlation_id("workflow-123".to_string());
-    workflow_ctx.set("document_id", "doc456").unwrap();
-    workflow_ctx.set("version", 2).unwrap();
-    workflow_ctx.set("tags", vec!["important", "confidential"]).unwrap();
-
-    println!("Workflow context:");
-    println!("- Actor: {:?}", workflow_ctx.actor());
-    println!("- Correlation ID: {:?}", workflow_ctx.correlation_id());
-    println!("- Document ID: {:?}", workflow_ctx.get::<String>("document_id"));
-    println!("- Version: {:?}", workflow_ctx.get::<i32>("version"));
-    println!("- Tags: {:?}", workflow_ctx.get::<Vec<String>>("tags"));
+    // Try transition from terminal state
+    match machine.process(&DocumentInput::Submit) {
+        Some(_) => println!("Submit from Published: Unexpected success!"),
+        None => println!("Submit from Published: Transition not allowed (terminal state)"),
+    }
 
     println!("\n=== Summary ===");
     println!("This example demonstrates:");
     println!("1. States are fully injectable (not hardcoded)");
-    println!("2. Transitions are morphisms with guards");
-    println!("3. Category operations (identity, composition)");
-    println!("4. Category laws hold by construction");
-    println!("5. Rich workflow context for runtime data");
+    println!("2. Transitions are morphisms in the state machine");
+    println!("3. Invalid transitions are properly rejected");
+    println!("4. Terminal states prevent further transitions");
+    println!("5. Type-safe state machine implementation");
 }

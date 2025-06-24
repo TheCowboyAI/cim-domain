@@ -9,13 +9,17 @@ use cim_domain::infrastructure::{
     NatsClient, NatsConfig,
     jetstream_event_store::JetStreamConfig,
 };
-use cim_domain::DomainEventEnum;
-use cim_domain::{PersonRegistered, OrganizationCreated, AgentDeployed};
-use cim_domain::{IdentityComponent, OrganizationType, AgentType, AgentMetadata};
+use cim_domain::{
+    DomainEventEnum,
+    WorkflowStarted, WorkflowTransitionExecuted, WorkflowCompleted,
+    WorkflowSuspended, WorkflowResumed, WorkflowCancelled,
+    WorkflowId, GraphId,
+};
 use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
-use chrono;
+use chrono::{self, Utc};
+use serde_json::json;
 
 /// Helper to check if NATS is available
 async fn nats_available() -> bool {
@@ -69,34 +73,27 @@ async fn test_jetstream_append_and_retrieve() {
     }
 
     let store = create_test_event_store("append-retrieve").await.unwrap();
-    let aggregate_id = "person-123";
-    let aggregate_type = "Person";
+    let aggregate_id = "workflow-123";
+    let aggregate_type = "Workflow";
 
     // Create test events
+    let workflow_id = WorkflowId::new();
+    let definition_id = GraphId::new();
+    
     let events = vec![
-        DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id: Uuid::new_v4(),
-            identity: IdentityComponent {
-                legal_name: "Alice Smith".to_string(),
-                preferred_name: Some("Alice".to_string()),
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
+        DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id: workflow_id.clone(),
+            definition_id: definition_id.clone(),
+            initial_state: "draft".to_string(),
+            started_at: Utc::now(),
         }),
-        DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id: Uuid::new_v4(),
-            identity: IdentityComponent {
-                legal_name: "Bob Jones".to_string(),
-                preferred_name: Some("Bob".to_string()),
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: Some(Uuid::new_v4()),
-            registered_at: chrono::Utc::now(),
+        DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+            workflow_id: workflow_id.clone(),
+            from_state: "draft".to_string(),
+            to_state: "submitted".to_string(),
+            input: json!({"action": "submit"}),
+            output: json!({"success": true}),
+            executed_at: Utc::now(),
         }),
     ];
 
@@ -152,25 +149,24 @@ async fn test_jetstream_concurrency_control() {
     }
 
     let store = create_test_event_store("concurrency").await.unwrap();
-    let aggregate_id = "org-456";
-    let aggregate_type = "Organization";
+    let aggregate_id = "workflow-456";
+    let aggregate_type = "Workflow";
 
-    let event1 = DomainEventEnum::OrganizationCreated(OrganizationCreated {
-        organization_id: Uuid::new_v4(),
-        name: "Acme Corp".to_string(),
-        org_type: OrganizationType::Company,
-        parent_id: None,
-        primary_location_id: None,
-        created_at: chrono::Utc::now(),
+    let workflow_id = WorkflowId::new();
+    let definition_id = GraphId::new();
+    
+    let event1 = DomainEventEnum::WorkflowStarted(WorkflowStarted {
+        workflow_id: workflow_id.clone(),
+        definition_id: definition_id.clone(),
+        initial_state: "initial".to_string(),
+        started_at: Utc::now(),
     });
 
-    let event2 = DomainEventEnum::OrganizationCreated(OrganizationCreated {
-        organization_id: Uuid::new_v4(),
-        name: "Acme Subsidiary".to_string(),
-        org_type: OrganizationType::Company,
-        parent_id: Some(Uuid::new_v4()),
-        primary_location_id: None,
-        created_at: chrono::Utc::now(),
+    let event2 = DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
+        workflow_id: workflow_id.clone(),
+        final_state: "completed".to_string(),
+        total_duration: Duration::from_secs(300),
+        completed_at: Utc::now(),
     });
 
     let metadata = EventMetadata::default();
@@ -223,27 +219,46 @@ async fn test_jetstream_cid_chain_verification() {
     }
 
     let store = create_test_event_store("cid-chain").await.unwrap();
-    let aggregate_id = "agent-789";
-    let aggregate_type = "Agent";
+    let aggregate_id = "workflow-789";
+    let aggregate_type = "Workflow";
 
+    let workflow_id = WorkflowId::new();
+    let definition_id = GraphId::new();
+    
     // Create a series of events
-    let events: Vec<DomainEventEnum> = (0..5)
-        .map(|i| {
-            DomainEventEnum::AgentDeployed(AgentDeployed {
-                agent_id: Uuid::new_v4(),
-                agent_type: AgentType::System,
-                owner_id: Uuid::new_v4(),
-                metadata: AgentMetadata {
-                    name: format!("Agent-{}", i),
-                    description: format!("Test agent {}", i),
-                    tags: std::collections::HashSet::from([format!("test-{}", i)]),
-                    created_at: chrono::Utc::now(),
-                    last_active: None,
-                },
-                deployed_at: chrono::Utc::now(),
-            })
-        })
-        .collect();
+    let events: Vec<DomainEventEnum> = vec![
+        DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id: workflow_id.clone(),
+            definition_id: definition_id.clone(),
+            initial_state: "initial".to_string(),
+            started_at: Utc::now(),
+        }),
+        DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+            workflow_id: workflow_id.clone(),
+            from_state: "initial".to_string(),
+            to_state: "processing".to_string(),
+            input: json!({"step": 1}),
+            output: json!({"processed": true}),
+            executed_at: Utc::now(),
+        }),
+        DomainEventEnum::WorkflowSuspended(WorkflowSuspended {
+            workflow_id: workflow_id.clone(),
+            current_state: "processing".to_string(),
+            reason: "Manual suspension".to_string(),
+            suspended_at: Utc::now(),
+        }),
+        DomainEventEnum::WorkflowResumed(WorkflowResumed {
+            workflow_id: workflow_id.clone(),
+            current_state: "processing".to_string(),
+            resumed_at: Utc::now(),
+        }),
+        DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
+            workflow_id: workflow_id.clone(),
+            final_state: "completed".to_string(),
+            total_duration: Duration::from_secs(600),
+            completed_at: Utc::now(),
+        }),
+    ];
 
     let metadata = EventMetadata {
         correlation_id: Some("cid-test".to_string()),
@@ -289,22 +304,21 @@ async fn test_jetstream_event_filtering() {
 
     let store = create_test_event_store("filtering").await.unwrap();
     let aggregate_id = "filter-test";
-    let aggregate_type = "Person";
+    let aggregate_type = "Workflow";
 
+    let workflow_id = WorkflowId::new();
+    let definition_id = GraphId::new();
+    
     // Create many events
     let events: Vec<DomainEventEnum> = (0..10)
         .map(|i| {
-            DomainEventEnum::PersonRegistered(PersonRegistered {
-                person_id: Uuid::new_v4(),
-                identity: IdentityComponent {
-                    legal_name: format!("User {}", i),
-                    preferred_name: None,
-                    date_of_birth: None,
-                    government_id: None,
-                },
-                contact: None,
-                location_id: None,
-                registered_at: chrono::Utc::now(),
+            DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+                workflow_id: workflow_id.clone(),
+                from_state: format!("state-{}", i),
+                to_state: format!("state-{}", i + 1),
+                input: json!({"step": i}),
+                output: json!({"result": format!("step-{}-complete", i)}),
+                executed_at: Utc::now(),
             })
         })
         .collect();
@@ -363,39 +377,23 @@ async fn test_jetstream_multiple_aggregates() {
 
     // Create events for different aggregates
     let aggregates = vec![
-        ("person-1", "Person"),
-        ("person-2", "Person"),
-        ("org-1", "Organization"),
+        ("workflow-1", "Workflow"),
+        ("workflow-2", "Workflow"),
+        ("workflow-3", "Workflow"),
     ];
 
     for (agg_id, agg_type) in &aggregates {
-        let events = match *agg_type {
-            "Person" => vec![
-                DomainEventEnum::PersonRegistered(PersonRegistered {
-                    person_id: Uuid::new_v4(),
-                    identity: IdentityComponent {
-                        legal_name: format!("Person for {}", agg_id),
-                        preferred_name: None,
-                        date_of_birth: None,
-                        government_id: None,
-                    },
-                    contact: None,
-                    location_id: None,
-                    registered_at: chrono::Utc::now(),
-                }),
-            ],
-            "Organization" => vec![
-                DomainEventEnum::OrganizationCreated(OrganizationCreated {
-                    organization_id: Uuid::new_v4(),
-                    name: format!("Org for {}", agg_id),
-                    org_type: OrganizationType::Company,
-                    parent_id: None,
-                    primary_location_id: None,
-                    created_at: chrono::Utc::now(),
-                }),
-            ],
-            _ => vec![],
-        };
+        let workflow_id = WorkflowId::new();
+        let definition_id = GraphId::new();
+        
+        let events = vec![
+            DomainEventEnum::WorkflowStarted(WorkflowStarted {
+                workflow_id: workflow_id.clone(),
+                definition_id: definition_id.clone(),
+                initial_state: format!("initial-{}", agg_id),
+                started_at: Utc::now(),
+            }),
+        ];
 
         store
             .append_events(agg_id, agg_type, events, None, metadata.clone())
@@ -434,21 +432,18 @@ async fn test_jetstream_cache_behavior() {
 
     let store = create_test_event_store("cache").await.unwrap();
     let aggregate_id = "cache-test";
-    let aggregate_type = "Person";
+    let aggregate_type = "Workflow";
     let metadata = EventMetadata::default();
 
+    let workflow_id = WorkflowId::new();
+    let definition_id = GraphId::new();
+    
     // Initial events
-    let event1 = DomainEventEnum::PersonRegistered(PersonRegistered {
-        person_id: Uuid::new_v4(),
-        identity: IdentityComponent {
-            legal_name: "Initial User".to_string(),
-            preferred_name: None,
-            date_of_birth: None,
-            government_id: None,
-        },
-        contact: None,
-        location_id: None,
-        registered_at: chrono::Utc::now(),
+    let event1 = DomainEventEnum::WorkflowStarted(WorkflowStarted {
+        workflow_id: workflow_id.clone(),
+        definition_id: definition_id.clone(),
+        initial_state: "initial".to_string(),
+        started_at: Utc::now(),
     });
 
     store
@@ -465,17 +460,13 @@ async fn test_jetstream_cache_behavior() {
     assert_eq!(second_retrieval.len(), 1);
 
     // Add more events
-    let event2 = DomainEventEnum::PersonRegistered(PersonRegistered {
-        person_id: Uuid::new_v4(),
-        identity: IdentityComponent {
-            legal_name: "Second User".to_string(),
-            preferred_name: None,
-            date_of_birth: None,
-            government_id: None,
-        },
-        contact: None,
-        location_id: None,
-        registered_at: chrono::Utc::now(),
+    let event2 = DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+        workflow_id: workflow_id.clone(),
+        from_state: "initial".to_string(),
+        to_state: "processing".to_string(),
+        input: json!({"action": "process"}),
+        output: json!({"status": "started"}),
+        executed_at: Utc::now(),
     });
 
     store

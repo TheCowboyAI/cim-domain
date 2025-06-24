@@ -132,7 +132,7 @@ impl EventStreamProcessor {
         let chains = self.event_chains.read().await;
         for (aggregate_id, events) in chains.iter() {
             for event in events {
-                if event.correlation_id() == Some(correlation_id.to_string()) {
+                if event.correlation_id() == Some(&correlation_id.to_string()) {
                     correlated_events.push(event.clone());
                 }
             }
@@ -169,8 +169,8 @@ impl EventStreamProcessor {
             for (_, events) in chains.iter() {
                 for event in events {
                     if event.causation_id() == Some(&event_id) {
-                        let child_id = event.event_id().to_string();
-                        tree.add_child(&event_id, child_id.clone(), event.event_type());
+                        let child_id = event.event_id;
+                        tree.add_child(&event_id, child_id.clone(), event.event_type().to_string());
                         to_process.push(child_id);
                     }
                 }
@@ -295,6 +295,7 @@ fn event_type_name(event: &DomainEventEnum) -> &str {
         DomainEventEnum::WorkflowResumed(_) => "WorkflowResumed",
         DomainEventEnum::WorkflowCancelled(_) => "WorkflowCancelled",
         DomainEventEnum::WorkflowFailed(_) => "WorkflowFailed",
+        DomainEventEnum::WorkflowTransitioned(_) => "WorkflowTransitioned",
     }
 }
 
@@ -308,36 +309,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let monitor = EventMonitor::new();
     
     // Create correlation context
-    let correlation_id = CorrelationId::new();
+    let correlation_id = CorrelationId::from_uuid(Uuid::new_v4());
     println!("📍 Correlation ID: {}", correlation_id);
     
     // Example 1: Simple event stream
     println!("\n=== Example 1: Basic Event Stream ===");
     
     let workflow_id = WorkflowId::new();
-    let graph_id = GraphId::new();
+    let definition_id = GraphId::new();
     
     let events = vec![
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
             workflow_id: workflow_id.clone(),
-            graph_id: graph_id.clone(),
+            definition_id: definition_id.clone(),
             initial_state: "draft".to_string(),
-            correlation_id: Some(correlation_id.clone()),
-            causation_id: None,
+            started_at: Utc::now(),
         }),
         DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
             workflow_id: workflow_id.clone(),
-            from_node: NodeId::new(),
-            to_node: NodeId::new(),
-            transition_data: json!({"action": "submit"}),
-            correlation_id: Some(correlation_id.clone()),
-            causation_id: Some(CausationId::from("start_event")),
+            from_state: "draft".to_string(),
+            to_state: "submitted".to_string(),
+            input: json!({"action": "submit"}),
+            output: json!({"success": true}),
+            executed_at: Utc::now(),
         }),
         DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
             workflow_id: workflow_id.clone(),
             final_state: "approved".to_string(),
-            correlation_id: Some(correlation_id.clone()),
-            causation_id: Some(CausationId::from("transition_event")),
+            total_duration: std::time::Duration::from_secs(300),
+            completed_at: Utc::now(),
         }),
     ];
     
@@ -372,7 +372,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Example 4: Causation Tree ===");
     
     if let Some(first_event) = event_store.load_events(&workflow_id.to_string()).await?.first() {
-        let tree = processor.build_causation_tree(first_event.event_id()).await?;
+        let tree = processor.build_causation_tree(&first_event.event_id).await?;
         println!("\n   Causation Tree:");
         tree.print(&tree.root, 1);
     }
@@ -386,20 +386,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Workflow event causes graph update
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
             workflow_id: WorkflowId::new(),
-            graph_id: graph_id.clone(),
+            definition_id: definition_id.clone(),
             initial_state: "initial".to_string(),
-            correlation_id: Some(correlation_id.clone()),
-            causation_id: None,
+            started_at: Utc::now(),
         }),
         // This would normally be a GraphNodeAdded event in the graph domain
         // For demo purposes, using workflow events
         DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
             workflow_id: WorkflowId::new(),
-            from_node: NodeId::new(),
-            to_node: NodeId::new(),
-            transition_data: json!({"triggered_by": "workflow_start"}),
-            correlation_id: Some(correlation_id.clone()),
-            causation_id: Some(CausationId::from("workflow_started")),
+            from_state: "initial".to_string(),
+            to_state: "processing".to_string(),
+            input: json!({"triggered_by": "workflow_start"}),
+            output: json!({"graph_updated": true}),
+            executed_at: Utc::now(),
         }),
     ];
     

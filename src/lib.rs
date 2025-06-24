@@ -33,7 +33,7 @@ mod context_types;
 mod composition_types;
 mod cqrs;
 mod errors;
-mod state_machine;
+pub mod state_machine;
 mod events;
 mod domain_events;
 mod commands;
