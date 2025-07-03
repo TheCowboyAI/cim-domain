@@ -98,7 +98,7 @@ impl JetStreamEventStore {
 
     /// Get subject for an aggregate
     fn get_subject(&self, aggregate_type: &str, aggregate_id: &str) -> String {
-        format!("{}.{}.{}", self.subject_prefix, aggregate_type, aggregate_id)
+        format!("{}.{aggregate_type}.{aggregate_id}", self.subject_prefix)
     }
 
     /// Store event with CID chain
@@ -270,7 +270,7 @@ impl EventStore for JetStreamEventStore {
         // Create consumer for this aggregate
         // Since we don't know the aggregate type, we need to read all events and filter
         // In production, you'd maintain an aggregate type mapping or use a different subject pattern
-        let consumer_name = format!("aggregate-reader-{}-{}", aggregate_id, uuid::Uuid::new_v4());
+        let consumer_name = format!("aggregate-reader-{aggregate_id}-{}", uuid::Uuid::new_v4());
 
         let consumer_config = ConsumerConfig {
             durable_name: None, // Use ephemeral consumer for reads
@@ -439,8 +439,8 @@ impl EventStore for JetStreamEventStore {
         from_position: Option<u64>,
     ) -> Result<Box<dyn EventStream>, EventStoreError> {
         // Create consumer for specific aggregate type
-        let consumer_name = format!("aggregate-type-subscriber-{}-{}", aggregate_type, uuid::Uuid::new_v4());
-        let filter_subject = format!("{}.{}.>", self.subject_prefix, aggregate_type);
+        let consumer_name = format!("aggregate-type-subscriber-{aggregate_type}-{}", uuid::Uuid::new_v4());
+        let filter_subject = format!("{}.{aggregate_type}.>", self.subject_prefix);
 
         let consumer_config = ConsumerConfig {
             durable_name: None, // Ephemeral consumer
@@ -482,7 +482,7 @@ impl EventStore for JetStreamEventStore {
     ) -> Result<Box<dyn EventStream>, EventStoreError> {
         // Create consumer for specific event type
         // This requires filtering by event type after deserialization
-        let consumer_name = format!("event-type-stream-{}-{}", event_type, uuid::Uuid::new_v4());
+        let consumer_name = format!("event-type-stream-{event_type}-{}", uuid::Uuid::new_v4());
 
         let consumer_config = ConsumerConfig {
             durable_name: None, // Ephemeral consumer

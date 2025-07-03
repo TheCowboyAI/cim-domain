@@ -420,7 +420,7 @@ mod event_store_tests {
         for i in 0..3 {
             let event = create_test_workflow_started_event();
             store
-                .append_events(&format!("workflow-{}", i), "Workflow", vec![event], None, metadata.clone())
+                .append_events(&format!("workflow-{i}"), "Workflow", vec![event], None, metadata.clone())
                 .await
                 .unwrap();
         }
@@ -429,7 +429,7 @@ mod event_store_tests {
         for i in 0..2 {
             let event = create_test_workflow_completed_event();
             store
-                .append_events(&format!("workflow-comp-{}", i), "Workflow", vec![event], None, metadata.clone())
+                .append_events(&format!("workflow-comp-{i}"), "Workflow", vec![event], None, metadata.clone())
                 .await
                 .unwrap();
         }

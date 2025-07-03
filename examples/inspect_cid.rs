@@ -8,21 +8,21 @@ fn main() {
 
     match Cid::try_from(cid_str) {
         Ok(cid) => {
-            println!("CID: {}", cid);
+            println!("CID: {cid}");
             println!("Version: {:?}", cid.version());
-            println!("Codec: 0x{:x} ({})", cid.codec(), codec_name(cid.codec()));
-            println!("Hash algorithm: {}", hash_name(cid.hash().code()));
-            println!("Hash digest length: {} bytes", cid.hash().size());
+            println!("Codec: 0x{:x} ({cid.codec(})"), codec_name(cid.codec()));
+            println!("Hash algorithm: {hash_name(cid.hash(}").code()));
+            println!("Hash digest length: {cid.hash(} bytes").size());
 
             // Convert hash to hex string
             let hash_hex: String = cid.hash().to_bytes()
                 .iter()
                 .map(|b| format!("{:02x}", b))
                 .collect();
-            println!("Multihash (hex): {}", hash_hex);
+            println!("Multihash (hex): {hash_hex}");
         }
         Err(e) => {
-            eprintln!("Failed to parse CID: {}", e);
+            eprintln!("Failed to parse CID: {e}");
         }
     }
 }

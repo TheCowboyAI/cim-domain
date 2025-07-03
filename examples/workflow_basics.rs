@@ -7,10 +7,9 @@
 //! - Verifying category laws
 
 use cim_domain::state_machine::{
-    State, Transition, Input, Output, StateMachine,
-    MealyStateTransitions, MealyMachine,
+    Input, MealyMachine, MealyStateTransitions, Output, State, StateMachine, Transition,
 };
-use cim_domain::{AggregateRoot, EntityId, AggregateMarker};
+use cim_domain::{AggregateMarker, AggregateRoot, EntityId};
 use std::collections::HashMap;
 
 // Define a simple state enum
@@ -60,7 +59,7 @@ struct DocumentAggregate {
 
 impl AggregateRoot for DocumentAggregate {
     type Id = EntityId<AggregateMarker>;
-    
+
     fn id(&self) -> Self::Id {
         self.id.clone()
     }
@@ -73,7 +72,7 @@ impl MealyStateTransitions for DocumentTransitions {
     type State = DocumentState;
     type Input = DocumentInput;
     type Output = DocumentOutput;
-    
+
     fn transition(
         &self,
         state: &Self::State,
@@ -111,7 +110,7 @@ fn main() {
 
     println!("Created workflow states:");
     for state in &states {
-        println!("- {:?} (terminal: {})", state, state.is_terminal());
+        println!("- {:?} (terminal: {state})", state.is_terminal());
     }
 
     // Create a document aggregate
@@ -122,11 +121,7 @@ fn main() {
 
     // Create state machine
     let transitions = DocumentTransitions;
-    let mut machine = MealyMachine::new(
-        document.current_state.clone(),
-        transitions,
-        document,
-    );
+    let mut machine = MealyMachine::new(document.current_state.clone(), transitions, document);
 
     println!("\nInitial state: {:?}", machine.current_state());
 
@@ -136,8 +131,9 @@ fn main() {
     // Submit for review
     match machine.process(&DocumentInput::Submit) {
         Some(output) => {
-            println!("Submit: {:?} -> {:?} (output: {:?})", 
-                DocumentState::Draft, 
+            println!(
+                "Submit: {:?} -> {:?} (output: {:?})",
+                DocumentState::Draft,
                 machine.current_state(),
                 output
             );
@@ -154,7 +150,8 @@ fn main() {
     // Approve
     match machine.process(&DocumentInput::Approve) {
         Some(output) => {
-            println!("Approve: {:?} -> {:?} (output: {:?})", 
+            println!(
+                "Approve: {:?} -> {:?} (output: {:?})",
                 DocumentState::Review,
                 machine.current_state(),
                 output
@@ -166,7 +163,8 @@ fn main() {
     // Publish
     match machine.process(&DocumentInput::Publish) {
         Some(output) => {
-            println!("Publish: {:?} -> {:?} (output: {:?})", 
+            println!(
+                "Publish: {:?} -> {:?} (output: {:?})",
                 DocumentState::Approved,
                 machine.current_state(),
                 output

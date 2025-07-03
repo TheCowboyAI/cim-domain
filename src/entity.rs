@@ -297,7 +297,7 @@ mod tests {
         let uuid = Uuid::new_v4();
         let id = EntityId::<GraphMarker>::from_uuid(uuid);
 
-        assert_eq!(format!("{}", id), format!("{}", uuid));
+        assert_eq!(format!("{id}"), format!("{uuid}"));
     }
 
     /// Test EntityId type safety with phantom types

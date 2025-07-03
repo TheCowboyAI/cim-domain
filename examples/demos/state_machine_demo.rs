@@ -77,7 +77,7 @@ impl StateMachineDemo {
         // Try invalid transition
         println!("\n8. Attempting invalid transition (decommissioned -> active)");
         match agent.activate() {
-            Err(e) => println!("   Error (expected): {}", e),
+            Err(e) => println!("   Error (expected): {e}"),
             Ok(_) => println!("   Unexpected success!"),
         }
 
@@ -142,7 +142,7 @@ impl StateMachineDemo {
         // Try to reactivate superseded policy
         println!("\n7. Attempting to reactivate superseded policy");
         match policy.reactivate() {
-            Err(e) => println!("   Error (expected): {}", e),
+            Err(e) => println!("   Error (expected): {e}"),
             Ok(_) => println!("   Unexpected success!"),
         }
 
@@ -195,7 +195,7 @@ impl StateMachineDemo {
         let mut document = Document::new(doc_id, info, content_cid);
 
         println!("1. Document created");
-        println!("   Has info component: {}", document.has_component::<DocumentInfoComponent>());
+        println!("   Has info component: {document.has_component::<DocumentInfoComponent>(}"));
 
         // Add lifecycle component to track status
         use cim_domain::{LifecycleComponent, DocumentStatus};
@@ -297,8 +297,8 @@ impl StateMachineDemo {
         println!("\n5. New document version created");
         if let Some(lc) = doc2.get_component::<LifecycleComponent>() {
             println!("   Status: {:?}", lc.status);
-            println!("   Version: {}", lc.version_number);
-            println!("   Supersedes previous: {}", lc.previous_version_cid.is_some());
+            println!("   Version: {lc.version_number}");
+            println!("   Supersedes previous: {lc.previous_version_cid.is_some(}"));
         }
 
         self.documents.push(doc2);
@@ -327,9 +327,9 @@ impl StateMachineDemo {
         println!("  Published → Superseded (by new version)");
 
         println!("\nDemonstrated Entities:");
-        println!("  - {} Agents", self.agents.len());
-        println!("  - {} Policies", self.policies.len());
-        println!("  - {} Documents", self.documents.len());
+        println!("  - {self.agents.len(} Agents"));
+        println!("  - {self.policies.len(} Policies"));
+        println!("  - {self.documents.len(} Documents"));
     }
 }
 

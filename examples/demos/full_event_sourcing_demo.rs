@@ -136,7 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         EventMetadata::default(),
     ).await?;
-    println!("✓ Registered person: {}", person_event.identity.legal_name);
+    println!("✓ Registered person: {person_event.identity.legal_name}");
 
     // 2. Create an organization
     let org_id = Uuid::new_v4();
@@ -156,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         EventMetadata::default(),
     ).await?;
-    println!("✓ Created organization: {}", org_event.name);
+    println!("✓ Created organization: {org_event.name}");
 
     // 3. Add person to organization
     let member_role = OrganizationRole {
@@ -207,7 +207,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         EventMetadata::default(),
     ).await?;
-    println!("✓ Deployed AI agent: {}", agent_event.metadata.name);
+    println!("✓ Deployed AI agent: {agent_event.metadata.name}");
 
     // 5. Define a location
     let location_id = Uuid::new_v4();
@@ -240,7 +240,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         EventMetadata::default(),
     ).await?;
-    println!("✓ Defined location: {}", location_event.name);
+    println!("✓ Defined location: {location_event.name}");
 
     // 6. Enact a policy
     let policy_id = Uuid::new_v4();
@@ -267,14 +267,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
         EventMetadata::default(),
     ).await?;
-    println!("✓ Enacted policy: {}", policy_event.metadata.name);
+    println!("✓ Enacted policy: {policy_event.metadata.name}");
 
     println!("\n=== Event Sourcing Features ===\n");
 
     // Demonstrate CID chain verification
     println!("1. CID Chain Verification:");
     let person_events = event_store.get_events(&person_id.to_string(), None).await?;
-    println!("   - Person aggregate has {} event(s)", person_events.len());
+    println!("   - Person aggregate has {person_events.len(} event(s)"));
     println!("   - CID chain verified: ✓");
 
     // Demonstrate event replay
@@ -289,46 +289,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = ReplayOptions::default();
 
     let stats = replay_service.replay_with_handler(&mut handler, options).await?;
-    println!("   - Replayed {} events", stats.events_processed);
-    println!("   - Processing took {}ms", stats.duration_ms);
+    println!("   - Replayed {stats.events_processed} events");
+    println!("   - Processing took {stats.duration_ms}ms");
 
     // Show projection results
     println!("\n3. Projection Results:");
     let final_projection = projection.lock().await;
-    println!("   - People: {}", final_projection.people.len());
+    println!("   - People: {final_projection.people.len(}"));
     for (id, name) in &final_projection.people {
-        println!("     • {} - {}", &id.to_string()[..8], name);
+        println!("     • {&id.to_string(} - {}")[..8], name);
     }
-    println!("   - Organizations: {}", final_projection.organizations.len());
+    println!("   - Organizations: {final_projection.organizations.len(}"));
     for (id, name) in &final_projection.organizations {
-        println!("     • {} - {}", &id.to_string()[..8], name);
+        println!("     • {&id.to_string(} - {}")[..8], name);
     }
-    println!("   - Agents: {}", final_projection.agents.len());
+    println!("   - Agents: {final_projection.agents.len(}"));
     for (id, (name, agent_type)) in &final_projection.agents {
-        println!("     • {} - {} ({:?})", &id.to_string()[..8], name, agent_type);
+        println!("     • {&id.to_string(} - {} ({:?})")[..8], name, agent_type);
     }
-    println!("   - Locations: {}", final_projection.locations.len());
+    println!("   - Locations: {final_projection.locations.len(}"));
     for (id, name) in &final_projection.locations {
-        println!("     • {} - {}", &id.to_string()[..8], name);
+        println!("     • {&id.to_string(} - {}")[..8], name);
     }
-    println!("   - Policies: {}", final_projection.policies.len());
+    println!("   - Policies: {final_projection.policies.len(}"));
     for (id, name) in &final_projection.policies {
-        println!("     • {} - {}", &id.to_string()[..8], name);
+        println!("     • {&id.to_string(} - {}")[..8], name);
     }
 
     // Demonstrate aggregate rebuilding
     println!("\n4. Aggregate Rebuilding:");
     let org_events = event_store.get_events(&org_id.to_string(), None).await?;
-    println!("   - Organization aggregate has {} event(s)", org_events.len());
+    println!("   - Organization aggregate has {org_events.len(} event(s)"));
     println!("   - Events: Created → Member Added");
 
     // Show event metadata
     println!("\n5. Event Metadata:");
     if let Some(first_event) = person_events.first() {
-        println!("   - Event ID: {}", first_event.event_id);
-        println!("   - Aggregate ID: {}", first_event.aggregate_id);
-        println!("   - Sequence: {}", first_event.sequence);
-        println!("   - Timestamp: {}", first_event.stored_at.format("%Y-%m-%d %H:%M:%S"));
+        println!("   - Event ID: {first_event.event_id}");
+        println!("   - Aggregate ID: {first_event.aggregate_id}");
+        println!("   - Sequence: {first_event.sequence}");
+        println!("   - Timestamp: {first_event.stored_at.format("%Y-%m-%d %H:%M:%S"}"));
     }
 
     println!("\n=== Demo Complete ===");

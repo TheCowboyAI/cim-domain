@@ -69,9 +69,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut markdown = String::new();
 
     // Header
-    markdown.push_str(&format!("# {} Component Reference\n\n", components.module));
-    markdown.push_str(&format!("**Version**: {}\n\n", components.version));
-    markdown.push_str(&format!("**Description**: {}\n\n", components.description));
+    markdown.push_str(&format!("# {components.module} Component Reference\n\n"));
+    markdown.push_str(&format!("**Version**: {components.version}\n\n"));
+    markdown.push_str(&format!("**Description**: {components.description}\n\n"));
 
     // Table of Contents
     markdown.push_str("## Table of Contents\n\n");
@@ -102,7 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     markdown.push_str("    end\n");
     markdown.push_str("    subgraph \"Entities\"\n");
     for entity in &components.core_entities {
-        markdown.push_str(&format!("        {}\n", entity.name));
+        markdown.push_str(&format!("        {entity.name}\n"));
     }
     markdown.push_str("    end\n");
     markdown.push_str("```\n\n");
@@ -110,17 +110,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Core Entities
     markdown.push_str("## Core Entities\n\n");
     for entity in &components.core_entities {
-        markdown.push_str(&format!("### {}\n\n", entity.name));
-        markdown.push_str(&format!("{}\n\n", entity.description));
+        markdown.push_str(&format!("### {entity.name}\n\n"));
+        markdown.push_str(&format!("{entity.description}\n\n"));
 
         markdown.push_str("**Events**:\n");
         for event in &entity.events {
-            markdown.push_str(&format!("- `{}`\n", event));
+            markdown.push_str(&format!("- `{event}`\n"));
         }
 
         markdown.push_str("\n**Commands**:\n");
         for command in &entity.commands {
-            markdown.push_str(&format!("- `{}`\n", command));
+            markdown.push_str(&format!("- `{command}`\n"));
         }
         markdown.push_str("\n");
     }
@@ -133,8 +133,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     modules.sort_by_key(|(name, _)| name.as_str());
 
     for (module_name, module_info) in modules {
-        markdown.push_str(&format!("### {} (`{}`)\n\n", module_name, module_info.file));
-        markdown.push_str(&format!("{}\n\n", module_info.description));
+        markdown.push_str(&format!("### {module_name} (`{module_info.file}`)\n\n"));
+        markdown.push_str(&format!("{module_info.description}\n\n"));
 
         // Group exports by type
         let mut traits = Vec::new();
@@ -156,7 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !traits.is_empty() {
             markdown.push_str("**Traits**:\n");
             for t in traits {
-                markdown.push_str(&format!("- `{}` - {}\n", t.name, t.description));
+                markdown.push_str(&format!("- `{t.name}` - {t.description}\n"));
             }
             markdown.push_str("\n");
         }
@@ -164,8 +164,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !structs.is_empty() {
             markdown.push_str("**Structs**:\n");
             for s in structs {
-                let generic = s.generic.as_ref().map(|g| format!("<{}>", g)).unwrap_or_default();
-                markdown.push_str(&format!("- `{}{}` - {}\n", s.name, generic, s.description));
+                let generic = s.generic.as_ref().map(|g| format!("<{g}>")).unwrap_or_default();
+                markdown.push_str(&format!("- `{s.name}{generic}` - {s.description}\n"));
             }
             markdown.push_str("\n");
         }
@@ -173,9 +173,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !enums.is_empty() {
             markdown.push_str("**Enums**:\n");
             for e in enums {
-                markdown.push_str(&format!("- `{}` - {}", e.name, e.description));
+                markdown.push_str(&format!("- `{e.name}` - {e.description}"));
                 if let Some(variants) = &e.variants {
-                    markdown.push_str(&format!(" ({})", variants.join(", ")));
+                    markdown.push_str(&format!(" ({variants.join(", "})")));
                 }
                 markdown.push_str("\n");
             }
@@ -185,8 +185,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !type_aliases.is_empty() {
             markdown.push_str("**Type Aliases**:\n");
             for ta in type_aliases {
-                let generic = ta.generic.as_ref().map(|g| format!("<{}>", g)).unwrap_or_default();
-                markdown.push_str(&format!("- `{}{}` - {}\n", ta.name, generic, ta.description));
+                let generic = ta.generic.as_ref().map(|g| format!("<{g}>")).unwrap_or_default();
+                markdown.push_str(&format!("- `{ta.name}{generic}` - {ta.description}\n"));
             }
             markdown.push_str("\n");
         }
@@ -196,14 +196,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     markdown.push_str("## Statistics\n\n");
     markdown.push_str("| Type | Count |\n");
     markdown.push_str("|------|-------|\n");
-    markdown.push_str(&format!("| Traits | {} |\n", components.statistics.traits));
-    markdown.push_str(&format!("| Enums | {} |\n", components.statistics.enums));
-    markdown.push_str(&format!("| Structs | {} |\n", components.statistics.structs));
-    markdown.push_str(&format!("| Type Aliases | {} |\n", components.statistics.type_aliases));
-    markdown.push_str(&format!("| Core Entities | {} |\n", components.statistics.core_entities));
-    markdown.push_str(&format!("| Event Types | {} |\n", components.statistics.event_types));
-    markdown.push_str(&format!("| Command Types | {} |\n", components.statistics.command_types));
-    markdown.push_str(&format!("| **Total Public Types** | **{}** |\n\n", components.statistics.total_public_types));
+    markdown.push_str(&format!("| Traits | {components.statistics.traits} |\n"));
+    markdown.push_str(&format!("| Enums | {components.statistics.enums} |\n"));
+    markdown.push_str(&format!("| Structs | {components.statistics.structs} |\n"));
+    markdown.push_str(&format!("| Type Aliases | {components.statistics.type_aliases} |\n"));
+    markdown.push_str(&format!("| Core Entities | {components.statistics.core_entities} |\n"));
+    markdown.push_str(&format!("| Event Types | {components.statistics.event_types} |\n"));
+    markdown.push_str(&format!("| Command Types | {components.statistics.command_types} |\n"));
+    markdown.push_str(&format!("| **Total Public Types** | **{components.statistics.total_public_types}** |\n\n"));
 
     // Type Index
     markdown.push_str("## Type Index\n\n");
@@ -219,14 +219,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     all_types.sort_by(|a, b| a.0.cmp(&b.0));
 
     for (name, type_kind, module) in all_types {
-        markdown.push_str(&format!("- `{}` ({}) - [{}](#{})\n", name, type_kind, module, module));
+        markdown.push_str(&format!("- `{name}` ({type_kind}) - [{module}](#{module})\n"));
     }
 
     // Write the markdown file
     let output_path = Path::new("doc/design/components-generated.md");
     fs::write(output_path, markdown)?;
 
-    println!("Generated markdown documentation at: {}", output_path.display());
+    println!("Generated markdown documentation at: {output_path.display(}"));
 
     Ok(())
 }

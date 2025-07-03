@@ -99,18 +99,14 @@ impl DomainEventStore {
             if !indices.is_empty() {
                 let last_event = &self.events[indices[indices.len() - 1]].0;
                 if event.version != last_event.version + 1 {
-                    return Err(format!(
-                        "Version mismatch: expected {}, got {}",
-                        last_event.version + 1,
-                        event.version
-                    ));
+                    return Err(format!("Version mismatch: expected {last_event.version + 1}, got {event.version}"));
                 }
             }
         }
         
         // Serialize event for CID calculation
         let event_bytes = serde_json::to_vec(&event)
-            .map_err(|e| format!("Serialization error: {}", e))?;
+            .map_err(|e| format!("Serialization error: {e}"))?;
         
         let cid = DomainCid::from_aggregate_event(
             &event_bytes,
@@ -132,7 +128,7 @@ impl DomainEventStore {
 
     pub fn validate_aggregate_chain(&self, aggregate_id: &str) -> Result<(DomainCid, DomainCid, usize), String> {
         let indices = self.aggregate_streams.get(aggregate_id)
-            .ok_or_else(|| format!("No events for aggregate {}", aggregate_id))?;
+            .ok_or_else(|| format!("No events for aggregate {aggregate_id}"))?;
         
         if indices.is_empty() {
             return Err("No events in aggregate stream".to_string());
@@ -144,10 +140,7 @@ impl DomainEventStore {
             let (_, expected_prev_cid, _) = &self.events[indices[i - 1]];
             
             if prev_cid.as_ref() != Some(expected_prev_cid) {
-                return Err(format!(
-                    "Chain broken at position {} for aggregate {}",
-                    i, aggregate_id
-                ));
+                return Err(format!("Chain broken at position {i} for aggregate {aggregate_id}"));
             }
         }
 
@@ -157,10 +150,7 @@ impl DomainEventStore {
             let previous_event = &self.events[indices[i - 1]].0;
             
             if current_event.version != previous_event.version + 1 {
-                return Err(format!(
-                    "Version sequence broken at position {}: expected {}, got {}",
-                    i, previous_event.version + 1, current_event.version
-                ));
+                return Err(format!("Version sequence broken at position {i}: expected {previous_event.version + 1}, got {current_event.version}"));
             }
         }
 
@@ -186,7 +176,7 @@ impl DomainEventStore {
         state: serde_json::Value,
     ) -> Result<(), String> {
         let indices = self.aggregate_streams.get(aggregate_id)
-            .ok_or_else(|| format!("No events for aggregate {}", aggregate_id))?;
+            .ok_or_else(|| format!("No events for aggregate {aggregate_id}"))?;
         
         if indices.is_empty() {
             return Err("Cannot snapshot aggregate with no events".to_string());
@@ -339,10 +329,10 @@ mod tests {
         // Add events for aggregate
         for i in 1..=3 {
             let event = AggregateEvent {
-                event_id: format!("evt_{}", i),
+                event_id: format!("evt_{i}"),
                 aggregate_id: aggregate_id.to_string(),
                 aggregate_type: "Product".to_string(),
-                event_type: format!("Event{}", i),
+                event_type: format!("Event{i}"),
                 sequence: i as u64,
                 version: i as u64,
                 payload: json!({ "data": i }),
@@ -375,7 +365,7 @@ mod tests {
         // Add some events
         for i in 1..=5 {
             let event = AggregateEvent {
-                event_id: format!("evt_{}", i),
+                event_id: format!("evt_{i}"),
                 aggregate_id: aggregate_id.to_string(),
                 aggregate_type: "Account".to_string(),
                 event_type: "BalanceUpdated".to_string(),

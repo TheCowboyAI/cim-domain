@@ -57,19 +57,17 @@ fn main() {
 
     match person_handler.handle(query) {
         Ok(Some(person)) => {
-            println!("✓ Found person: {} ({})",
-                person.legal_name,
-                person.preferred_name.as_deref().unwrap_or("no preferred name")
+            println!("✓ Found person: {person.legal_name} ({person.preferred_name.as_deref(})").unwrap_or("no preferred name")
             );
             if let Some(org) = &person.organization_name {
-                println!("  Organization: {}", org);
+                println!("  Organization: {org}");
             }
             if !person.roles.is_empty() {
-                println!("  Roles: {}", person.roles.join(", "));
+                println!("  Roles: {person.roles.join(", "}"));
             }
         }
         Ok(None) => println!("✗ Person not found"),
-        Err(e) => println!("✗ Query failed: {}", e),
+        Err(e) => println!("✗ Query failed: {e}"),
     }
 
     // Example 2: Find people by organization
@@ -82,15 +80,13 @@ fn main() {
 
     match person_handler.handle(query) {
         Ok(people) => {
-            println!("✓ Found {} people in organization", people.len());
+            println!("✓ Found {people.len(} people in organization"));
             for person in people {
-                println!("  - {} ({})",
-                    person.legal_name,
-                    person.email.as_deref().unwrap_or("no email")
+                println!("  - {person.legal_name} ({person.email.as_deref(})").unwrap_or("no email")
                 );
             }
         }
-        Err(e) => println!("✗ Query failed: {}", e),
+        Err(e) => println!("✗ Query failed: {e}"),
     }
 
     // Example 3: Find locations by type
@@ -102,18 +98,16 @@ fn main() {
 
     match location_handler.handle(query) {
         Ok(locations) => {
-            println!("✓ Found {} physical locations", locations.len());
+            println!("✓ Found {locations.len(} physical locations"));
             for location in locations {
-                println!("  - {} ({})",
-                    location.name,
-                    location.address.as_deref().unwrap_or("no address")
+                println!("  - {location.name} ({location.address.as_deref(})").unwrap_or("no address")
                 );
                 if let Some((lat, lon)) = location.coordinates {
                     println!("    Coordinates: {:.4}, {:.4}", lat, lon);
                 }
             }
         }
-        Err(e) => println!("✗ Query failed: {}", e),
+        Err(e) => println!("✗ Query failed: {e}"),
     }
 
     // Example 4: Find active policies
@@ -125,16 +119,12 @@ fn main() {
 
     match policy_handler.handle(query) {
         Ok(policies) => {
-            println!("✓ Found {} active global policies", policies.len());
+            println!("✓ Found {policies.len(} active global policies"));
             for policy in policies {
-                println!("  - {} (Type: {}, Status: {})",
-                    policy.name,
-                    policy.policy_type,
-                    policy.status
-                );
+                println!("  - {policy.name} (Type: {policy.policy_type}, Status: {policy.status})");
             }
         }
-        Err(e) => println!("✗ Query failed: {}", e),
+        Err(e) => println!("✗ Query failed: {e}"),
     }
 
     // Example 5: Find agents by capability
@@ -146,17 +136,13 @@ fn main() {
 
     match agent_handler.handle(query) {
         Ok(agents) => {
-            println!("✓ Found {} agents with text-generation capability", agents.len());
+            println!("✓ Found {agents.len(} agents with text-generation capability"));
             for agent in agents {
-                println!("  - {} (Type: {}, Status: {})",
-                    agent.name,
-                    agent.agent_type,
-                    agent.status
-                );
-                println!("    Capabilities: {}", agent.capabilities.join(", "));
+                println!("  - {agent.name} (Type: {agent.agent_type}, Status: {agent.status})");
+                println!("    Capabilities: {agent.capabilities.join(", "}"));
             }
         }
-        Err(e) => println!("✗ Query failed: {}", e),
+        Err(e) => println!("✗ Query failed: {e}"),
     }
 
     // Example 6: Find running workflows
@@ -168,17 +154,13 @@ fn main() {
 
     match workflow_handler.handle(query) {
         Ok(workflows) => {
-            println!("✓ Found {} running workflows", workflows.len());
+            println!("✓ Found {workflows.len(} running workflows"));
             for workflow in workflows {
-                println!("  - {} (State: {}, Transitions: {})",
-                    workflow.definition_name,
-                    workflow.current_state,
-                    workflow.transition_count
-                );
-                println!("    Started: {}", workflow.started_at);
+                println!("  - {workflow.definition_name} (State: {workflow.current_state}, Transitions: {workflow.transition_count})");
+                println!("    Started: {workflow.started_at}");
             }
         }
-        Err(e) => println!("✗ Query failed: {}", e),
+        Err(e) => println!("✗ Query failed: {e}"),
     }
 
     println!("\n=== Query Handler Example Complete ===");

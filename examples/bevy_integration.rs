@@ -4,16 +4,23 @@
 //! to Bevy ECS commands using our subject-based routing pattern.
 
 use cim_domain::{
-    // Events
-    PersonRegistered, OrganizationCreated, AgentDeployed,
-    EventMetadata, DomainEventEnvelope, PropagationScope,
-
+    AgentDeployed,
+    BevyCommand,
+    BevyEvent,
+    BevyEventRouter,
+    DomainEventEnvelope,
+    EventMetadata,
+    MessageTranslator,
+    NatsMessage,
     // Bevy bridge
-    NatsToBevyTranslator, BevyEventRouter, NatsMessage,
-    BevyCommand, BevyEvent, MessageTranslator,
+    NatsToBevyTranslator,
+    OrganizationCreated,
+    // Events
+    PersonRegistered,
+    PropagationScope,
 };
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 fn main() {
     println!("=== CIM Domain Bevy Integration Example ===\n");
@@ -66,12 +73,16 @@ fn main() {
 
     // Translate to Bevy command
     match translator.translate(nats_msg) {
-        Ok(BevyCommand::SpawnEntity { entity_id, components, parent }) => {
+        Ok(BevyCommand::SpawnEntity {
+            entity_id,
+            components,
+            parent,
+        }) => {
             println!("  ✓ Translated to SpawnEntity command");
-            println!("    Entity ID: {}", entity_id);
+            println!("    Entity ID: {entity_id}");
             println!("    Components:");
             for comp in &components {
-                println!("      - {}: {:?}", comp.component_type, comp.data);
+                println!("      - {comp.component_type}: {:?}", comp.data);
             }
             println!("    Parent: {:?}", parent);
         }
@@ -100,9 +111,13 @@ fn main() {
     };
 
     match translator.translate(nats_msg) {
-        Ok(BevyCommand::SpawnEntity { entity_id, components, .. }) => {
+        Ok(BevyCommand::SpawnEntity {
+            entity_id,
+            components,
+            ..
+        }) => {
             println!("  ✓ Translated to SpawnEntity command");
-            println!("    Entity ID: {}", entity_id);
+            println!("    Entity ID: {entity_id}");
             println!("    Organization type: Corporation");
             println!("    Transform scale: 1.5x (organizations are larger)");
         }
@@ -132,9 +147,11 @@ fn main() {
     };
 
     match translator.translate(nats_msg) {
-        Ok(BevyCommand::SpawnEntity { entity_id, parent, .. }) => {
+        Ok(BevyCommand::SpawnEntity {
+            entity_id, parent, ..
+        }) => {
             println!("  ✓ Translated to SpawnEntity command");
-            println!("    Entity ID: {}", entity_id);
+            println!("    Entity ID: {entity_id}");
             println!("    Parent (owner): {:?}", parent);
             println!("    Capabilities: chat, search");
         }
@@ -150,7 +167,7 @@ fn main() {
     };
 
     let subject = router.route_event(&select_event);
-    println!("  Entity selected → Subject: {}", subject);
+    println!("  Entity selected → Subject: {subject}");
 
     let move_event = BevyEvent::EntityMoved {
         entity_id: person_id,
@@ -159,7 +176,7 @@ fn main() {
     };
 
     let subject = router.route_event(&move_event);
-    println!("  Entity moved → Subject: {}", subject);
+    println!("  Entity moved → Subject: {subject}");
 
     let create_event = BevyEvent::EntityCreationRequested {
         entity_type: "Agent".to_string(),
@@ -171,7 +188,7 @@ fn main() {
     };
 
     let subject = router.route_event(&create_event);
-    println!("  Creation requested → Subject: {}", subject);
+    println!("  Creation requested → Subject: {subject}");
 
     // Example 5: Subject pattern matching
     println!("\n5. Subject Pattern Benefits:");

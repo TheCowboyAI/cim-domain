@@ -46,10 +46,10 @@ async fn create_test_event_store(test_name: &str) -> Result<JetStreamEventStore,
         .map_err(|e| EventStoreError::ConnectionError(e.to_string()))?;
 
     let config = JetStreamConfig {
-        stream_name: format!("TEST-EVENTS-{}", test_name.to_uppercase()),
-        stream_subjects: vec![format!("test.{}.events.>", test_name)],
+        stream_name: format!("TEST-EVENTS-{test_name.to_uppercase(}")),
+        stream_subjects: vec![format!("test.{test_name}.events.>")],
         cache_size: 10_000,
-        subject_prefix: format!("test.{}", test_name),
+        subject_prefix: format!("test.{test_name}"),
     };
 
     JetStreamEventStore::new(client.client().clone(), config).await
@@ -314,10 +314,10 @@ async fn test_jetstream_event_filtering() {
         .map(|i| {
             DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
                 workflow_id: workflow_id.clone(),
-                from_state: format!("state-{}", i),
-                to_state: format!("state-{}", i + 1),
+                from_state: format!("state-{i}"),
+                to_state: format!("state-{i + 1}"),
                 input: json!({"step": i}),
-                output: json!({"result": format!("step-{}-complete", i)}),
+                output: json!({"result": format!("step-{i}-complete")}),
                 executed_at: Utc::now(),
             })
         })
@@ -338,9 +338,9 @@ async fn test_jetstream_event_filtering() {
 
     // Get all events
     let all_events = store.get_events(aggregate_id, None).await.unwrap();
-    println!("DEBUG: Retrieved {} events for aggregate {}", all_events.len(), aggregate_id);
+    println!("DEBUG: Retrieved {all_events.len(} events for aggregate {}"), aggregate_id);
     for (i, event) in all_events.iter().enumerate() {
-        println!("  Event {}: aggregate_id={}, sequence={}", i, event.aggregate_id, event.sequence);
+        println!("  Event {i}: aggregate_id={event.aggregate_id}, sequence={event.sequence}");
     }
     assert_eq!(all_events.len(), 10);
 
@@ -390,7 +390,7 @@ async fn test_jetstream_multiple_aggregates() {
             DomainEventEnum::WorkflowStarted(WorkflowStarted {
                 workflow_id: workflow_id.clone(),
                 definition_id: definition_id.clone(),
-                initial_state: format!("initial-{}", agg_id),
+                initial_state: format!("initial-{agg_id}"),
                 started_at: Utc::now(),
             }),
         ];

@@ -136,7 +136,7 @@ impl DomainEvent for ExampleEvent {
     }
 
     fn subject(&self) -> String {
-        format!("example.aggregate.{}.v1", self.event_type().to_lowercase())
+        format!("example.aggregate.{self.event_type(}.v1").to_lowercase())
     }
 }
 
@@ -151,7 +151,7 @@ impl<R: AggregateRepository<ExampleAggregate>> ExampleCommandHandler<R> {
         &self,
         envelope: CommandEnvelope<ExampleCommand>,
     ) -> DomainResult<CommandStatus> {
-        println!("📋 Processing {} command", envelope.payload.command_type());
+        println!("📋 Processing {envelope.payload.command_type(} command"));
         
         let aggregate_id = EntityId::<AggregateMarker>::new();
         
@@ -278,12 +278,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Example 3: Published Events ===");
     
     let published = event_publisher.get_published_events().await;
-    println!("Total events published: {}", published.len());
+    println!("Total events published: {published.len(}"));
     
     for (i, (event, correlation_id)) in published.iter().enumerate() {
-        println!("{}. Event: {} (Correlation: {})", 
-            i + 1,
-            event.event_type(),
+        println!("{i + 1}. Event: {event.event_type(} (Correlation: {})"),
             &correlation_id.to_string()[..8]
         );
     }

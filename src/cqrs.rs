@@ -516,7 +516,7 @@ mod tests {
     fn test_correlation_id_display() {
         let command_id = CommandId::new();
         let correlation = CorrelationId(IdType::Uuid(*command_id.as_uuid()));
-        let display = format!("{}", correlation);
+        let display = format!("{correlation}");
         assert!(display.starts_with("correlation:"));
         assert!(display.contains(&command_id.as_uuid().to_string()));
     }
@@ -526,7 +526,7 @@ mod tests {
     fn test_causation_id_display() {
         let query_id = QueryId::new();
         let causation = CausationId(IdType::Uuid(*query_id.as_uuid()));
-        let display = format!("{}", causation);
+        let display = format!("{causation}");
         assert!(display.starts_with("causation:"));
         assert!(display.contains(&query_id.as_uuid().to_string()));
     }

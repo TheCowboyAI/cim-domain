@@ -74,7 +74,7 @@ impl WorkflowWriteModel {
             .map_err(|e| DomainError::Infrastructure(e.to_string()))?;
         }
         
-        println!("   Generated {} events", new_events.len());
+        println!("   Generated {new_events.len(} events"));
         Ok(new_events)
     }
 }
@@ -153,7 +153,7 @@ impl WorkflowReadModel {
                 // Update context graph
                 let mut graph = self.context_graph.write().await;
                 graph.add_node(ContextNode {
-                    id: format!("workflow_{}", e.workflow_id),
+                    id: format!("workflow_{e.workflow_id}"),
                     node_type: "Workflow".to_string(),
                     properties: json!({
                         "workflow_id": e.workflow_id.to_string(),
@@ -192,8 +192,8 @@ impl WorkflowReadModel {
                 let mut graph = self.context_graph.write().await;
                 
                 // Add nodes if not exists
-                let from_id = format!("node_{}", e.from_node);
-                let to_id = format!("node_{}", e.to_node);
+                let from_id = format!("node_{e.from_node}");
+                let to_id = format!("node_{e.to_node}");
                 
                 graph.add_node(ContextNode {
                     id: from_id.clone(),
@@ -234,7 +234,7 @@ impl WorkflowReadModel {
                 
                 // Update context graph
                 let mut graph = self.context_graph.write().await;
-                if let Some(node) = graph.get_node_mut(&format!("workflow_{}", e.workflow_id)) {
+                if let Some(node) = graph.get_node_mut(&format!("workflow_{e.workflow_id}")) {
                     node.properties["status"] = json!("completed");
                     node.properties["completed_at"] = json!(Utc::now().to_rfc3339());
                     node.properties["final_state"] = json!(e.final_state);
@@ -358,7 +358,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     
     for (i, (from, to, data)) in transitions.iter().enumerate() {
-        println!("   Transition {}: {} → {}", i + 1, from, to);
+        println!("   Transition {i + 1}: {from} → {to}");
         
         let events = write_model.process_command(
             &workflow_id,
@@ -389,7 +389,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("1. Current workflow state:");
     if let Some(state) = read_model.get_workflow_state(&workflow_id).await {
         println!("   Status: {:?}", state.status);
-        println!("   Transitions: {}", state.transitions.len());
+        println!("   Transitions: {state.transitions.len(}"));
         println!("   Started: {:?}", state.started_at);
         println!("   Completed: {:?}", state.completed_at);
     }
@@ -397,13 +397,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Query active workflows
     println!("\n2. Active workflows:");
     let active = read_model.get_active_workflows().await;
-    println!("   Count: {}", active.len());
+    println!("   Count: {active.len(}"));
     
     // Query performance metrics
     println!("\n3. Transition performance:");
     for ((from, to), _) in transitions.iter().take(2) {
         if let Some(avg_time) = read_model.get_average_transition_time(from, to).await {
-            println!("   {} → {}: {:?} average", from, to, avg_time);
+            println!("   {from} → {to}: {:?} average", avg_time);
         }
     }
     
@@ -412,12 +412,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Export as JSON
     println!("1. JSON Export:");
     let json_export = read_model.export_graph_json().await;
-    println!("{}", serde_json::to_string_pretty(&json_export)?);
+    println!("{serde_json::to_string_pretty(&json_export}")?);
     
     // Export as DOT
     println!("\n2. DOT Export (for Graphviz):");
     let dot_export = read_model.export_graph_dot().await;
-    println!("{}", dot_export);
+    println!("{dot_export}");
     
     println!("\n=== CQRS Benefits Demonstrated ===");
     println!("✅ Write model optimized for business logic and consistency");

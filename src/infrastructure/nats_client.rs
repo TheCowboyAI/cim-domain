@@ -133,7 +133,7 @@ impl NatsClient {
         let client = options
             .connect(&config.url)
             .await
-            .map_err(|e| NatsError::ConnectionFailed(format!("Failed to connect to {}: {}", config.url, e)))?;
+            .map_err(|e| NatsError::ConnectionFailed(format!("Failed to connect to {}: {e}", config.url)))?;
 
                 // Create JetStream context
         let jetstream = jetstream::new(client.clone());

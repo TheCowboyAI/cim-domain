@@ -52,13 +52,13 @@ impl EventStreamProcessor {
         aggregate_id: &str,
         events: Vec<DomainEventEnum>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🔄 Processing event stream for aggregate: {}", aggregate_id);
+        println!("🔄 Processing event stream for aggregate: {aggregate_id}");
         
         let mut previous_cid: Option<String> = None;
         let mut stored_events = Vec::new();
         
         for (i, event) in events.iter().enumerate() {
-            println!("\n📌 Event {}: {}", i + 1, event_type_name(event));
+            println!("\n📌 Event {i + 1}: {event_type_name(event}"));
             
             // Store event with CID chain
             let stored = self.event_store
@@ -67,13 +67,10 @@ impl EventStreamProcessor {
             
             // Verify CID chain
             if let Some(prev) = &previous_cid {
-                println!("   CID Chain: {} → {}", 
-                    &prev[..8], 
-                    &stored.event_cid().unwrap_or_default()[..8]
+                println!("   CID Chain: {&prev[..8]} → {&stored.event_cid(}").unwrap_or_default()[..8]
                 );
             } else {
-                println!("   CID Chain: Genesis → {}", 
-                    &stored.event_cid().unwrap_or_default()[..8]
+                println!("   CID Chain: Genesis → {&stored.event_cid(}").unwrap_or_default()[..8]
                 );
             }
             
@@ -95,7 +92,7 @@ impl EventStreamProcessor {
         aggregate_id: &str,
         from_time: DateTime<Utc>,
     ) -> Result<Vec<StoredEvent>, Box<dyn std::error::Error>> {
-        println!("\n⏮️ Replaying events from: {}", from_time);
+        println!("\n⏮️ Replaying events from: {from_time}");
         
         let all_events = self.event_store
             .load_events(aggregate_id)
@@ -106,12 +103,10 @@ impl EventStreamProcessor {
             .filter(|e| e.timestamp() > from_time)
             .collect();
         
-        println!("   Found {} events to replay", replayed.len());
+        println!("   Found {replayed.len(} events to replay"));
         
         for (i, event) in replayed.iter().enumerate() {
-            println!("   {}. {} at {}", 
-                i + 1,
-                event.event_type(),
+            println!("   {i + 1}. {event.event_type(} at {}"),
                 event.timestamp().format("%H:%M:%S")
             );
         }
@@ -124,7 +119,7 @@ impl EventStreamProcessor {
         &self,
         correlation_id: &CorrelationId,
     ) -> Result<Vec<StoredEvent>, Box<dyn std::error::Error>> {
-        println!("\n🔗 Finding correlation chain for: {}", correlation_id);
+        println!("\n🔗 Finding correlation chain for: {correlation_id}");
         
         let mut correlated_events = Vec::new();
         
@@ -141,7 +136,7 @@ impl EventStreamProcessor {
         // Sort by timestamp
         correlated_events.sort_by_key(|e| e.timestamp());
         
-        println!("   Found {} correlated events", correlated_events.len());
+        println!("   Found {correlated_events.len(} correlated events"));
         Ok(correlated_events)
     }
     
@@ -150,7 +145,7 @@ impl EventStreamProcessor {
         &self,
         root_event_id: &str,
     ) -> Result<CausationTree, Box<dyn std::error::Error>> {
-        println!("\n🌳 Building causation tree from: {}", &root_event_id[..8]);
+        println!("\n🌳 Building causation tree from: {&root_event_id[..8]}");
         
         let mut tree = CausationTree::new(root_event_id.to_string());
         let chains = self.event_chains.read().await;
@@ -177,7 +172,7 @@ impl EventStreamProcessor {
             }
         }
         
-        println!("   Tree contains {} events", tree.size());
+        println!("   Tree contains {tree.size(} events"));
         Ok(tree)
     }
 }
@@ -227,7 +222,7 @@ impl CausationTree {
     fn print(&self, id: &str, depth: usize) {
         if let Some(node) = self.nodes.get(id) {
             let indent = "  ".repeat(depth);
-            println!("{}├─ {} ({})", indent, &node.event_id[..8], node.event_type);
+            println!("{indent}├─ {&node.event_id[..8]} ({node.event_type})");
             
             for child in &node.children {
                 self.print(child, depth + 1);
@@ -267,7 +262,7 @@ impl EventMonitor {
         let counts = self.event_count.read().await;
         println!("\n   Event Counts:");
         for (event_type, count) in counts.iter() {
-            println!("     {}: {}", event_type, count);
+            println!("     {event_type}: {count}");
         }
         
         // Latency stats
@@ -310,7 +305,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create correlation context
     let correlation_id = CorrelationId::from_uuid(Uuid::new_v4());
-    println!("📍 Correlation ID: {}", correlation_id);
+    println!("📍 Correlation ID: {correlation_id}");
     
     // Example 1: Simple event stream
     println!("\n=== Example 1: Basic Event Stream ===");
@@ -353,17 +348,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let replay_from = Utc::now() - chrono::Duration::seconds(5);
     let replayed = processor.replay_from_timestamp(&workflow_id.to_string(), replay_from).await?;
-    println!("   Replayed {} events", replayed.len());
+    println!("   Replayed {replayed.len(} events"));
     
     // Example 3: Correlation chain
     println!("\n=== Example 3: Correlation Chain ===");
     
     let correlated = processor.find_correlation_chain(&correlation_id).await?;
-    println!("   Chain contains {} events:", correlated.len());
+    println!("   Chain contains {correlated.len(} events:"));
     for (i, event) in correlated.iter().enumerate() {
-        println!("     {}. {} at {}", 
-            i + 1,
-            event.event_type(),
+        println!("     {i + 1}. {event.event_type(} at {}"),
             event.timestamp().format("%H:%M:%S")
         );
     }
@@ -381,7 +374,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Example 5: Cross-Domain Event Flow ===");
     
     // Simulate cross-domain events
-    let graph_aggregate_id = format!("graph_{}", GraphId::new());
+    let graph_aggregate_id = format!("graph_{GraphId::new(}"));
     let cross_domain_events = vec![
         // Workflow event causes graph update
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
@@ -408,7 +401,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     println!("\n   Cross-domain flow established:");
     println!("   Workflow Domain → Graph Domain");
-    println!("   (via correlation ID: {})", &correlation_id.to_string()[..8]);
+    println!("   (via correlation ID: {&correlation_id.to_string(})")[..8]);
     
     // Print statistics
     monitor.print_statistics().await;

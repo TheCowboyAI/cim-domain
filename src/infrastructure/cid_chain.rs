@@ -219,10 +219,7 @@ pub fn verify_event_chain(events: &[EventWithCid]) -> Result<(), CidError> {
             }
             (Some(prev), Some(prev_cid)) => {
                 if prev.cid != *prev_cid {
-                    return Err(CidError::ChainError(format!(
-                        "CID chain broken at index {}: expected {:?}, got {:?}",
-                        i, prev.cid, prev_cid
-                    )));
+                    return Err(CidError::ChainError(format!("CID chain broken at index {i}: expected {:?}, got {:?}", prev.cid, prev_cid)));
                 }
             }
             _ => {

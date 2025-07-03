@@ -150,20 +150,11 @@ impl EventHandler for AggregateRebuilder {
 
         // In production, this would log to monitoring system
         if stats.errors > 0 {
-            eprintln!("Replay completed with errors: {} events processed, {} errors, {} aggregates rebuilt in {}ms ({:.2} events/sec)",
-                stats.events_processed,
-                stats.errors,
-                aggregates_count,
-                stats.duration_ms,
-                stats.events_per_second
-            );
+            eprintln!("Replay completed with errors: {} events processed, {} errors, {} aggregates rebuilt in {}ms ({:.2} events/sec)", 
+                stats.events_processed, stats.errors, aggregates_count, stats.duration_ms, stats.events_per_second);
         } else {
-            println!("Replay completed successfully: {} events processed, {} aggregates rebuilt in {}ms ({:.2} events/sec)",
-                stats.events_processed,
-                aggregates_count,
-                stats.duration_ms,
-                stats.events_per_second
-            );
+            println!("Replay completed successfully: {} events processed, {} aggregates rebuilt in {}ms ({:.2} events/sec)", 
+                stats.events_processed, aggregates_count, stats.duration_ms, stats.events_per_second);
         }
 
         Ok(())
