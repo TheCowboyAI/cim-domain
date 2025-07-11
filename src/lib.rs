@@ -26,7 +26,7 @@
 
 mod component;
 mod entity;
-mod identifiers;
+pub mod identifiers;
 mod node_types;
 mod relationship_types;
 mod context_types;

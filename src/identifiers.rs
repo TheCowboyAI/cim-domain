@@ -190,18 +190,22 @@ pub type WorkflowId = EntityId<markers::WorkflowMarker>;
 /// Marker types for different entity kinds
 pub mod markers {
     /// Marker for Person entities
+    #[allow(dead_code)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct PersonMarker;
 
     /// Marker for Location entities
+    #[allow(dead_code)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct LocationMarker;
 
     /// Marker for Organization entities
+    #[allow(dead_code)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct OrganizationMarker;
 
     /// Marker for Agent entities
+    #[allow(dead_code)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct AgentMarker;
 
@@ -210,6 +214,7 @@ pub mod markers {
 
 
     /// Marker for ConceptGraph entities
+    #[allow(dead_code)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct ConceptGraphMarker;
 
