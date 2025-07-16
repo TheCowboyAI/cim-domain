@@ -60,6 +60,72 @@ pub trait State: Debug + Clone + PartialEq + Eq + Send + Sync {
 }
 
 /// Moore Machine: Output depends only on current state
+///
+/// # Examples
+///
+/// ```rust
+/// use cim_domain::state_machine::{State, MooreStateTransitions, TransitionOutput};
+/// use cim_domain::DomainEvent;
+/// 
+/// #[derive(Debug, Clone, PartialEq, Eq)]
+/// enum TrafficLight {
+///     Red,
+///     Yellow,
+///     Green,
+/// }
+/// 
+/// #[derive(Debug, Clone)]
+/// struct LightOutput {
+///     message: String,
+/// }
+/// 
+/// impl TransitionOutput for LightOutput {
+///     fn to_events(&self) -> Vec<Box<dyn DomainEvent>> {
+///         vec![] // Example: no events
+///     }
+/// }
+/// 
+/// impl State for TrafficLight {
+///     fn name(&self) -> &'static str {
+///         match self {
+///             TrafficLight::Red => "Red",
+///             TrafficLight::Yellow => "Yellow",
+///             TrafficLight::Green => "Green",
+///         }
+///     }
+/// }
+/// 
+/// impl MooreStateTransitions for TrafficLight {
+///     type Output = LightOutput;
+///     
+///     fn can_transition_to(&self, target: &Self) -> bool {
+///         match (self, target) {
+///             (TrafficLight::Red, TrafficLight::Green) => true,
+///             (TrafficLight::Green, TrafficLight::Yellow) => true,
+///             (TrafficLight::Yellow, TrafficLight::Red) => true,
+///             _ => false,
+///         }
+///     }
+///     
+///     fn valid_transitions(&self) -> Vec<Self> {
+///         match self {
+///             TrafficLight::Red => vec![TrafficLight::Green],
+///             TrafficLight::Green => vec![TrafficLight::Yellow],
+///             TrafficLight::Yellow => vec![TrafficLight::Red],
+///         }
+///     }
+///     
+///     fn entry_output(&self) -> Self::Output {
+///         LightOutput {
+///             message: format!("Light is now {}", self.name()),
+///         }
+///     }
+/// }
+/// 
+/// let light = TrafficLight::Red;
+/// assert!(light.can_transition_to(&TrafficLight::Green));
+/// assert!(!light.can_transition_to(&TrafficLight::Yellow));
+/// ```
 pub trait MooreStateTransitions: State {
     /// The output type for this state machine
     type Output: TransitionOutput;
@@ -473,7 +539,7 @@ mod tests {
         struct DocumentAggregate;
         impl AggregateRoot for DocumentAggregate {
             type Id = EntityId<DocumentAggregate>;
-            fn id(&self) -> Self::Id { unimplemented!() }
+            fn id(&self) -> Self::Id { EntityId::<DocumentAggregate>::new() }
             fn version(&self) -> u64 { 0 }
             fn increment_version(&mut self) {}
         }
@@ -503,7 +569,7 @@ mod tests {
         struct DocumentAggregate;
         impl AggregateRoot for DocumentAggregate {
             type Id = EntityId<DocumentAggregate>;
-            fn id(&self) -> Self::Id { unimplemented!() }
+            fn id(&self) -> Self::Id { EntityId::<DocumentAggregate>::new() }
             fn version(&self) -> u64 { 0 }
             fn increment_version(&mut self) {}
         }

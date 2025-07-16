@@ -99,7 +99,7 @@ impl DomainEventStore {
             if !indices.is_empty() {
                 let last_event = &self.events[indices[indices.len() - 1]].0;
                 if event.version != last_event.version + 1 {
-                    return Err(format!("Version mismatch: expected {last_event.version + 1}, got {event.version}"));
+                    return Err(format!("Version mismatch: expected {}, got {}", last_event.version + 1, event.version));
                 }
             }
         }
@@ -150,7 +150,7 @@ impl DomainEventStore {
             let previous_event = &self.events[indices[i - 1]].0;
             
             if current_event.version != previous_event.version + 1 {
-                return Err(format!("Version sequence broken at position {i}: expected {previous_event.version + 1}, got {current_event.version}"));
+                return Err(format!("Version sequence broken at position {}: expected {}, got {}", i, previous_event.version + 1, current_event.version));
             }
         }
 

@@ -25,6 +25,8 @@
 #![warn(missing_docs)]
 
 mod component;
+mod component_sync;
+mod domain_component_bridge;
 mod entity;
 pub mod identifiers;
 mod node_types;
@@ -39,16 +41,21 @@ mod domain_events;
 mod commands;
 mod command_handlers;
 mod query_handlers;
-mod bevy_bridge;
 mod event_handler;
 // Location module has been extracted to cim-domain-location
 // Graph modules have been extracted to cim-domain-graph
 // Workflow module has been extracted to cim-domain-workflow
 pub mod infrastructure;
 pub mod projections;
+pub mod category;
+pub mod composition;
+pub mod domain;
+pub mod integration;
 
 // Re-export core types
-pub use component::{Component, ComponentStorage};
+pub use component::{Component, ComponentStorage, ComponentExt, EcsComponentData, ComponentEvent};
+pub use component_sync::DomainComponentSync;
+pub use domain_component_bridge::DomainComponentBridge;
 pub use entity::{Entity, EntityId, AggregateRoot};
 pub use identifiers::{NodeId, EdgeId, GraphId, StateId, TransitionId, WorkflowId, WorkflowIdExt};
 pub use node_types::NodeType;
@@ -96,17 +103,13 @@ pub use events::{
     DomainEventEnvelopeWithMetadata,
 };
 // Location commands have been extracted to cim-domain-location
+pub use commands::{DomainCommand, AcknowledgeCommand};
 pub use command_handlers::{
     EventPublisher, MockEventPublisher,
     AggregateRepository, InMemoryRepository,
 };
 pub use query_handlers::{
     DirectQueryHandler, QueryResult, ReadModelStorage, InMemoryReadModel, QueryCriteria,
-};
-pub use bevy_bridge::{
-    BevyCommand, BevyEvent, ComponentData,
-    NatsToBevyTranslator, BevyEventRouter,
-    NatsMessage, TranslationError,
 };
 // Location types have been extracted to cim-domain-location
 

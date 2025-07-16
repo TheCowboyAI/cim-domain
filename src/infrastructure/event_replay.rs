@@ -113,6 +113,52 @@ pub struct AggregateRebuilder {
     pub processors: HashMap<String, Box<dyn AggregateEventProcessor>>,
 }
 
+/// Generic aggregate processor that tracks events by type
+pub struct GenericAggregateProcessor {
+    aggregate_type: String,
+    aggregates: HashMap<String, Vec<DomainEventEnum>>,
+}
+
+impl GenericAggregateProcessor {
+    /// Create a new generic processor for an aggregate type
+    pub fn new(aggregate_type: &str) -> Self {
+        Self {
+            aggregate_type: aggregate_type.to_string(),
+            aggregates: HashMap::new(),
+        }
+    }
+}
+
+#[async_trait]
+impl AggregateEventProcessor for GenericAggregateProcessor {
+    async fn process_event(&mut self, event: &DomainEventEnum) -> Result<(), ReplayError> {
+        // Extract aggregate ID from event
+        let aggregate_id = match event {
+            DomainEventEnum::WorkflowStarted(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowTransitionExecuted(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowTransitioned(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowCompleted(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowSuspended(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowResumed(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowCancelled(e) => e.workflow_id.to_string(),
+            DomainEventEnum::WorkflowFailed(e) => e.workflow_id.to_string(),
+        };
+        
+        // Store event for the aggregate
+        self.aggregates
+            .entry(aggregate_id)
+            .or_insert_with(Vec::new)
+            .push(event.clone());
+        
+        Ok(())
+    }
+
+    async fn get_aggregate(&self, aggregate_id: &str) -> Option<Box<dyn std::any::Any + Send>> {
+        self.aggregates.get(aggregate_id)
+            .map(|events| Box::new(events.clone()) as Box<dyn std::any::Any + Send>)
+    }
+}
+
 /// Trait for processing events for specific aggregate types
 #[async_trait]
 pub trait AggregateEventProcessor: Send + Sync {
@@ -337,13 +383,26 @@ impl EventReplayService {
         &self,
         options: ReplayOptions,
     ) -> Result<ReplayStats, ReplayError> {
-        let mut rebuilder = AggregateRebuilder {
-            aggregate_versions: Arc::new(RwLock::new(HashMap::new())),
-            processors: HashMap::new(),
-        };
+        let aggregate_versions = Arc::new(RwLock::new(HashMap::new()));
+        let mut processors: HashMap<String, Box<dyn AggregateEventProcessor>> = HashMap::new();
 
-        // TODO: Add aggregate processors for each aggregate type
-        // For now, we'll just track versions
+        // Register aggregate processors for each domain
+        processors.insert("Person".to_string(), Box::new(GenericAggregateProcessor::new("Person")));
+        processors.insert("Organization".to_string(), Box::new(GenericAggregateProcessor::new("Organization")));
+        processors.insert("Document".to_string(), Box::new(GenericAggregateProcessor::new("Document")));
+        processors.insert("Graph".to_string(), Box::new(GenericAggregateProcessor::new("Graph")));
+        processors.insert("Workflow".to_string(), Box::new(GenericAggregateProcessor::new("Workflow")));
+        processors.insert("Agent".to_string(), Box::new(GenericAggregateProcessor::new("Agent")));
+        processors.insert("Dialog".to_string(), Box::new(GenericAggregateProcessor::new("Dialog")));
+        processors.insert("Location".to_string(), Box::new(GenericAggregateProcessor::new("Location")));
+        processors.insert("ConceptualSpace".to_string(), Box::new(GenericAggregateProcessor::new("ConceptualSpace")));
+        processors.insert("Policy".to_string(), Box::new(GenericAggregateProcessor::new("Policy")));
+        processors.insert("NixConfiguration".to_string(), Box::new(GenericAggregateProcessor::new("NixConfiguration")));
+        
+        let mut rebuilder = AggregateRebuilder {
+            aggregate_versions,
+            processors,
+        };
 
         self.replay_with_handler(&mut rebuilder, options).await
     }

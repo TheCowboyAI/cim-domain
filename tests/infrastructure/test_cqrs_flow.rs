@@ -101,7 +101,7 @@ impl TestCommandHandler {
         // Validate command
         if let Some(validator) = self.validation_rules.get(&command.command_type) {
             if !validator(&command) {
-                return Err(format!("Command validation failed for {command.command_type}"));
+                return Err(format!("Command validation failed for {}", command.command_type));
             }
         }
 
@@ -117,7 +117,7 @@ impl TestCommandHandler {
                 aggregate_id: command.aggregate_id.clone(),
                 payload: command.payload,
             }],
-            _ => return Err(format!("Unknown command type: {command.command_type}")),
+            _ => return Err(format!("Unknown command type: {}", command.command_type)),
         };
 
         // Store events
@@ -148,7 +148,7 @@ impl TestProjectionUpdater {
         let projection_type = match event.event_type.as_str() {
             "EntityCreated" => "EntityProjection",
             "EntityUpdated" => "EntityProjection",
-            _ => return Err(format!("Unknown event type: {event.event_type}")),
+            _ => return Err(format!("Unknown event type: {}", event.event_type)),
         };
 
         let entry = ProjectionEntry {
@@ -206,7 +206,7 @@ impl TestQueryHandler {
                     Err("Missing 'type' in query filter".to_string())
                 }
             }
-            _ => Err(format!("Unknown query type: {query.query_type}")),
+            _ => Err(format!("Unknown query type: {}", query.query_type)),
         }
     }
 }

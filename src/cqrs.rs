@@ -76,6 +76,47 @@ pub struct QueryResponse {
 /// with imperative verbs (CreateOrder, UpdateCustomer, DeleteProduct).
 ///
 /// Commands do NOT return results directly - results come through event streams.
+///
+/// # Examples
+///
+/// ```rust
+/// use cim_domain::{Command, EntityId};
+/// 
+/// #[derive(Debug)]
+/// struct CreateOrderCommand {
+///     customer_id: String,
+///     items: Vec<OrderItem>,
+/// }
+/// 
+/// #[derive(Debug)]
+/// struct OrderItem {
+///     product_id: String,
+///     quantity: u32,
+/// }
+/// 
+/// struct Order;
+/// 
+/// impl Command for CreateOrderCommand {
+///     type Aggregate = Order;
+///     
+///     fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
+///         None // New order, no ID yet
+///     }
+/// }
+/// 
+/// let cmd = CreateOrderCommand {
+///     customer_id: "CUST-123".to_string(),
+///     items: vec![
+///         OrderItem {
+///             product_id: "PROD-456".to_string(),
+///             quantity: 2,
+///         }
+///     ],
+/// };
+/// 
+/// // Commands are sent to handlers, which validate and emit events
+/// assert!(cmd.aggregate_id().is_none());
+/// ```
 pub trait Command: Debug + Send + Sync {
     /// The aggregate type this command targets
     type Aggregate;

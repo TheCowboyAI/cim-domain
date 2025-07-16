@@ -9,6 +9,8 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::infrastructure::event_store::StoredEvent;
+use crate::infrastructure::cid_chain::{EventWithCid, create_event_with_cid};
+use crate::domain_events::DomainEventEnum;
 
 /// Unique identifier for an event stream
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -378,13 +380,19 @@ impl EventStream {
             _ => None,
         };
 
+        // Calculate causation chains
+        let causation_chains = Self::calculate_causation_chains(events);
+        
+        // Calculate CID root
+        let cid_root = Self::calculate_cid_root(events);
+
         EventStreamMetadata {
             event_count: events.len(),
             time_range,
             aggregate_types,
             correlation_ids,
-            causation_chains: Vec::new(), // TODO: Calculate causation chains
-            cid_root: None, // TODO: Calculate CID root
+            causation_chains,
+            cid_root,
         }
     }
 
@@ -480,5 +488,78 @@ impl EventStream {
         }
 
         groups
+    }
+    
+    /// Calculate causation chains from the events
+    fn calculate_causation_chains(events: &[StoredEvent]) -> Vec<CausationChain> {
+        let mut chains: Vec<CausationChain> = Vec::new();
+        let mut event_to_chain: HashMap<String, usize> = HashMap::new();
+        
+        for event in events {
+            let event_id = event.event_id.to_string();
+            
+            if let Some(causation_id) = event.causation_id() {
+                // This event was caused by another event
+                if let Some(&chain_idx) = event_to_chain.get(causation_id) {
+                    // Add to existing chain
+                    chains[chain_idx].chain.push(event_id.clone());
+                    event_to_chain.insert(event_id, chain_idx);
+                } else {
+                    // Start new chain with both the cause and this event
+                    let chain = CausationChain {
+                        root_event_id: causation_id.clone(),
+                        chain: vec![causation_id.clone(), event_id.clone()],
+                    };
+                    let chain_idx = chains.len();
+                    chains.push(chain);
+                    event_to_chain.insert(event_id, chain_idx);
+                }
+            } else {
+                // This is a root event, check if it starts any chains
+                let has_effects = events.iter().any(|e| {
+                    e.causation_id().map(|cid| cid == &event_id).unwrap_or(false)
+                });
+                
+                if has_effects && !event_to_chain.contains_key(&event_id) {
+                    // This is a root that causes other events
+                    let chain = CausationChain {
+                        root_event_id: event_id.clone(),
+                        chain: vec![event_id.clone()],
+                    };
+                    let chain_idx = chains.len();
+                    chains.push(chain);
+                    event_to_chain.insert(event_id, chain_idx);
+                }
+            }
+        }
+        
+        chains
+    }
+    
+    /// Calculate the CID root for the event stream
+    fn calculate_cid_root(events: &[StoredEvent]) -> Option<String> {
+        if events.is_empty() {
+            return None;
+        }
+        
+        // Convert events to domain events for CID calculation
+        let mut cid_events: Vec<EventWithCid> = Vec::new();
+        
+        for event in events {
+            // Get the domain event
+            let domain_event = event.event.clone();
+            let event_with_cid = if let Some(last) = cid_events.last() {
+                create_event_with_cid(domain_event, Some(last))
+            } else {
+                create_event_with_cid(domain_event, None)
+            };
+            
+            if let Ok(event_with_cid) = event_with_cid {
+                cid_events.push(event_with_cid);
+            }
+        }
+        
+        // Return the CID of the last event as the root
+        cid_events.last().map(|e| e.cid.to_string())
     }
 }

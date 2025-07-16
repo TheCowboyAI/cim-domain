@@ -39,6 +39,47 @@ pub struct EventEnvelope<E> {
 }
 
 /// Base trait for all domain events
+///
+/// # Examples
+///
+/// ```rust
+/// use cim_domain::DomainEvent;
+/// use uuid::Uuid;
+/// 
+/// #[derive(Debug)]
+/// struct UserCreatedEvent {
+///     user_id: Uuid,
+///     email: String,
+///     created_at: std::time::SystemTime,
+/// }
+/// 
+/// impl DomainEvent for UserCreatedEvent {
+///     fn subject(&self) -> String {
+///         "users.user.created.v1".to_string()
+///     }
+///     
+///     fn aggregate_id(&self) -> Uuid {
+///         self.user_id
+///     }
+///     
+///     fn event_type(&self) -> &'static str {
+///         "UserCreated"
+///     }
+///     
+///     fn version(&self) -> &'static str {
+///         "v1"
+///     }
+/// }
+/// 
+/// let event = UserCreatedEvent {
+///     user_id: Uuid::new_v4(),
+///     email: "user@example.com".to_string(),
+///     created_at: std::time::SystemTime::now(),
+/// };
+/// 
+/// assert_eq!(event.event_type(), "UserCreated");
+/// assert_eq!(event.subject(), "users.user.created.v1");
+/// ```
 pub trait DomainEvent: Send + Sync + std::fmt::Debug {
     /// Get the subject for this event
     fn subject(&self) -> String;

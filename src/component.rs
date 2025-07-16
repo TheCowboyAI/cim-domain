@@ -1,41 +1,18 @@
-//! Component trait and storage for attaching data to domain objects
+//! Component storage for attaching data to domain objects
+//!
+//! This module provides storage for components that follow the isomorphic
+//! architecture defined in cim-component. Components can be synchronized
+//! between DDD and ECS representations via NATS.
 
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt;
 use crate::DomainError;
 
-/// Trait for components that can be attached to domain objects
-///
-/// Components are immutable data that can be attached to entities, nodes, or edges.
-/// They provide a way to extend domain objects with additional data without modifying
-/// their core structure.
-///
-/// # Example
-///
-/// ```
-/// use cim_domain::Component;
-/// use std::any::Any;
-///
-/// #[derive(Debug, Clone)]
-/// struct Label(String);
-///
-/// impl Component for Label {
-///     fn as_any(&self) -> &dyn Any { self }
-///     fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
-///     fn type_name(&self) -> &'static str { "Label" }
-/// }
-/// ```
-pub trait Component: Any + Send + Sync {
-    /// Get the component as Any for downcasting
-    fn as_any(&self) -> &dyn Any;
-
-    /// Clone the component into a box
-    fn clone_box(&self) -> Box<dyn Component>;
-
-    /// Get the name of this component type
-    fn type_name(&self) -> &'static str;
-}
+// Re-export the Component trait and related types from cim-component
+pub use cim_component::{
+    Component, ComponentExt, EcsComponentData, ComponentEvent,
+};
 
 /// Storage for components attached to a domain object
 ///
@@ -59,6 +36,42 @@ impl ComponentStorage {
     /// # Errors
     ///
     /// Returns an error if a component of the same type already exists
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use cim_domain::{ComponentStorage, Component};
+    /// use std::any::Any;
+    /// 
+    /// #[derive(Debug, Clone)]
+    /// struct HealthComponent {
+    ///     current: i32,
+    ///     maximum: i32,
+    /// }
+    /// 
+    /// impl Component for HealthComponent {
+    ///     fn type_name(&self) -> &'static str {
+    ///         "HealthComponent"
+    ///     }
+    ///     
+    ///     fn as_any(&self) -> &dyn Any {
+    ///         self
+    ///     }
+    ///     
+    ///     fn clone_box(&self) -> Box<dyn Component> {
+    ///         Box::new(self.clone())
+    ///     }
+    /// }
+    /// 
+    /// let mut storage = ComponentStorage::new();
+    /// let health = HealthComponent { current: 100, maximum: 100 };
+    /// 
+    /// // First add succeeds
+    /// assert!(storage.add(health.clone()).is_ok());
+    /// 
+    /// // Second add of same type fails
+    /// assert!(storage.add(health).is_err());
+    /// ```
     pub fn add<T: Component + 'static>(&mut self, component: T) -> Result<(), DomainError> {
         let type_id = TypeId::of::<T>();
         if self.components.contains_key(&type_id) {
@@ -126,18 +139,22 @@ impl fmt::Debug for ComponentStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::any::Any;
 
     // Test components
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
     struct TestLabel(String);
 
     impl Component for TestLabel {
         fn as_any(&self) -> &dyn Any { self }
         fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
         fn type_name(&self) -> &'static str { "TestLabel" }
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap_or_default()
+        }
     }
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
     struct TestMetadata {
         key: String,
         value: i32,
@@ -147,15 +164,21 @@ mod tests {
         fn as_any(&self) -> &dyn Any { self }
         fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
         fn type_name(&self) -> &'static str { "TestMetadata" }
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap_or_default()
+        }
     }
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
     struct TestTag;
 
     impl Component for TestTag {
         fn as_any(&self) -> &dyn Any { self }
         fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
         fn type_name(&self) -> &'static str { "TestTag" }
+        fn to_json(&self) -> serde_json::Value {
+            serde_json::to_value(self).unwrap_or_default()
+        }
     }
 
     /// Test component trait implementation

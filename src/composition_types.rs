@@ -97,6 +97,14 @@ pub enum DomainCompositionType {
         /// Type of workflow
         workflow_type: String
     },
+    
+    /// Composite structure (for limits/colimits)
+    Composite {
+        /// Type of composite
+        composite_type: String,
+        /// Component domains
+        components: Vec<String>,
+    },
 }
 
 impl CompositionType {
@@ -175,6 +183,7 @@ impl DomainCompositionType {
             DomainCompositionType::BoundedContext { domain } => format!("Bounded Context: {domain}"),
             DomainCompositionType::Policy { policy_type } => format!("Policy: {policy_type}"),
             DomainCompositionType::Workflow { workflow_type } => format!("Workflow: {workflow_type}"),
+            DomainCompositionType::Composite { composite_type, components } => format!("Composite: {} ({})", composite_type, components.join(", ")),
         }
     }
 
@@ -191,6 +200,7 @@ impl DomainCompositionType {
             DomainCompositionType::BoundedContext { .. } => "BoundedContext",
             DomainCompositionType::Policy { .. } => "Policy",
             DomainCompositionType::Workflow { .. } => "Workflow",
+            DomainCompositionType::Composite { .. } => "Composite",
         }
     }
 }

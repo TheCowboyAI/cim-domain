@@ -98,6 +98,26 @@ pub enum DomainError {
     /// Invalid subject format
     #[error("Invalid subject: {0}")]
     InvalidSubject(String),
+    
+    /// Component synchronization error
+    #[error("Component error: {0}")]
+    ComponentError(String),
+    
+    /// NATS communication error
+    #[error("NATS error: {0}")]
+    NatsError(String),
+    
+    /// Not found error (generic)
+    #[error("Not found: {0}")]
+    NotFound(String),
+    
+    /// Already exists error (generic)
+    #[error("Already exists: {0}")]
+    AlreadyExists(String),
+    
+    /// Not implemented error
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
 /// Result type for domain operations

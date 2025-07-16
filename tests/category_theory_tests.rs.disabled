@@ -1,0 +1,308 @@
+//! Integration tests for category theory-based inter-domain communication
+
+use cim_domain::category::*;
+use cim_domain::composition::*;
+use cim_domain::domain::*;
+use cim_domain::integration::*;
+use cim_domain::errors::DomainError;
+use std::sync::Arc;
+use uuid::Uuid;
+
+#[tokio::test]
+async fn test_domain_category_creation() {
+    let mut category = DomainCategory::new("TestDomain".to_string());
+    
+    // Add objects
+    let obj1 = DomainObject::new("Entity1".to_string());
+    let obj2 = DomainObject::new("Entity2".to_string());
+    
+    category.add_object(obj1.clone());
+    category.add_object(obj2.clone());
+    
+    assert_eq!(category.objects.len(), 2);
+    assert!(category.objects.contains_key("Entity1"));
+    assert!(category.objects.contains_key("Entity2"));
+}
+
+#[tokio::test]
+async fn test_morphism_composition() {
+    let mut category = DomainCategory::new("TestDomain".to_string());
+    
+    // Add objects
+    let obj_a = DomainObject::new("A".to_string());
+    let obj_b = DomainObject::new("B".to_string());
+    let obj_c = DomainObject::new("C".to_string());
+    
+    category.add_object(obj_a);
+    category.add_object(obj_b);
+    category.add_object(obj_c);
+    
+    // Create morphisms
+    let morph_ab = DomainMorphism::new(
+        "f".to_string(),
+        "A".to_string(),
+        "B".to_string(),
+    );
+    
+    let morph_bc = DomainMorphism::new(
+        "g".to_string(),
+        "B".to_string(),
+        "C".to_string(),
+    );
+    
+    category.add_morphism(morph_ab.clone()).unwrap();
+    category.add_morphism(morph_bc.clone()).unwrap();
+    
+    // Compose morphisms
+    let composition = category.compose(&morph_ab, &morph_bc).unwrap();
+    assert_eq!(composition.source, "A");
+    assert_eq!(composition.target, "C");
+}
+
+#[tokio::test]
+async fn test_functor_mapping() {
+    let source_cat = DomainCategory::new("Source".to_string());
+    let target_cat = DomainCategory::new("Target".to_string());
+    
+    let functor = IdentityFunctor::new(source_cat.clone(), target_cat.clone());
+    
+    // Test object mapping
+    let obj = DomainObject::new("TestObject".to_string());
+    let mapped_obj = functor.map_object(obj.clone()).await.unwrap();
+    assert_eq!(mapped_obj.name, obj.name);
+}
+
+#[tokio::test]
+async fn test_domain_composition() {
+    let mut composition = DomainComposition::new("TestComposition".to_string());
+    
+    let domain1 = DomainCategory::new("Domain1".to_string());
+    let domain2 = DomainCategory::new("Domain2".to_string());
+    
+    composition.add_domain(domain1).unwrap();
+    composition.add_domain(domain2).unwrap();
+    
+    assert_eq!(composition.domains.len(), 2);
+    assert!(composition.domains.contains_key("Domain1"));
+    assert!(composition.domains.contains_key("Domain2"));
+}
+
+#[tokio::test]
+async fn test_saga_orchestration() {
+    let orchestrator = SagaOrchestrator::new();
+    
+    // Register domains
+    orchestrator.register_domain(DomainCategory::new("Sales".to_string())).await.unwrap();
+    orchestrator.register_domain(DomainCategory::new("Billing".to_string())).await.unwrap();
+    
+    // Create saga
+    let saga = Saga::new(
+        "TestSaga".to_string(),
+        vec![
+            SagaStep::new("Step1".to_string(), "Sales".to_string(), "Billing".to_string()),
+            SagaStep::new("Step2".to_string(), "Billing".to_string(), "Billing".to_string()),
+        ],
+    );
+    
+    // Start saga
+    let saga_id = orchestrator.start_saga(saga).await.unwrap();
+    assert_ne!(saga_id, Uuid::nil());
+    
+    // Execute first step
+    orchestrator.execute_step(saga_id, 0).await.unwrap();
+}
+
+#[tokio::test]
+async fn test_dependency_injection() {
+    let container = DependencyContainer::new();
+    
+    // Register a service
+    #[derive(Debug)]
+    struct TestService {
+        value: String,
+    }
+    
+    container.register_singleton(|_| {
+        Ok(Arc::new(TestService {
+            value: "test".to_string(),
+        }))
+    }).await.unwrap();
+    
+    // Resolve service
+    let service = container.resolve::<TestService>().await.unwrap();
+    assert_eq!(service.value, "test");
+    
+    // Resolve again - should be same instance (singleton)
+    let service2 = container.resolve::<TestService>().await.unwrap();
+    assert!(Arc::ptr_eq(&service, &service2));
+}
+
+#[tokio::test]
+async fn test_service_registry() {
+    let registry = ServiceRegistry::new();
+    
+    // Test service trait
+    trait TestService: Send + Sync {
+        fn get_name(&self) -> &str;
+    }
+    
+    struct TestServiceImpl;
+    impl TestService for TestServiceImpl {
+        fn get_name(&self) -> &str {
+            "TestService"
+        }
+    }
+    
+    let container = DependencyContainer::new();
+    
+    // Register service
+    registry.register_singleton::<dyn TestService, TestServiceImpl, _>(|_| {
+        Ok(Box::new(TestServiceImpl))
+    }).await.unwrap();
+    
+    // Add tags
+    registry.add_tags::<dyn TestService>(vec!["test".to_string(), "service".to_string()]).await.unwrap();
+    
+    // Find by tag
+    let services = registry.find_by_tag("test").await;
+    assert_eq!(services.len(), 1);
+}
+
+#[tokio::test]
+async fn test_event_bridge() {
+    use cim_domain::integration::event_bridge::*;
+    
+    let bridge = EventBridge::new(BridgeConfig::default());
+    
+    // Add routing rule
+    let rule = RoutingRule {
+        name: "test_rule".to_string(),
+        source_pattern: "domain.*".to_string(),
+        event_pattern: "TestEvent".to_string(),
+        targets: vec!["target_domain".to_string()],
+        priority: 100,
+        conditions: vec![],
+    };
+    
+    bridge.add_rule(rule).await.unwrap();
+    
+    // Create event stream
+    let mut stream = bridge.event_stream(
+        "target_domain".to_string(),
+        vec!["*".to_string()],
+        10,
+    ).await.unwrap();
+    
+    // Stream is ready to receive events
+    // In a real test, we would publish events and verify they appear in the stream
+}
+
+#[tokio::test]
+async fn test_domain_invariants() {
+    use cim_domain::domain::invariants::*;
+    
+    let invariant = ReferentialIntegrityInvariant::new(
+        "Order".to_string(),
+        "Sales".to_string(),
+        "Invoice".to_string(),
+        "Billing".to_string(),
+    );
+    
+    let mut checker = InvariantChecker::new();
+    checker.register_invariant(Box::new(invariant)).unwrap();
+    
+    // In a real scenario, we would check actual domain state
+    let violations = checker.check_all().await.unwrap();
+    assert_eq!(violations.len(), 0);
+}
+
+#[tokio::test]
+async fn test_cross_domain_rules() {
+    use cim_domain::domain::cross_domain_rules::*;
+    
+    let mut engine = CrossDomainRuleEngine::new();
+    
+    // Create a simple rule
+    let rule = CrossDomainRule::new(
+        "test_rule".to_string(),
+        vec!["Sales".to_string(), "Billing".to_string()],
+        vec![],
+        vec![RuleAction::Notify {
+            message: "Rule triggered".to_string(),
+        }],
+        RulePriority::High,
+    );
+    
+    engine.add_rule(rule).unwrap();
+    
+    // Evaluate rules
+    let context = RuleContext::new();
+    let actions = engine.evaluate(context).await.unwrap();
+    
+    // Should have one action
+    assert_eq!(actions.len(), 1);
+}
+
+#[tokio::test]
+async fn test_semantic_analyzer() {
+    use cim_domain::domain::semantic_analyzer::*;
+    
+    let analyzer = SemanticAnalyzer::new();
+    
+    // Add concepts
+    analyzer.add_concept(Concept::new(
+        "Order".to_string(),
+        vec![1.0, 0.5, 0.3, 0.8, 0.2],
+    )).await.unwrap();
+    
+    analyzer.add_concept(Concept::new(
+        "Invoice".to_string(),
+        vec![0.9, 0.6, 0.4, 0.7, 0.3],
+    )).await.unwrap();
+    
+    // Find similar concepts
+    let similar = analyzer.find_similar("Order", 0.8).await.unwrap();
+    assert!(similar.len() > 0);
+    
+    // Analyze similarity
+    let similarity = analyzer.analyze_similarity("Order", "Invoice").await.unwrap();
+    assert!(similarity > 0.8); // Should be highly similar
+}
+
+#[tokio::test]
+async fn test_topos_structure() {
+    let mut topos = ToposStructure::new("TestTopos".to_string());
+    
+    // Add objects
+    topos.add_object(ToposObject::new("A".to_string())).unwrap();
+    topos.add_object(ToposObject::new("B".to_string())).unwrap();
+    
+    // Add arrow
+    topos.add_arrow(ToposArrow::new(
+        "f".to_string(),
+        "A".to_string(),
+        "B".to_string(),
+    )).unwrap();
+    
+    // Create subobject classifier
+    let omega = topos.subobject_classifier();
+    assert_eq!(omega.name, "Ω");
+}
+
+#[tokio::test]
+async fn test_comprehension_engine() {
+    let engine = ComprehensionEngine::new();
+    
+    // Add interpretation
+    let rule = InterpretationRule::structural(
+        "test_rule".to_string(),
+        r"Order\s+to\s+Invoice".to_string(),
+    );
+    
+    engine.add_rule(rule).await.unwrap();
+    
+    // Comprehend pattern
+    let result = engine.comprehend("Order to Invoice mapping").await.unwrap();
+    assert_eq!(result.interpretations.len(), 1);
+    assert_eq!(result.confidence, 1.0);
+}

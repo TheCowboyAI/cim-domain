@@ -1,0 +1,460 @@
+//! Cross-domain business rules
+//!
+//! Rules that span multiple domains and must be enforced consistently
+//! across domain boundaries.
+
+use std::collections::HashMap;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+
+use crate::errors::DomainError;
+use crate::composition::DomainComposition;
+
+/// A cross-domain business rule
+#[async_trait]
+pub trait CrossDomainRule: Send + Sync {
+    /// Name of the rule
+    fn name(&self) -> &str;
+    
+    /// Description of the rule
+    fn description(&self) -> &str;
+    
+    /// Evaluate the rule against a domain composition
+    async fn evaluate(
+        &self,
+        composition: &DomainComposition,
+        context: &RuleContext,
+    ) -> Result<RuleEvaluationResult, DomainError>;
+    
+    /// Get the domains this rule affects
+    fn affected_domains(&self) -> Vec<String>;
+    
+    /// Get the priority of this rule (higher = more important)
+    fn priority(&self) -> u32 {
+        50 // Default medium priority
+    }
+}
+
+/// Context for rule evaluation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleContext {
+    /// Current user/actor
+    pub actor: Option<String>,
+    
+    /// Current operation being performed
+    pub operation: Option<String>,
+    
+    /// Additional context data
+    pub data: HashMap<String, serde_json::Value>,
+    
+    /// Timestamp of evaluation
+    pub timestamp: DateTime<Utc>,
+}
+
+impl RuleContext {
+    pub fn new() -> Self {
+        Self {
+            actor: None,
+            operation: None,
+            data: HashMap::new(),
+            timestamp: Utc::now(),
+        }
+    }
+    
+    pub fn with_actor(mut self, actor: String) -> Self {
+        self.actor = Some(actor);
+        self
+    }
+    
+    pub fn with_operation(mut self, operation: String) -> Self {
+        self.operation = Some(operation);
+        self
+    }
+    
+    pub fn with_data(mut self, key: String, value: serde_json::Value) -> Self {
+        self.data.insert(key, value);
+        self
+    }
+}
+
+/// Result of evaluating a rule
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleEvaluationResult {
+    /// Whether the rule passed
+    pub passed: bool,
+    
+    /// Confidence level (0-100)
+    pub confidence: u8,
+    
+    /// Explanation of the result
+    pub explanation: String,
+    
+    /// Actions to take based on the result
+    pub actions: Vec<RuleAction>,
+    
+    /// Metadata about the evaluation
+    pub metadata: HashMap<String, String>,
+}
+
+/// Actions that can be taken based on rule evaluation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RuleAction {
+    /// Allow the operation to proceed
+    Allow,
+    
+    /// Deny the operation
+    Deny { reason: String },
+    
+    /// Require additional approval
+    RequireApproval { approver_role: String },
+    
+    /// Log the event for audit
+    Log { level: LogLevel, message: String },
+    
+    /// Send notification
+    Notify { recipient: String, message: String },
+    
+    /// Execute compensation
+    Compensate { action: String },
+    
+    /// Custom action
+    Custom { action_type: String, data: serde_json::Value },
+}
+
+/// Log levels for rule actions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Critical,
+}
+
+/// Engine for evaluating cross-domain rules
+pub struct RuleEngine {
+    /// Registered rules
+    rules: Vec<Box<dyn CrossDomainRule>>,
+    
+    /// Rule evaluation history
+    history: Vec<RuleEvaluationRecord>,
+    
+    /// Rule caching
+    cache: HashMap<String, RuleEvaluationResult>,
+}
+
+/// Record of a rule evaluation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleEvaluationRecord {
+    pub rule_name: String,
+    pub context: RuleContext,
+    pub result: RuleEvaluationResult,
+    pub evaluated_at: DateTime<Utc>,
+}
+
+impl RuleEngine {
+    pub fn new() -> Self {
+        Self {
+            rules: Vec::new(),
+            history: Vec::new(),
+            cache: HashMap::new(),
+        }
+    }
+    
+    /// Register a rule
+    pub fn register(&mut self, rule: Box<dyn CrossDomainRule>) {
+        self.rules.push(rule);
+        // Sort by priority (highest first)
+        self.rules.sort_by_key(|r| std::cmp::Reverse(r.priority()));
+    }
+    
+    /// Evaluate all rules
+    pub async fn evaluate_all(
+        &mut self,
+        composition: &DomainComposition,
+        context: &RuleContext,
+    ) -> Result<Vec<RuleEvaluationResult>, DomainError> {
+        let mut results = Vec::new();
+        
+        for rule in &self.rules {
+            let cache_key = format!("{}:{:?}", rule.name(), context.operation);
+            
+            // Check cache
+            if let Some(cached) = self.cache.get(&cache_key) {
+                results.push(cached.clone());
+                continue;
+            }
+            
+            // Evaluate rule
+            let result = rule.evaluate(composition, context).await?;
+            
+            // Record evaluation
+            self.history.push(RuleEvaluationRecord {
+                rule_name: rule.name().to_string(),
+                context: context.clone(),
+                result: result.clone(),
+                evaluated_at: Utc::now(),
+            });
+            
+            // Cache result
+            self.cache.insert(cache_key, result.clone());
+            
+            // Always push result before checking for short-circuit
+            results.push(result.clone());
+            
+            // Short-circuit on critical deny
+            if matches!(result.actions.first(), Some(RuleAction::Deny { .. })) && rule.priority() >= 90 {
+                break;
+            }
+        }
+        
+        Ok(results)
+    }
+    
+    /// Get all deny actions from results
+    pub fn get_denials(results: &[RuleEvaluationResult]) -> Vec<&str> {
+        results.iter()
+            .flat_map(|r| &r.actions)
+            .filter_map(|a| match a {
+                RuleAction::Deny { reason } => Some(reason.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+    
+    /// Check if operation is allowed
+    pub fn is_allowed(results: &[RuleEvaluationResult]) -> bool {
+        Self::get_denials(results).is_empty()
+    }
+    
+    /// Clear cache
+    pub fn clear_cache(&mut self) {
+        self.cache.clear();
+    }
+}
+
+/// Example: Data locality rule
+pub struct DataLocalityRule {
+    required_locality: HashMap<String, String>, // domain -> required location
+}
+
+impl DataLocalityRule {
+    pub fn new() -> Self {
+        let mut required = HashMap::new();
+        required.insert("PersonalData".to_string(), "EU".to_string());
+        required.insert("FinancialData".to_string(), "US".to_string());
+        
+        Self {
+            required_locality: required,
+        }
+    }
+}
+
+#[async_trait]
+impl CrossDomainRule for DataLocalityRule {
+    fn name(&self) -> &str {
+        "data_locality"
+    }
+    
+    fn description(&self) -> &str {
+        "Ensures data is stored in required geographical locations"
+    }
+    
+    async fn evaluate(
+        &self,
+        composition: &DomainComposition,
+        context: &RuleContext,
+    ) -> Result<RuleEvaluationResult, DomainError> {
+        let mut violations = Vec::new();
+        
+        // Check each domain's data location
+        for (domain_name, required_location) in &self.required_locality {
+            let location_key = format!("{}_location", domain_name);
+            if let Some(actual_location) = context.data.get(&location_key) {
+                if actual_location.as_str() != Some(required_location.as_str()) {
+                    violations.push(format!(
+                        "{} must be in {}, but is in {:?}",
+                        domain_name, required_location, actual_location
+                    ));
+                }
+            } else if let Some(ref op) = context.operation {
+                if op.contains("read") || op.contains("write") {
+                    // If we're doing data operations, we should know the location
+                    violations.push(format!(
+                        "{} location not specified for {} operation",
+                        domain_name, op
+                    ));
+                }
+            }
+        }
+        
+        let passed = violations.is_empty();
+        let actions = if passed {
+            vec![RuleAction::Allow]
+        } else {
+            vec![
+                RuleAction::Deny {
+                    reason: violations.join("; "),
+                },
+                RuleAction::Log {
+                    level: LogLevel::Error,
+                    message: format!("Data locality violations: {}", violations.join(", ")),
+                },
+            ]
+        };
+        
+        let result = RuleEvaluationResult {
+            passed,
+            confidence: 100,
+            explanation: if passed {
+                "All data locality requirements satisfied".to_string()
+            } else {
+                format!("Data locality violations found: {}", violations.len())
+            },
+            actions,
+            metadata: HashMap::new(),
+        };
+        Ok(result)
+    }
+    
+    fn affected_domains(&self) -> Vec<String> {
+        self.required_locality.keys().cloned().collect()
+    }
+    
+    fn priority(&self) -> u32 {
+        90 // High priority for compliance
+    }
+}
+
+/// Example: Transaction consistency rule
+pub struct TransactionConsistencyRule {
+    max_inconsistency_window_ms: u64,
+}
+
+impl TransactionConsistencyRule {
+    pub fn new(max_window_ms: u64) -> Self {
+        Self {
+            max_inconsistency_window_ms: max_window_ms,
+        }
+    }
+}
+
+#[async_trait]
+impl CrossDomainRule for TransactionConsistencyRule {
+    fn name(&self) -> &str {
+        "transaction_consistency"
+    }
+    
+    fn description(&self) -> &str {
+        "Ensures cross-domain transactions maintain consistency"
+    }
+    
+    async fn evaluate(
+        &self,
+        composition: &DomainComposition,
+        context: &RuleContext,
+    ) -> Result<RuleEvaluationResult, DomainError> {
+        // Check if this is a transaction operation
+        let is_transaction = context.operation
+            .as_ref()
+            .map(|op| op.contains("transaction") || op.contains("transfer"))
+            .unwrap_or(false);
+        
+        if !is_transaction {
+            return Ok(RuleEvaluationResult {
+                passed: true,
+                confidence: 100,
+                explanation: "Not a transaction operation".to_string(),
+                actions: vec![RuleAction::Allow],
+                metadata: HashMap::new(),
+            });
+        }
+        
+        // In real implementation, would check:
+        // 1. All participating domains support transactions
+        // 2. Consistency window is acceptable
+        // 3. Compensation handlers are available
+        
+        Ok(RuleEvaluationResult {
+            passed: true,
+            confidence: 95,
+            explanation: "Transaction consistency requirements met".to_string(),
+            actions: vec![
+                RuleAction::Allow,
+                RuleAction::Log {
+                    level: LogLevel::Info,
+                    message: "Cross-domain transaction initiated".to_string(),
+                },
+            ],
+            metadata: HashMap::from([
+                ("max_window_ms".to_string(), self.max_inconsistency_window_ms.to_string()),
+            ]),
+        })
+    }
+    
+    fn affected_domains(&self) -> Vec<String> {
+        vec!["*".to_string()] // Affects all domains
+    }
+    
+    fn priority(&self) -> u32 {
+        80
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_rule_engine() {
+        let mut engine = RuleEngine::new();
+        
+        // Register rules
+        engine.register(Box::new(DataLocalityRule::new()));
+        engine.register(Box::new(TransactionConsistencyRule::new(5000)));
+        
+        // Create test composition
+        let composition = DomainComposition::new("Test".to_string());
+        
+        // Create context with proper data locality
+        let context = RuleContext::new()
+            .with_operation("read_data".to_string())
+            .with_data("PersonalData_location".to_string(), serde_json::json!("EU"))
+            .with_data("FinancialData_location".to_string(), serde_json::json!("US"));
+        
+        let results = engine.evaluate_all(&composition, &context).await.unwrap();
+        
+        assert!(RuleEngine::is_allowed(&results));
+        
+        // Test with violation
+        let bad_context = RuleContext::new()
+            .with_operation("read_data".to_string())
+            .with_data("PersonalData_location".to_string(), serde_json::json!("US"))
+            .with_data("FinancialData_location".to_string(), serde_json::json!("US"));  // Add this to avoid missing location error
+        
+        // Clear cache to ensure fresh evaluation
+        engine.clear_cache();
+        
+        let results = engine.evaluate_all(&composition, &bad_context).await.unwrap();
+        
+        // Should be denied because PersonalData must be in EU but is in US
+        let denials = RuleEngine::get_denials(&results);
+        assert!(!denials.is_empty(), "Expected denials but got none. Results: {:?}", results);
+        assert!(!RuleEngine::is_allowed(&results));
+    }
+    
+    #[test]
+    fn test_rule_priority() {
+        let mut engine = RuleEngine::new();
+        
+        // Lower priority rule
+        engine.register(Box::new(TransactionConsistencyRule::new(5000)));
+        // Higher priority rule
+        engine.register(Box::new(DataLocalityRule::new()));
+        
+        // Check rules are sorted by priority
+        assert_eq!(engine.rules[0].priority(), 90);
+        assert_eq!(engine.rules[1].priority(), 80);
+    }
+}

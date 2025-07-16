@@ -1,106 +1,116 @@
 # CIM Domain
 
-Core Domain-Driven Design (DDD) components for the Composable Information Machine (CIM).
+Core Domain-Driven Design (DDD) components and traits for the Composable Information Machine (CIM).
 
 ## Overview
 
-The `cim-domain` crate provides the fundamental building blocks for implementing Domain-Driven Design patterns in any CIM implementation. It defines the core entities that are essential for modeling information flows and organizational structures.
+This crate provides the fundamental building blocks for implementing DDD patterns:
 
-## Core Entities
+- **Component**: Trait for attachable components with type erasure
+- **Entity**: Types with identity and lifecycle  
+- **Value Objects**: Immutable types defined by their attributes
+- **Aggregates**: Consistency boundaries with root entities
+- **Domain Events**: Things that happen in the domain
+- **Commands**: Requests to change state (return only acknowledgments)
+- **Queries**: Requests to read state (return only acknowledgments)
+- **State Machines**: Enum-based state management with controlled transitions
 
-### 1. **People** - Human actors with identity and decision-making capabilities
-### 2. **Agents** - Automated actors that execute tasks within bounded capabilities
-### 3. **Organizations** - Collective entities that group people and agents
-### 4. **Locations** - Physical or logical spaces where activities occur
-### 5. **Policies** - Governance rules that control system behavior
+## Features
 
-## Design Principles
+- Event-driven architecture with CQRS pattern
+- Content-addressed events with CID chains
+- Async event streams using NATS JetStream
+- State machine abstractions (Moore and Mealy machines)
+- Component system for extensible domain objects
+- Full test coverage with examples
 
-- **Type Safety**: Leverages Rust's type system for compile-time guarantees
-- **Immutability**: Value objects are immutable by design
-- **Event Sourcing**: All state changes are captured as domain events
-- **Domain Alignment**: Types reflect business concepts, not technical details
-- **Composability**: Build complex systems from simple, well-defined components
+## Installation
 
-## Usage
-
-Add to your `Cargo.toml`:
+Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cim-domain = { path = "../cim-domain" }
+cim-domain = "0.3.0"
 ```
 
-Basic example:
+## Usage
 
 ```rust
-use cim_domain::{
-    person::{PersonId, Person, RegisterPerson},
-    DomainResult,
-};
+use cim_domain::{Entity, EntityId, DomainEvent, Command};
+use serde::{Deserialize, Serialize};
 
-// Create a new person
-let person_id = PersonId::new();
-let command = RegisterPerson {
-    id: person_id,
-    name: "Alice Smith".to_string(),
-    email: "alice@example.com".to_string(),
-};
+// Define a domain entity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct User {
+    id: EntityId,
+    name: String,
+    email: String,
+}
 
-// Process command to get events
-let events = Person::handle_command(command)?;
+impl Entity for User {
+    fn id(&self) -> EntityId {
+        self.id.clone()
+    }
+}
+
+// Define domain events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum UserEvent {
+    Created { id: EntityId, name: String, email: String },
+    NameChanged { id: EntityId, new_name: String },
+}
+
+impl DomainEvent for UserEvent {
+    fn event_type(&self) -> String {
+        match self {
+            UserEvent::Created { .. } => "UserCreated".to_string(),
+            UserEvent::NameChanged { .. } => "UserNameChanged".to_string(),
+        }
+    }
+}
+
+// Define commands
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum UserCommand {
+    CreateUser { name: String, email: String },
+    ChangeName { id: EntityId, new_name: String },
+}
+
+impl Command for UserCommand {}
 ```
 
-## Architecture
+## Development
 
-The crate follows a modular structure where each core entity has:
+### Building
 
-- **Aggregate**: The main entity with business logic
-- **Commands**: Requests to change state
-- **Events**: Records of state changes
-- **Value Objects**: Immutable domain concepts
-- **Tests**: Comprehensive test coverage
+```bash
+cargo build
+```
 
-## Documentation
+### Testing
 
-- [User Stories and Acceptance Tests](doc/qa/cim-domain-user-stories.md)
-- [Implementation Plan](doc/plan/core-entities-implementation.md)
-- [Progress Tracking](doc/progress/progress.json)
+```bash
+cargo test
+```
 
-## Development Status
+### Running Examples
 
-Currently implementing Phase 1: People entity with identity management. See [progress.json](doc/progress/progress.json) for detailed status.
+```bash
+# Basic CQRS pattern demo
+cargo run --example cqrs_pattern_demo
 
-## Contributing
+# State machine demo
+cargo run --example state_machine_demo
 
-This is a foundational crate for CIM implementations. All changes must:
-
-1. Maintain backward compatibility AFTER v0.5.0 (currently v0.1.0)
-2. Include comprehensive tests
-3. Follow DDD principles
-4. Update documentation
-5. Pass all quality checks
+# Event sourcing demo
+cargo run --example full_event_sourcing_demo
+```
 
 ## License
 
-Part of the CIM ecosystem.
+This project is licensed under either of:
 
-## Status
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
 
-**Library Status**: ✅ Complete and functional
-- Core library builds successfully
-- All 135 unit tests pass
-- Provides foundational DDD framework for all other domain modules
-
-**Examples Status**: ⚠️ Needs updating
-- `simple_example.rs` - ✅ Working example demonstrating core functionality
-- Other examples need to be updated to work with the current API
-- Many examples depend on types that have been moved to specific domain modules
-
-**Infrastructure**: ✅ Complete
-- Event Store integration with NATS JetStream
-- Command/Query handlers with proper CQRS separation
-- Bevy ECS bridge for visualization
-- Event replay and snapshot capabilities
-
-## Features
+at your option.

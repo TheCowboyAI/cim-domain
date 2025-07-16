@@ -10,6 +10,25 @@ use uuid::Uuid;
 ///
 /// Entities are domain objects with identity that persists across time.
 /// They have a lifecycle with creation and update timestamps.
+///
+/// # Examples
+///
+/// ```rust
+/// use cim_domain::{Entity, EntityId};
+/// 
+/// // Define a domain entity type
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// struct Customer;
+/// 
+/// // Create a new customer entity
+/// let customer = Entity::<Customer>::new();
+/// assert_eq!(customer.created_at, customer.updated_at);
+/// 
+/// // Create with a specific ID
+/// let id = EntityId::<Customer>::new();
+/// let customer = Entity::with_id(id);
+/// assert_eq!(customer.id, id);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Entity<T> {
     /// The unique identifier for this entity
@@ -42,6 +61,25 @@ impl<T> Entity<T> {
     }
 
     /// Update the entity's timestamp
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use cim_domain::Entity;
+    /// use std::thread;
+    /// use std::time::Duration;
+    /// 
+    /// struct Task;
+    /// 
+    /// let mut task = Entity::<Task>::new();
+    /// let original_updated = task.updated_at;
+    /// 
+    /// // Wait a bit to ensure time difference
+    /// thread::sleep(Duration::from_millis(10));
+    /// 
+    /// task.touch();
+    /// assert!(task.updated_at > original_updated);
+    /// ```
     pub fn touch(&mut self) {
         self.updated_at = SystemTime::now();
     }
@@ -58,6 +96,24 @@ impl<T> Default for Entity<T> {
 /// These IDs are globally unique and persistent. The phantom type
 /// parameter ensures that IDs for different entity types cannot be
 /// mixed up at compile time.
+///
+/// # Examples
+///
+/// ```rust
+/// use cim_domain::EntityId;
+/// 
+/// struct User;
+/// struct Product;
+/// 
+/// let user_id = EntityId::<User>::new();
+/// let product_id = EntityId::<Product>::new();
+/// 
+/// // These are different types - won't compile if mixed up:
+/// // let _: EntityId<User> = product_id; // ERROR!
+/// 
+/// // But you can explicitly cast if needed (use carefully):
+/// let casted: EntityId<Product> = user_id.cast();
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EntityId<T> {
     id: Uuid,
@@ -124,6 +180,56 @@ impl<T> From<&EntityId<T>> for Uuid {
 ///
 /// Aggregate roots are the entry points for modifying aggregates.
 /// All changes to entities within an aggregate must go through the root.
+///
+/// # Examples
+///
+/// ```rust
+/// use cim_domain::{AggregateRoot, EntityId};
+/// 
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// struct Order;
+/// 
+/// struct OrderAggregate {
+///     id: EntityId<Order>,
+///     version: u64,
+///     items: Vec<OrderItem>,
+/// }
+/// 
+/// struct OrderItem {
+///     product_id: String,
+///     quantity: u32,
+/// }
+/// 
+/// impl AggregateRoot for OrderAggregate {
+///     type Id = EntityId<Order>;
+///     
+///     fn id(&self) -> Self::Id {
+///         self.id
+///     }
+///     
+///     fn version(&self) -> u64 {
+///         self.version
+///     }
+///     
+///     fn increment_version(&mut self) {
+///         self.version += 1;
+///     }
+/// }
+/// 
+/// let mut order = OrderAggregate {
+///     id: EntityId::new(),
+///     version: 0,
+///     items: vec![],
+/// };
+/// 
+/// // All modifications go through the aggregate root
+/// order.items.push(OrderItem {
+///     product_id: "PROD-123".to_string(),
+///     quantity: 2,
+/// });
+/// order.increment_version();
+/// assert_eq!(order.version(), 1);
+/// ```
 pub trait AggregateRoot: Sized {
     /// The type of ID for this aggregate
     type Id: Copy + Eq + Send + Sync;

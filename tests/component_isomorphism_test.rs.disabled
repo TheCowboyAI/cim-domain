@@ -1,0 +1,107 @@
+//! Test that components properly support isomorphic mapping between DDD and ECS
+
+use cim_domain::{Component, ComponentExt, ComponentStorage};
+use serde::{Serialize, Deserialize};
+use std::any::Any;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct TestPosition {
+    x: f32,
+    y: f32,
+    z: f32,
+}
+
+impl Component for TestPosition {
+    fn as_any(&self) -> &dyn Any { self }
+    fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
+    fn type_name(&self) -> &'static str { "TestPosition" }
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::to_value(self).unwrap_or_default()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct TestVelocity {
+    dx: f32,
+    dy: f32,
+    dz: f32,
+}
+
+impl Component for TestVelocity {
+    fn as_any(&self) -> &dyn Any { self }
+    fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
+    fn type_name(&self) -> &'static str { "TestVelocity" }
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::to_value(self).unwrap_or_default()
+    }
+}
+
+#[test]
+fn test_component_to_ecs_mapping() {
+    let position = TestPosition { x: 10.0, y: 20.0, z: 30.0 };
+    
+    // Convert to ECS data
+    let ecs_data = position.to_ecs_data().unwrap();
+    
+    assert_eq!(ecs_data.component_type, "TestPosition");
+    assert!(ecs_data.data.is_object());
+    assert_eq!(ecs_data.data["x"], 10.0);
+    assert_eq!(ecs_data.data["y"], 20.0);
+    assert_eq!(ecs_data.data["z"], 30.0);
+}
+
+#[test]
+fn test_component_storage_with_isomorphic_components() {
+    let mut storage = ComponentStorage::new();
+    
+    // Add DDD components
+    let position = TestPosition { x: 1.0, y: 2.0, z: 3.0 };
+    let velocity = TestVelocity { dx: 0.1, dy: 0.2, dz: 0.3 };
+    
+    storage.add(position.clone()).unwrap();
+    storage.add(velocity.clone()).unwrap();
+    
+    // Verify components can be retrieved
+    let retrieved_pos = storage.get::<TestPosition>().unwrap();
+    assert_eq!(retrieved_pos, &position);
+    
+    let retrieved_vel = storage.get::<TestVelocity>().unwrap();
+    assert_eq!(retrieved_vel, &velocity);
+    
+    // Verify components can be converted to ECS
+    let pos_ecs = retrieved_pos.to_ecs_data().unwrap();
+    assert_eq!(pos_ecs.component_type, "TestPosition");
+    
+    let vel_ecs = retrieved_vel.to_ecs_data().unwrap();
+    assert_eq!(vel_ecs.component_type, "TestVelocity");
+}
+
+#[test]
+fn test_ecs_data_round_trip() {
+    let original = TestPosition { x: 5.0, y: 10.0, z: 15.0 };
+    
+    // Convert to ECS
+    let ecs_data = original.to_ecs_data().unwrap();
+    
+    // Manually reconstruct from ECS data (in real use, ComponentRegistry would handle this)
+    let reconstructed: TestPosition = serde_json::from_value(ecs_data.data).unwrap();
+    
+    assert_eq!(original, reconstructed);
+}
+
+#[test]
+fn test_component_trait_object_serialization() {
+    let position = TestPosition { x: 42.0, y: 84.0, z: 126.0 };
+    let boxed: Box<dyn Component> = Box::new(position.clone());
+    
+    // Can call to_json on trait object
+    let json = boxed.to_json();
+    
+    assert!(json.is_object());
+    assert_eq!(json["x"], 42.0);
+    assert_eq!(json["y"], 84.0);
+    assert_eq!(json["z"], 126.0);
+    
+    // Can get type name
+    assert_eq!(boxed.type_name(), "TestPosition");
+}
