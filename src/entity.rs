@@ -244,6 +244,15 @@ pub trait AggregateRoot: Sized {
     fn increment_version(&mut self);
 }
 
+/// Trait for domain entities with identity
+pub trait DomainEntity: Sized + Send + Sync {
+    /// The marker type for this entity
+    type IdType;
+    
+    /// Get the entity's ID
+    fn id(&self) -> EntityId<Self::IdType>;
+}
+
 // Marker types for entity IDs
 /// Marker for graph entities
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

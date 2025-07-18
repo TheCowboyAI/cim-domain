@@ -46,10 +46,10 @@ pub struct DomainBridge {
     pub target_domain: String,
     
     /// Message translator
-    pub translator: Box<dyn MessageTranslator>,
+    pub translator: Option<Box<dyn MessageTranslator>>,
     
     /// Bridge adapter
-    pub adapter: Box<dyn BridgeAdapter>,
+    pub adapter: Option<Box<dyn BridgeAdapter>>,
     
     /// Context mapping functor
     pub functor: ContextMappingFunctor,
@@ -177,8 +177,6 @@ impl DomainBridge {
     pub fn new(
         source_domain: String,
         target_domain: String,
-        translator: Box<dyn MessageTranslator>,
-        adapter: Box<dyn BridgeAdapter>,
     ) -> Self {
         let functor = ContextMappingFunctor::new(
             source_domain.clone(),
@@ -188,11 +186,21 @@ impl DomainBridge {
         Self {
             source_domain,
             target_domain,
-            translator,
-            adapter,
+            translator: None,
+            adapter: None,
             functor,
             metadata: HashMap::new(),
         }
+    }
+    
+    /// Set the translator
+    pub fn set_translator(&mut self, translator: Box<dyn MessageTranslator>) {
+        self.translator = Some(translator);
+    }
+    
+    /// Set the adapter
+    pub fn set_adapter(&mut self, adapter: Box<dyn BridgeAdapter>) {
+        self.adapter = Some(adapter);
     }
     
     /// Forward a command through the bridge
@@ -201,19 +209,31 @@ impl DomainBridge {
         command: SerializedCommand,
         context: &TranslationContext,
     ) -> Result<(), DomainError> {
+        // Check if translator is available
+        let translator = self.translator.as_ref()
+            .ok_or_else(|| DomainError::InvalidOperation {
+                reason: "No translator configured for bridge".to_string()
+            })?;
+        
         // Check if translation is possible
         let command_type = &command.command_type;
-        if !self.translator.can_translate_command(command_type) {
+        if !translator.can_translate_command(command_type) {
             return Err(DomainError::InvalidOperation {
                 reason: format!("Cannot translate command type: {}", command_type)
             });
         }
         
         // Translate the command
-        let translated = self.translator.translate_command(command, context).await?;
+        let translated = translator.translate_command(command, context).await?;
         
-        // Send through adapter
-        self.adapter.send_command(translated, &self.target_domain).await
+        // Send through adapter if available
+        if let Some(adapter) = &self.adapter {
+            adapter.send_command(translated, &self.target_domain).await
+        } else {
+            Err(DomainError::InvalidOperation {
+                reason: "No adapter configured for bridge".to_string()
+            })
+        }
     }
     
     /// Forward an event through the bridge
@@ -222,31 +242,52 @@ impl DomainBridge {
         event: Box<dyn DomainEvent>,
         context: &TranslationContext,
     ) -> Result<(), DomainError> {
+        // Check if translator is available
+        let translator = self.translator.as_ref()
+            .ok_or_else(|| DomainError::InvalidOperation {
+                reason: "No translator configured for bridge".to_string()
+            })?;
+        
         // Check if translation is possible
         let event_type = event.event_type();
-        if !self.translator.can_translate_event(&event_type) {
+        if !translator.can_translate_event(&event_type) {
             return Err(DomainError::InvalidOperation {
                 reason: format!("Cannot translate event type: {}", event_type)
             });
         }
         
         // Translate the event
-        let translated = self.translator.translate_event(event, context).await?;
+        let translated = translator.translate_event(event, context).await?;
         
-        // Send through adapter
-        self.adapter.send_event(translated, &self.target_domain).await
+        // Send through adapter if available
+        if let Some(adapter) = &self.adapter {
+            adapter.send_event(translated, &self.target_domain).await
+        } else {
+            Err(DomainError::InvalidOperation {
+                reason: "No adapter configured for bridge".to_string()
+            })
+        }
     }
     
     /// Check bridge health
     pub async fn health_check(&self) -> Result<BridgeHealth, DomainError> {
-        self.adapter.health_check().await
+        if let Some(adapter) = &self.adapter {
+            adapter.health_check().await
+        } else {
+            Ok(BridgeHealth {
+                is_healthy: false,
+                last_success: None,
+                recent_errors: 0,
+                avg_latency_ms: None,
+            })
+        }
     }
 }
 
 /// Registry for domain bridges
 pub struct BridgeRegistry {
     /// Registered bridges
-    bridges: Arc<RwLock<HashMap<(String, String), DomainBridge>>>,
+    bridges: Arc<RwLock<HashMap<(String, String), Arc<DomainBridge>>>>,
 }
 
 impl BridgeRegistry {
@@ -268,7 +309,7 @@ impl BridgeRegistry {
             ));
         }
         
-        bridges.insert(key, bridge);
+        bridges.insert(key, Arc::new(bridge));
         Ok(())
     }
     
@@ -279,13 +320,12 @@ impl BridgeRegistry {
         target: &str,
     ) -> Result<Arc<DomainBridge>, DomainError> {
         let bridges = self.bridges.read().await;
-        let _bridge = bridges.get(&(source.to_string(), target.to_string()))
+        let bridge = bridges.get(&(source.to_string(), target.to_string()))
             .ok_or_else(|| DomainError::NotFound(
                 format!("Bridge from {} to {} not found", source, target)
             ))?;
         
-        // Return a reference (in real impl, would clone or use Arc)
-        Err(DomainError::NotImplemented("Bridge reference not implemented".to_string()))
+        Ok(bridge.clone())
     }
     
     /// Find all bridges from a source domain
@@ -305,18 +345,49 @@ impl BridgeRegistry {
             .cloned()
             .collect()
     }
+    
+    /// Send a command through a bridge
+    pub async fn send_command(
+        &self,
+        source: &str,
+        target: &str,
+        command: SerializedCommand,
+        context: TranslationContext,
+    ) -> Result<SerializedCommand, DomainError> {
+        let bridge = self.get_bridge(source, target).await?;
+        
+        // Translate the command if translator is available
+        let translated_command = if let Some(translator) = &bridge.translator {
+            translator.translate_command(command, &context).await?
+        } else {
+            command
+        };
+        
+        // Send through adapter if available
+        if let Some(adapter) = &bridge.adapter {
+            adapter.send_command(translated_command.clone(), target).await?;
+        }
+        
+        Ok(translated_command)
+    }
+}
+
+/// Mapping configuration for a command or event type
+#[derive(Clone)]
+struct TypeMapping {
+    /// Target type name
+    target_type: String,
+    /// Property mappings (source -> target)
+    property_mappings: Vec<(String, String)>,
 }
 
 /// Example: Simple property-based translator
 pub struct PropertyBasedTranslator {
     /// Command mappings
-    command_mappings: HashMap<String, String>,
+    command_mappings: HashMap<String, TypeMapping>,
     
     /// Event mappings
-    event_mappings: HashMap<String, String>,
-    
-    /// Property mappings
-    property_mappings: HashMap<String, String>,
+    event_mappings: HashMap<String, TypeMapping>,
 }
 
 impl PropertyBasedTranslator {
@@ -325,7 +396,6 @@ impl PropertyBasedTranslator {
         Self {
             command_mappings: HashMap::new(),
             event_mappings: HashMap::new(),
-            property_mappings: HashMap::new(),
         }
     }
     
@@ -334,8 +404,12 @@ impl PropertyBasedTranslator {
     /// # Arguments
     /// * `source` - Source command type
     /// * `target` - Target command type
-    pub fn add_command_mapping(&mut self, source: String, target: String) {
-        self.command_mappings.insert(source, target);
+    /// * `property_mappings` - Property name mappings
+    pub fn add_command_mapping(&mut self, source: String, target: String, property_mappings: Vec<(String, String)>) {
+        self.command_mappings.insert(source, TypeMapping {
+            target_type: target,
+            property_mappings,
+        });
     }
     
     /// Add an event type mapping
@@ -343,17 +417,12 @@ impl PropertyBasedTranslator {
     /// # Arguments
     /// * `source` - Source event type
     /// * `target` - Target event type
-    pub fn add_event_mapping(&mut self, source: String, target: String) {
-        self.event_mappings.insert(source, target);
-    }
-    
-    /// Add a property name mapping
-    ///
-    /// # Arguments
-    /// * `source` - Source property name
-    /// * `target` - Target property name
-    pub fn add_property_mapping(&mut self, source: String, target: String) {
-        self.property_mappings.insert(source, target);
+    /// * `property_mappings` - Property name mappings
+    pub fn add_event_mapping(&mut self, source: String, target: String, property_mappings: Vec<(String, String)>) {
+        self.event_mappings.insert(source, TypeMapping {
+            target_type: target,
+            property_mappings,
+        });
     }
 }
 
@@ -361,22 +430,111 @@ impl PropertyBasedTranslator {
 impl MessageTranslator for PropertyBasedTranslator {
     async fn translate_command(
         &self,
-        _command: SerializedCommand,
-        _context: &TranslationContext,
+        command: SerializedCommand,
+        context: &TranslationContext,
     ) -> Result<SerializedCommand, DomainError> {
-        // In real implementation, would perform actual translation
-        // For now, return error
-        Err(DomainError::NotImplemented("Command translation not implemented".to_string()))
+        // Get the mapping for this command type
+        let mapping = self.command_mappings.get(&command.command_type)
+            .ok_or_else(|| DomainError::InvalidOperation {
+                reason: format!("No mapping found for command type: {}", command.command_type)
+            })?;
+        
+        // Create translated payload map
+        let mut payload_map = serde_json::Map::new();
+        
+        // Apply property mappings
+        if let Some(obj) = command.payload.as_object() {
+            for (source_prop, target_prop) in &mapping.property_mappings {
+                if let Some(value) = obj.get(source_prop) {
+                    payload_map.insert(target_prop.clone(), value.clone());
+                }
+            }
+        }
+        
+        // Apply any context-specific transformations
+        if let Some(target_domain_context) = context.target_context.get("domain_context") {
+            payload_map.insert("_context".to_string(), target_domain_context.clone());
+        }
+        
+        // Create translated command with mapped type
+        let translated = SerializedCommand {
+            command_type: mapping.target_type.clone(),
+            aggregate_id: command.aggregate_id,
+            payload: serde_json::Value::Object(payload_map),
+        };
+        
+        Ok(translated)
     }
     
     async fn translate_event(
         &self,
-        _event: Box<dyn DomainEvent>,
-        _context: &TranslationContext,
+        event: Box<dyn DomainEvent>,
+        context: &TranslationContext,
     ) -> Result<Box<dyn DomainEvent>, DomainError> {
-        // In real implementation, would perform actual translation
-        // For now, return error
-        Err(DomainError::NotImplemented("Event translation not implemented".to_string()))
+        // Get the mapping for this event type
+        let event_type = event.event_type();
+        let mapping = self.event_mappings.get(event_type)
+            .ok_or_else(|| DomainError::InvalidOperation {
+                reason: format!("No mapping found for event type: {}", event_type)
+            })?;
+        
+        // Since we can't serialize trait objects, create a simple payload
+        // In a real implementation, you would need type-specific handling
+        let mut translated_payload = serde_json::Map::new();
+        
+        // Add basic event information
+        translated_payload.insert("source_event_type".to_string(), serde_json::Value::String(event_type.to_string()));
+        translated_payload.insert("aggregate_id".to_string(), serde_json::Value::String(event.aggregate_id().to_string()));
+        translated_payload.insert("subject".to_string(), serde_json::Value::String(event.subject()));
+        
+        // Add context metadata if provided
+        if let Some(target_context) = context.target_context.get("domain_context") {
+            translated_payload.insert("_context".to_string(), target_context.clone());
+        }
+        
+        // For now, return a generic translated event wrapper
+        // In a real implementation, this would deserialize to the target event type
+        use crate::events::{DomainEvent as DomainEventTrait, EventMetadata};
+        use uuid::Uuid;
+        
+        #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+        struct TranslatedEvent {
+            event_type: String,
+            aggregate_id: Uuid,
+            payload: serde_json::Value,
+            metadata: EventMetadata,
+        }
+        
+        impl DomainEventTrait for TranslatedEvent {
+            fn subject(&self) -> String {
+                format!("{}.translated.v1", self.event_type)
+            }
+            
+            fn aggregate_id(&self) -> Uuid {
+                self.aggregate_id
+            }
+            
+            fn event_type(&self) -> &'static str {
+                "TranslatedEvent"
+            }
+        }
+        
+        let translated_event = TranslatedEvent {
+            event_type: mapping.target_type.clone(),
+            aggregate_id: event.aggregate_id(),
+            payload: serde_json::Value::Object(translated_payload),
+            metadata: EventMetadata {
+                source: context.source_context.get("source")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("integration")
+                    .to_string(),
+                version: "1.0".to_string(),
+                propagation_scope: crate::events::PropagationScope::Leaf,
+                properties: context.source_context.clone(),
+            },
+        };
+        
+        Ok(Box::new(translated_event) as Box<dyn DomainEvent>)
     }
     
     fn can_translate_command(&self, command_type: &str) -> bool {
@@ -462,14 +620,9 @@ mod tests {
     
     #[tokio::test]
     async fn test_domain_bridge_creation() {
-        let translator = Box::new(PropertyBasedTranslator::new());
-        let adapter = Box::new(InMemoryBridgeAdapter::new());
-        
         let bridge = DomainBridge::new(
             "Sales".to_string(),
             "Billing".to_string(),
-            translator,
-            adapter,
         );
         
         assert_eq!(bridge.source_domain, "Sales");
@@ -480,14 +633,9 @@ mod tests {
     async fn test_bridge_registry() {
         let registry = BridgeRegistry::new();
         
-        let translator = Box::new(PropertyBasedTranslator::new());
-        let adapter = Box::new(InMemoryBridgeAdapter::new());
-        
         let bridge = DomainBridge::new(
             "Domain1".to_string(),
             "Domain2".to_string(),
-            translator,
-            adapter,
         );
         
         registry.register(bridge).await.unwrap();

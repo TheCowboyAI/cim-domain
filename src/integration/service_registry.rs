@@ -50,6 +50,30 @@ pub struct ServiceDescriptor {
     pub metadata: HashMap<String, String>,
 }
 
+impl ServiceDescriptor {
+    /// Create a new service descriptor
+    pub fn new<T>(
+        lifetime: ServiceLifetime,
+        factory: Box<dyn Fn(&DependencyContainer) -> Result<Arc<T>, DomainError> + Send + Sync>,
+    ) -> Self
+    where
+        T: 'static + Send + Sync,
+    {
+        ServiceDescriptor {
+            service_type: TypeId::of::<T>(),
+            service_name: std::any::type_name::<T>().to_string(),
+            implementation_type: TypeId::of::<T>(),
+            implementation_name: std::any::type_name::<T>().to_string(),
+            lifetime,
+            factory: Arc::new(move |container| {
+                let instance = factory(container)?;
+                Ok(Box::new(instance) as Box<dyn Any + Send + Sync>)
+            }),
+            metadata: HashMap::new(),
+        }
+    }
+}
+
 /// Service registry
 pub struct ServiceRegistry {
     /// Registered services
@@ -182,10 +206,10 @@ impl ServiceRegistry {
     }
     
     /// Resolve a service
-    pub async fn resolve<T: ?Sized + 'static>(
+    pub async fn resolve<T: 'static + Send + Sync>(
         &self,
         container: &DependencyContainer,
-    ) -> Result<Box<dyn Any + Send + Sync>, DomainError> {
+    ) -> Result<Arc<T>, DomainError> {
         let service_type = TypeId::of::<T>();
         
         // Get service descriptor
@@ -202,32 +226,45 @@ impl ServiceRegistry {
             ServiceLifetime::Singleton => {
                 // Check if instance exists
                 let instances = self.instances.read().await;
-                // TODO: Fix instance caching for singletons
-                // Currently recreating instances each time
-                // if let Some(instance) = instances.get(&service_type) {
-                //     if let Some(typed) = instance.downcast_ref::<Box<T>>() {
-                //         return Ok(typed.clone());
-                //     }
-                // }
+                if let Some(instance) = instances.get(&service_type) {
+                    // Try to downcast the stored instance
+                    if let Some(arc_any) = instance.downcast_ref::<Arc<T>>() {
+                        return Ok(arc_any.clone());
+                    }
+                }
                 drop(instances);
                 
                 // Create new instance
-                let instance = (descriptor.factory)(container)?;
+                let boxed_instance = (descriptor.factory)(container)?;
                 
-                // TODO: Fix instance storage
-                // let mut instances = self.instances.write().await;
-                // instances.insert(service_type, instance.clone());
-                
-                // Return the instance as-is
-                Ok(instance)
+                // Try to downcast to Arc<T>
+                if let Ok(arc_t) = boxed_instance.downcast::<Arc<T>>() {
+                    let instance = *arc_t;
+                    
+                    // Store the instance for future use
+                    let mut instances = self.instances.write().await;
+                    instances.insert(service_type, Box::new(instance.clone()) as Box<dyn Any + Send + Sync>);
+                    
+                    Ok(instance)
+                } else {
+                    Err(DomainError::InvalidOperation {
+                        reason: "Failed to downcast service instance".to_string()
+                    })
+                }
             }
             
             ServiceLifetime::Transient | ServiceLifetime::Scoped => {
                 // Always create new instance
-                let instance = (descriptor.factory)(container)?;
+                let boxed_instance = (descriptor.factory)(container)?;
                 
-                // Return the instance as-is
-                Ok(instance)
+                // Try to downcast to Arc<T>
+                if let Ok(arc_t) = boxed_instance.downcast::<Arc<T>>() {
+                    Ok(*arc_t)
+                } else {
+                    Err(DomainError::InvalidOperation {
+                        reason: "Failed to downcast service instance".to_string()
+                    })
+                }
             }
         }
     }
@@ -421,12 +458,8 @@ mod tests {
         }).await.unwrap();
         
         // Resolve service
-        let service1_any = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
-        let service2_any = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
-        
-        // Downcast to concrete type
-        let service1 = service1_any.downcast::<TestServiceImpl>().unwrap();
-        let service2 = service2_any.downcast::<TestServiceImpl>().unwrap();
+        let service1 = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
+        let service2 = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
         
         assert_eq!(service1.get_value(), "singleton");
         assert_eq!(service2.get_value(), "singleton");
@@ -449,12 +482,8 @@ mod tests {
         }).await.unwrap();
         
         // Each resolve creates new instance
-        let service1_any = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
-        let service2_any = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
-        
-        // Downcast to concrete type
-        let service1 = service1_any.downcast::<TestServiceImpl>().unwrap();
-        let service2 = service2_any.downcast::<TestServiceImpl>().unwrap();
+        let service1 = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
+        let service2 = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
         
         assert_eq!(service1.get_value(), "instance_0");
         assert_eq!(service2.get_value(), "instance_1");

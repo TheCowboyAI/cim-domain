@@ -63,6 +63,9 @@ pub struct CrossDomainSearchEngine {
     
     /// Search configuration
     config: SearchConfig,
+    
+    /// Domain searchers
+    searchers: Arc<RwLock<HashMap<String, Box<dyn DomainSearcher>>>>,
 }
 
 /// Configuration for cross-domain search
@@ -233,15 +236,24 @@ pub struct SearchMetadata {
 }
 
 impl CrossDomainSearchEngine {
-    /// Create a new cross-domain search engine
-    pub fn new(event_bridge: Arc<EventBridge>, config: SearchConfig) -> Self {
+    /// Create a new cross-domain search engine with specific config
+    pub fn with_config(event_bridge: Arc<EventBridge>, config: SearchConfig) -> Self {
         Self {
             analyzers: Arc::new(RwLock::new(HashMap::new())),
             domains: Arc::new(RwLock::new(HashMap::new())),
             functors: Arc::new(RwLock::new(HashMap::new())),
             _event_bridge: event_bridge,
             config,
+            searchers: Arc::new(RwLock::new(HashMap::new())),
         }
+    }
+    
+    /// Create a new cross-domain search engine with default config
+    pub fn new() -> Self {
+        Self::with_config(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        )
     }
     
     /// Register a domain with its semantic analyzer
@@ -267,6 +279,12 @@ impl CrossDomainSearchEngine {
         Ok(())
     }
     
+    /// Register a domain searcher
+    pub async fn register_domain_searcher(&self, searcher: Box<dyn DomainSearcher>) {
+        let mut searchers = self.searchers.write().await;
+        searchers.insert(searcher.domain_name().to_string(), searcher);
+    }
+    
     /// Register a functor between domains
     pub async fn register_functor<F>(
         &self,
@@ -290,8 +308,26 @@ impl CrossDomainSearchEngine {
         Ok(())
     }
     
+    /// Simple search method using domain searchers
+    pub async fn search(&self, query: &str) -> Result<Vec<SearchResult>, DomainError> {
+        let searchers = self.searchers.read().await;
+        let mut all_results = Vec::new();
+        
+        for searcher in searchers.values() {
+            match searcher.search(query).await {
+                Ok(results) => all_results.extend(results),
+                Err(_) => continue, // Skip errors from individual domains
+            }
+        }
+        
+        // Sort by relevance score descending
+        all_results.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap_or(std::cmp::Ordering::Equal));
+        
+        Ok(all_results)
+    }
+    
     /// Perform a cross-domain search
-    pub async fn search(&self, query: CrossDomainQuery) -> Result<CrossDomainResult, DomainError> {
+    pub async fn search_advanced(&self, query: CrossDomainQuery) -> Result<CrossDomainResult, DomainError> {
         let start_time = std::time::Instant::now();
         let config = query.config_overrides.as_ref().unwrap_or(&self.config);
         
@@ -710,7 +746,7 @@ mod tests {
             config_overrides: None,
         };
         
-        let results = engine.search(query).await.unwrap();
+        let results = engine.search_advanced(query).await.unwrap();
         
         assert_eq!(results.domain_results.len(), 2);
         assert!(results.domain_results.contains_key("Sales"));
@@ -834,7 +870,7 @@ mod tests {
             config_overrides: None,
         };
         
-        let results = engine.search(query).await.unwrap();
+        let results = engine.search_advanced(query).await.unwrap();
         
         assert_eq!(results.domain_results.len(), 2);
         assert!(results.domain_results.contains_key("Domain1"));
@@ -855,7 +891,7 @@ mod tests {
             config_overrides: None,
         };
         
-        let result = engine.search(query).await;
+        let result = engine.search_advanced(query).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             DomainError::NotFound(msg) => assert!(msg.contains("NonExistentDomain")),
@@ -898,7 +934,7 @@ mod tests {
             config_overrides: Some(custom_config),
         };
         
-        let results = engine.search(query).await.unwrap();
+        let results = engine.search_advanced(query).await.unwrap();
         
         // Should respect custom results_per_domain limit
         let test_domain_results = results.domain_results.get("TestDomain").unwrap();
@@ -1077,11 +1113,44 @@ mod tests {
             config_overrides: None,
         };
         
-        let results = engine.search(query).await.unwrap();
+        let results = engine.search_advanced(query).await.unwrap();
         
         assert_eq!(results.domain_results.len(), 1);
         assert_eq!(results.domain_results.get("EmptyDomain").unwrap().len(), 0);
         assert_eq!(results.metadata.total_results, 0);
         assert_eq!(results.aggregated_concepts.len(), 0);
     }
+}
+
+/// Trait for searching within a specific domain
+#[async_trait::async_trait]
+pub trait DomainSearcher: Send + Sync {
+    /// Get the domain name
+    fn domain_name(&self) -> &str;
+    
+    /// Search within the domain
+    async fn search(&self, query: &str) -> Result<Vec<SearchResult>, DomainError>;
+    
+    /// Get relationships for an entity
+    async fn get_relationships(
+        &self,
+        entity_id: &str,
+    ) -> Result<Vec<(String, String, String)>, DomainError>;
+}
+
+/// Result from a domain search
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    /// Domain this result belongs to
+    pub domain: String,
+    /// Entity ID
+    pub entity_id: String,
+    /// Entity type
+    pub entity_type: String,
+    /// Relevance score (0.0 to 1.0)
+    pub relevance_score: f64,
+    /// Fields that matched
+    pub matched_fields: Vec<String>,
+    /// Additional metadata
+    pub metadata: HashMap<String, String>,
 }

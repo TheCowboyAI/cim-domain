@@ -1,0 +1,60 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  coverage:
+    name: Generate test coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+      
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@cargo-tarpaulin
+      
+      - name: Generate coverage with tarpaulin
+        run: |
+          cargo tarpaulin --lib --out Xml --out Lcov
+      
+      - name: Generate LLVM coverage
+        run: |
+          cargo llvm-cov --all-features --lcov --output-path lcov-llvm.info
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./cobertura.xml,./lcov.info,./lcov-llvm.info
+          fail_ci_if_error: false
+          verbose: true
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: |
+            cobertura.xml
+            lcov.info
+            lcov-llvm.info
+            tarpaulin-report.html
+      
+      - name: Coverage summary
+        run: |
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cargo tarpaulin --lib --print-summary >> $GITHUB_STEP_SUMMARY

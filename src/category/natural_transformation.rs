@@ -132,20 +132,7 @@ where
     }
 }
 
-/// Monad structure via natural transformations
-#[allow(dead_code)]
-pub struct MonadStructure<M>
-where
-    M: DomainFunctor,
-{
-    /// unit: Id → M (return/pure)
-    unit: Box<dyn NaturalTransformation<SourceFunctor = IdentityFunctor, TargetFunctor = M>>,
-    
-    /// multiplication: M∘M → M (join/flatten)
-    multiplication: Box<dyn NaturalTransformation<SourceFunctor = ComposedFunctor<M, M>, TargetFunctor = M>>,
-}
-
-// Placeholder types for monad structure
+// Placeholder types for functors
 /// Identity functor - maps objects and morphisms to themselves
 pub struct IdentityFunctor;
 /// Composed functor F∘G - composition of two functors
@@ -171,25 +158,6 @@ impl DomainFunctor for IdentityFunctor {
     fn target_category(&self) -> String {
         "Identity".to_string()
     }
-}
-
-/// Adjunction between functors
-#[allow(dead_code)]
-pub struct Adjunction<L, R, C, D>
-where
-    L: DomainFunctor<Source = C, Target = D>,
-    R: DomainFunctor<Source = D, Target = C>,
-{
-    left: L,
-    right: R,
-    
-    /// unit: Id_C → R∘L
-    unit: Box<dyn NaturalTransformation<SourceFunctor = IdentityFunctor, TargetFunctor = ComposedFunctor<R, L>>>,
-    
-    /// counit: L∘R → Id_D
-    counit: Box<dyn NaturalTransformation<SourceFunctor = ComposedFunctor<L, R>, TargetFunctor = IdentityFunctor>>,
-    
-    _phantom: PhantomData<(C, D)>,
 }
 
 /// Example: Event sourcing as a natural transformation

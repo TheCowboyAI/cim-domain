@@ -1,0 +1,16 @@
+[build]
+# Enable debug symbols for better coverage reports
+rustflags = ["-C", "instrument-coverage"]
+
+[target.'cfg(all())']
+# Additional flags for coverage instrumentation
+rustflags = ["-C", "link-dead-code"]
+
+[alias]
+# Convenient aliases for common tasks
+cov = "tarpaulin --lib --out Html"
+cov-all = "tarpaulin --all-features --out Html"
+cov-lcov = "tarpaulin --lib --out Lcov"
+nextest = "nextest run"
+lint = "clippy -- -D warnings"
+quality = "clippy --all-targets --all-features -- -D warnings"

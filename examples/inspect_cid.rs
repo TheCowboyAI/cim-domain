@@ -10,9 +10,9 @@ fn main() {
         Ok(cid) => {
             println!("CID: {cid}");
             println!("Version: {:?}", cid.version());
-            println!("Codec: 0x{:x} ({cid.codec(})"), codec_name(cid.codec()));
-            println!("Hash algorithm: {hash_name(cid.hash(}").code()));
-            println!("Hash digest length: {cid.hash(} bytes").size());
+            println!("Codec: 0x{:x} ({})", cid.codec(), codec_name(cid.codec()));
+            println!("Hash algorithm: {}", hash_name(cid.hash().code()));
+            println!("Hash digest length: {} bytes", cid.hash().size());
 
             // Convert hash to hex string
             let hash_hex: String = cid.hash().to_bytes()

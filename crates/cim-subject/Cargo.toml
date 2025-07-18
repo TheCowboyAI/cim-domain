@@ -1,7 +1,7 @@
 [package]
 name = "cim-subject"
 version = "0.3.0"
-edition = "2024"
+edition = "2021"
 authors = ["The CowboyAI Team"]
 description = "Subject Algebra for NATS-based domain routing and message translation"
 license = "MIT OR Apache-2.0"

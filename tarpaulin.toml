@@ -1,0 +1,66 @@
+# Tarpaulin configuration for test coverage
+
+[default]
+# Exclude non-library code from coverage
+exclude-files = [
+    "*/tests/*",
+    "*/examples/*",
+    "*/benches/*",
+    "target/*",
+    "*/build.rs"
+]
+
+# Include integration tests in coverage
+run-types = ["Tests", "Doctests"]
+
+# Timeout for each test
+timeout = "120s"
+
+# Generate both HTML and LCOV reports
+out = ["Html", "Lcov"]
+
+# Use all available cores
+jobs = 0
+
+# Follow exec calls
+follow-exec = true
+
+# Ignore panic exits
+ignore-panics = true
+
+# Include ignored tests
+ignored = true
+
+# Avoid false positives
+avoid-cfg-tarpaulin = true
+
+[lib-coverage]
+# Library-only coverage profile
+workspace = false
+exclude-files = [
+    "*/tests/*",
+    "*/examples/*",
+    "*/benches/*",
+    "target/*",
+    "*/build.rs",
+    "src/bin/*"
+]
+lib = true
+bins = false
+examples = false
+tests = false
+benches = false
+doc = false
+all-targets = false
+
+[full-coverage]
+# Full coverage including tests and examples
+workspace = true
+all-features = true
+all-targets = true
+lib = true
+bins = true
+examples = true
+tests = true
+benches = false
+doc = true

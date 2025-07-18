@@ -136,7 +136,7 @@ impl DomainEvent for ExampleEvent {
     }
 
     fn subject(&self) -> String {
-        format!("example.aggregate.{self.event_type(}.v1").to_lowercase())
+        format!("example.aggregate.{}.v1", self.event_type()).to_lowercase()
     }
 }
 

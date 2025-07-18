@@ -239,6 +239,30 @@ impl EventBridge {
         }
     }
     
+    /// Add a routing rule
+    pub async fn add_routing_rule(
+        &self,
+        name: String,
+        source_pattern: String,
+        event_type_pattern: String,
+        targets: Vec<String>,
+        condition: Option<RoutingCondition>,
+    ) -> Result<(), DomainError> {
+        let rule = RoutingRule {
+            name,
+            source_pattern,
+            event_pattern: event_type_pattern,
+            targets,
+            priority: 100, // Default priority
+            conditions: condition.map(|c| vec![c]).unwrap_or_default(),
+        };
+        
+        let mut rules = self.router.rules.write().await;
+        rules.push(rule);
+        rules.sort_by_key(|r| std::cmp::Reverse(r.priority));
+        Ok(())
+    }
+    
     /// Publish an event
     pub async fn publish(
         &self,
@@ -411,6 +435,14 @@ impl EventBridge {
 }
 
 impl EventRouter {
+    /// Create a new event router
+    pub fn new() -> Self {
+        Self {
+            rules: Arc::new(RwLock::new(Vec::new())),
+            default_routes: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+    
     /// Determine routes for an event
     pub async fn determine_routes(
         &self,

@@ -51,12 +51,13 @@ pub mod category;
 pub mod composition;
 pub mod domain;
 pub mod integration;
+pub mod persistence;
 
 // Re-export core types
 pub use component::{Component, ComponentStorage, ComponentExt, EcsComponentData, ComponentEvent};
 pub use component_sync::DomainComponentSync;
 pub use domain_component_bridge::DomainComponentBridge;
-pub use entity::{Entity, EntityId, AggregateRoot};
+pub use entity::{Entity, EntityId, AggregateRoot, DomainEntity};
 pub use identifiers::{NodeId, EdgeId, GraphId, StateId, TransitionId, WorkflowId, WorkflowIdExt};
 pub use node_types::NodeType;
 pub use relationship_types::RelationshipType;

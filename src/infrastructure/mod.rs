@@ -16,6 +16,14 @@ pub mod event_replay;
 pub mod snapshot_store;
 pub mod event_stream;
 pub mod event_stream_service;
+/// Event versioning and schema evolution support
+pub mod event_versioning;
+/// Projection checkpoint storage for fault-tolerant event processing
+pub mod projection_checkpoint;
+/// Automatic snapshot policies for performance optimization
+pub mod snapshot_policy;
+/// Saga pattern implementation for distributed transactions
+pub mod saga;
 
 pub use nats_client::{NatsClient, NatsConfig, NatsError};
 pub use event_store::{EventStore, EventStoreError, StoredEvent, EventMetadata};
@@ -33,6 +41,21 @@ pub use event_stream::{
     StreamComposition, GroupingCriteria, WindowSpec,
 };
 pub use event_stream_service::EventStreamService;
+pub use event_versioning::{
+    EventVersioningService, EventVersioningError, EventUpcaster, 
+    SimpleUpcaster, VersionedEvent, EventTypeMetadata
+};
+pub use projection_checkpoint::{
+    CheckpointStore, JetStreamCheckpointStore, InMemoryCheckpointStore,
+    ProjectionCheckpoint, EventPosition, CheckpointError, CheckpointManager
+};
+pub use snapshot_policy::{
+    SnapshotPolicy, SnapshotPolicyEngine, SnapshotMetrics, AutoSnapshotService
+};
+pub use saga::{
+    SagaError, SagaInstance, SagaCoordinator, CommandBus, ProcessManager, 
+    ProcessPolicy, SagaCommand, SagaDefinition, SagaMarker
+};
 
 #[cfg(test)]
 mod tests;

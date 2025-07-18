@@ -10,6 +10,6 @@ pub mod topos_structure;
 pub mod comprehension_engine;
 
 pub use domain_composition::{DomainComposition, CompositionStrategy};
-pub use saga_orchestration::{Saga, SagaStep, SagaOrchestrator};
+pub use saga_orchestration::{Saga, SagaStep, SagaState, SagaOrchestrator, RetryPolicy};
 pub use topos_structure::{DomainTopos, SubobjectClassifier, InternalLogic};
 pub use comprehension_engine::{ComprehensionEngine, Predicate, SubAggregate};

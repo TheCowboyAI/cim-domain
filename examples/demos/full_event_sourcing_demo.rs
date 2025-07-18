@@ -338,7 +338,7 @@ fn main() {
     println!("1️⃣ Creating New Account\n");
     
     let account_id = "ACC-001";
-    let open_command = AccountCommand::OpenAccount {
+    let _open_command = AccountCommand::OpenAccount {
         owner_name: "Alice Smith".to_string(),
         initial_deposit: 1000.0,
     };

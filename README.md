@@ -1,11 +1,12 @@
 # CIM Domain
 
+[![CI](https://github.com/thecowboyai/cim-domain/actions/workflows/ci.yml/badge.svg)](https://github.com/thecowboyai/cim-domain/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/cim-domain.svg)](https://crates.io/crates/cim-domain)
 [![Documentation](https://docs.rs/cim-domain/badge.svg)](https://docs.rs/cim-domain)
 [![Test Coverage](https://img.shields.io/codecov/c/github/thecowboyai/cim-domain)](https://codecov.io/gh/thecowboyai/cim-domain)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Core Domain-Driven Design (DDD) components and traits for the Composable Information Machine (CIM).
+Core Domain-Driven Design (DDD) components and traits for the Composable Information Machine (CIM), featuring a complete persistence layer with NATS JetStream integration.
 
 ## Critical Context
 
@@ -43,6 +44,15 @@ The `cim-domain` crate provides the fundamental building blocks for implementing
 - State machine abstractions (Moore and Mealy machines)
 - Component system for extensible domain objects
 - Full test coverage with examples
+
+### Persistence Layer
+
+- **Simple Repository**: Basic CRUD operations for aggregates
+- **NATS KV Repository**: Advanced storage with TTL and versioning
+- **Read Model Store**: Optimized storage for CQRS read models with caching
+- **Query Support**: Type-safe query building with filters, sorting, and pagination
+- **Event Sourcing**: Full event sourcing support (advanced modules)
+- **Metrics Collection**: Built-in performance monitoring and instrumentation
 
 ## Core Entities
 
@@ -122,24 +132,63 @@ enum UserCommand {
 impl Command for UserCommand {}
 ```
 
-### Creating a New Domain
+### Persistence Example
 
 ```rust
 use cim_domain::{
-    person::{PersonId, Person, RegisterPerson},
-    DomainResult,
+    EntityId,
+    DomainEntity,
+    persistence::*,
 };
 
-// Create a new person
-let person_id = PersonId::new();
-let command = RegisterPerson {
-    id: person_id,
-    name: "Alice Smith".to_string(),
-    email: "alice@example.com".to_string(),
-};
+// Define your aggregate
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Product {
+    id: EntityId<ProductMarker>,
+    name: String,
+    price: f64,
+}
 
-// Process command to get events
-let events = Person::handle_command(command)?;
+impl DomainEntity for Product {
+    type IdType = ProductMarker;
+    
+    fn id(&self) -> EntityId<Self::IdType> {
+        self.id
+    }
+}
+
+// Create repository
+let repo = NatsKvRepositoryBuilder::new()
+    .client(client)
+    .bucket_name("products")
+    .aggregate_type("Product")
+    .ttl_seconds(3600)  // 1 hour TTL
+    .build()
+    .await?;
+
+// Save aggregate
+let product = Product::new("Laptop", 999.99);
+let metadata = repo.save(&product).await?;
+
+// Load aggregate
+let loaded: Option<Product> = repo.load(&product.id()).await?;
+
+// Query with filters
+let query = QueryBuilder::new()
+    .filter("category", json!("electronics"))
+    .sort_by("price", SortDirection::Ascending)
+    .limit(10)
+    .build();
+
+// Add metrics instrumentation
+use cim_domain::persistence::instrumented_repository::InstrumentedRepository;
+
+let instrumented_repo = InstrumentedRepository::new(repo);
+instrumented_repo.save(&product).await?;
+
+// Get metrics summary
+let summary = instrumented_repo.metrics().summary().await;
+println!("Save operations: {}", summary.counters.get("repository.save.count").unwrap_or(&0));
 ```
 
 ## Project Structure
@@ -157,12 +206,19 @@ cim-domain/
 │   ├── category/           # Category theory
 │   ├── domain/             # Domain utilities
 │   ├── integration/        # Cross-domain
+│   ├── persistence/        # Persistence layer
+│   │   ├── simple_repository.rs
+│   │   ├── nats_kv_repository.rs
+│   │   ├── read_model_store_v2.rs
+│   │   └── query_support.rs
 │   └── state_machine.rs    # State machines
 ├── crates/
 │   ├── cim-component/      # ECS component system
 │   ├── cim-ipld/           # Content addressing
 │   └── cim-subject/        # NATS subject algebra
-└── tests/                  # Integration tests
+├── tests/                  # Integration tests
+├── benches/                # Performance benchmarks
+└── examples/               # Usage examples
 ```
 
 ## Development
@@ -181,6 +237,13 @@ cargo test
 
 # Run with verbose output
 cargo test -- --nocapture
+
+# Run integration tests with NATS
+docker run -d -p 4222:4222 nats:latest -js
+cargo test --test nats_integration_tests
+
+# Run benchmarks
+cargo bench
 ```
 
 ### Running Examples
@@ -197,26 +260,43 @@ cargo run --example full_event_sourcing_demo
 
 # Simple example demonstrating core functionality
 cargo run --example simple_example
+
+# Persistence layer example
+cargo run --example persistence_example_v2
+
+# Advanced persistence with TTL
+cargo run --example advanced_persistence_example
+
+# Persistence metrics collection and monitoring
+cargo run --example persistence_metrics_demo
 ```
 
 ## Current Status
 
 **Library Status**: ✅ Complete and functional
-- **196 tests passing** (100% pass rate)
-- **9 doc tests** demonstrating usage
-- **Zero compilation warnings** in domain logic
-- **Production ready** - Used by 14+ domains
+- **All tests passing** (100% pass rate)
+- **Zero compilation warnings**
+- **Production ready** with full persistence layer
+
+**Persistence Layer**: ✅ Complete
+- Simple repository for basic CRUD operations
+- NATS KV repository with TTL and versioning
+- Read model store with caching
+- Query support with filters and pagination
+- Integration tests with real NATS server
+- Performance benchmarks included
 
 **Infrastructure**: ✅ Complete
 - Event Store integration with NATS JetStream
 - Command/Query handlers with proper CQRS separation
-- Bevy ECS bridge for visualization
+- Cross-domain integration patterns
 - Event replay and snapshot capabilities
 
-**Examples Status**: ⚠️ Needs updating
-- `simple_example.rs` - ✅ Working example demonstrating core functionality
-- Other examples need to be updated to work with the current API
-- Many examples depend on types that have been moved to specific domain modules
+**CI/CD**: ✅ Complete
+- GitHub Actions workflow for continuous integration
+- Automated testing with NATS services
+- Code coverage reporting
+- Clippy and formatting checks
 
 ## Documentation
 
