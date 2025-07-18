@@ -42,6 +42,10 @@ pub struct FunctorIdentity<C> {
 }
 
 impl<C> FunctorIdentity<C> {
+    /// Create a new identity functor for a category
+    ///
+    /// # Arguments
+    /// * `category_name` - Name of the category this functor operates on
     pub fn new(category_name: String) -> Self {
         Self {
             category_name,
@@ -90,6 +94,11 @@ where
     F: DomainFunctor,
     G: DomainFunctor,
 {
+    /// Create a new composed functor F ∘ G
+    ///
+    /// # Arguments
+    /// * `first` - The first functor to apply
+    /// * `second` - The second functor to apply (after first)
     pub fn new(first: F, second: G) -> Self {
         Self { first, second }
     }
@@ -135,6 +144,11 @@ pub struct ContextMappingFunctor {
 }
 
 impl ContextMappingFunctor {
+    /// Create a new context mapping functor
+    ///
+    /// # Arguments
+    /// * `source_context` - The source bounded context name
+    /// * `target_context` - The target bounded context name
     pub fn new(source_context: String, target_context: String) -> Self {
         Self {
             source_context,
@@ -218,6 +232,11 @@ pub struct AntiCorruptionFunctor {
 }
 
 impl AntiCorruptionFunctor {
+    /// Create a new anti-corruption layer functor
+    ///
+    /// # Arguments
+    /// * `source_domain` - The source domain name
+    /// * `target_domain` - The target domain name (protected)
     pub fn new(source_domain: String, target_domain: String) -> Self {
         Self {
             source_domain,
@@ -291,6 +310,11 @@ pub struct ForgetfulFunctor {
 }
 
 impl ForgetfulFunctor {
+    /// Create a new forgetful functor
+    ///
+    /// # Arguments
+    /// * `source_domain` - The source domain with full structure
+    /// * `target_domain` - The target domain with reduced structure
     pub fn new(source_domain: String, target_domain: String) -> Self {
         Self {
             source_domain,
@@ -299,6 +323,10 @@ impl ForgetfulFunctor {
         }
     }
     
+    /// Add a property to forget when mapping objects
+    ///
+    /// # Arguments
+    /// * `property` - Name of the property to remove
     pub fn forget_property(&mut self, property: String) {
         self.properties_to_forget.push(property);
     }

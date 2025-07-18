@@ -52,6 +52,11 @@ where
     F: DomainFunctor,
     G: DomainFunctor,
 {
+    /// Create a new natural isomorphism from forward and backward transformations
+    ///
+    /// # Arguments
+    /// * `forward` - Natural transformation from F to G
+    /// * `backward` - Natural transformation from G to F
     pub fn new(
         forward: Box<dyn NaturalTransformation<SourceFunctor = F, TargetFunctor = G>>,
         backward: Box<dyn NaturalTransformation<SourceFunctor = G, TargetFunctor = F>>,
@@ -59,6 +64,7 @@ where
         Self { forward, backward }
     }
     
+    /// Get the inverse natural isomorphism (G ≅ F instead of F ≅ G)
     pub fn inverse(self) -> NaturalIsomorphism<G, F> {
         NaturalIsomorphism {
             forward: self.backward,
@@ -79,6 +85,7 @@ impl<F> IdentityNaturalTransformation<F>
 where
     F: DomainFunctor,
 {
+    /// Create a new identity natural transformation (F → F)
     pub fn new() -> Self {
         Self {
             _phantom: PhantomData,
@@ -126,6 +133,7 @@ where
 }
 
 /// Monad structure via natural transformations
+#[allow(dead_code)]
 pub struct MonadStructure<M>
 where
     M: DomainFunctor,
@@ -138,7 +146,9 @@ where
 }
 
 // Placeholder types for monad structure
+/// Identity functor - maps objects and morphisms to themselves
 pub struct IdentityFunctor;
+/// Composed functor F∘G - composition of two functors
 pub struct ComposedFunctor<F, G>(PhantomData<(F, G)>);
 
 #[async_trait]
@@ -164,6 +174,7 @@ impl DomainFunctor for IdentityFunctor {
 }
 
 /// Adjunction between functors
+#[allow(dead_code)]
 pub struct Adjunction<L, R, C, D>
 where
     L: DomainFunctor<Source = C, Target = D>,
@@ -188,6 +199,11 @@ pub struct EventSourcingTransformation {
 }
 
 impl EventSourcingTransformation {
+    /// Create a new event sourcing transformation
+    ///
+    /// # Arguments
+    /// * `source_domain` - The source domain emitting events
+    /// * `target_domain` - The target domain consuming events
     pub fn new(source_domain: String, target_domain: String) -> Self {
         Self {
             source_domain,
@@ -224,9 +240,9 @@ impl NaturalTransformation for EventSourcingTransformation {
     
     async fn verify_naturality(
         &self,
-        source_functor: &Self::SourceFunctor,
-        target_functor: &Self::TargetFunctor,
-        morphism: &DomainMorphism,
+        _source_functor: &Self::SourceFunctor,
+        _target_functor: &Self::TargetFunctor,
+        _morphism: &DomainMorphism,
     ) -> Result<bool, DomainError> {
         // Verify that:
         // target_functor(morphism) ∘ transform = transform ∘ source_functor(morphism)
@@ -242,7 +258,9 @@ impl NaturalTransformation for EventSourcingTransformation {
 }
 
 // Placeholder functors for event sourcing
+/// Functor that projects events into state representations
 pub struct StateProjectionFunctor;
+/// Functor that maps domain objects to event streams
 pub struct EventStreamFunctor;
 
 #[async_trait]

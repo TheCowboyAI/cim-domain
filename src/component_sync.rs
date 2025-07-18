@@ -170,7 +170,5 @@ impl cim_component::NatsClient for NatsAdapter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    
     // Tests would go here
 }

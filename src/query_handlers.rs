@@ -125,8 +125,6 @@ impl<T: Clone + Send + Sync> ReadModelStorage<T> for InMemoryReadModel<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Workflow query tests have been moved to cim-domain-workflow
 
     // Location query tests have been moved to cim-domain-location

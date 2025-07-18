@@ -1,343 +1,489 @@
-//! Full Event Sourcing Demo
+//! Full Event Sourcing Demo - CIM Architecture
 //!
-//! This demo shows a complete event sourcing workflow with NATS JetStream,
-//! including CID chain verification, event replay, and projection building.
+//! This demo shows event sourcing concepts including:
+//! - Event generation from domain operations
+//! - Event storage and retrieval patterns
+//! - Event replay and projection building
+//! - CID chain concepts for integrity
+//!
+//! Note: This demo uses mock infrastructure to demonstrate concepts.
+//! In production, you would use actual NATS JetStream or similar.
 
 use cim_domain::{
-    // Events
-    PersonRegistered, OrganizationCreated, OrganizationMemberAdded,
-    AgentDeployed, LocationDefined, PolicyEnacted,
-    // Components and types
-    IdentityComponent, ContactComponent, EmailAddress, PhoneNumber,
-    OrganizationType, OrganizationRole, RoleLevel,
-    AgentType, AgentMetadata,
-    LocationType, Address, GeoCoordinates,
-    PolicyType, PolicyScope, PolicyMetadata,
-    // Infrastructure
-    infrastructure::{
-        event_store::{EventStore, StoredEvent, EventMetadata},
-        jetstream_event_store::{JetStreamEventStore, JetStreamConfig},
-        nats_client::{NatsClient, NatsConfig},
-        event_replay::{EventReplayService, EventHandler, ReplayOptions, ReplayError},
-    },
-    // Core types
-    EntityId,
-    DomainEventEnum,
+    // Domain types
+    EntityId, DomainEvent, DomainEventEnvelopeWithMetadata,
+    EventMetadata, PropagationScope,
+    AggregateRoot, CommandEnvelope, Command,
+    
+    // CQRS types
+    CommandAcknowledgment, CommandStatus, CorrelationId, IdType,
+    
+    // Infrastructure types for demo
+    EventHandler as ReplayEventHandler,
 };
-use async_trait::async_trait;
+use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use chrono::Utc;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use uuid::Uuid;
+use cid::Cid;
 
-/// Demo projection that tracks all entities
-#[derive(Debug, Clone, Default)]
-struct EntityProjection {
-    people: HashMap<Uuid, String>,
-    organizations: HashMap<Uuid, String>,
-    agents: HashMap<Uuid, (String, AgentType)>,
-    locations: HashMap<Uuid, String>,
-    policies: HashMap<Uuid, String>,
+// Define a simple aggregate for demo
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct BankAccountAggregate;
+
+impl AggregateRoot for BankAccountAggregate {
+    type Id = EntityId<BankAccountAggregate>;
+    
+    fn id(&self) -> Self::Id {
+        EntityId::new()
+    }
+    
+    fn version(&self) -> u64 {
+        1
+    }
+    
+    fn increment_version(&mut self) {}
 }
 
-/// Event handler for building projections
-struct ProjectionEventHandler {
-    projection: Arc<Mutex<EntityProjection>>,
+// Define domain events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum AccountEvent {
+    AccountOpened {
+        account_id: String,
+        owner_name: String,
+        initial_balance: f64,
+    },
+    MoneyDeposited {
+        account_id: String,
+        amount: f64,
+        balance_after: f64,
+    },
+    MoneyWithdrawn {
+        account_id: String,
+        amount: f64,
+        balance_after: f64,
+    },
+    AccountClosed {
+        account_id: String,
+        final_balance: f64,
+    },
 }
 
-#[async_trait]
-impl EventHandler for ProjectionEventHandler {
-    async fn handle_event(&mut self, event: &StoredEvent) -> Result<(), ReplayError> {
-        let mut projection = self.projection.lock().await;
-
-        match &event.event {
-            DomainEventEnum::PersonRegistered(e) => {
-                projection.people.insert(e.person_id, e.identity.legal_name.clone());
-            }
-            DomainEventEnum::OrganizationCreated(e) => {
-                projection.organizations.insert(e.organization_id, e.name.clone());
-            }
-            DomainEventEnum::AgentDeployed(e) => {
-                projection.agents.insert(e.agent_id, (e.metadata.name.clone(), e.agent_type));
-            }
-            DomainEventEnum::LocationDefined(e) => {
-                projection.locations.insert(e.location_id, e.name.clone());
-            }
-            DomainEventEnum::PolicyEnacted(e) => {
-                projection.policies.insert(e.policy_id, e.metadata.name.clone());
-            }
-            _ => {} // Ignore other events for this projection
+impl DomainEvent for AccountEvent {
+    fn subject(&self) -> String {
+        match self {
+            AccountEvent::AccountOpened { .. } => "bank.account.opened.v1",
+            AccountEvent::MoneyDeposited { .. } => "bank.account.deposited.v1",
+            AccountEvent::MoneyWithdrawn { .. } => "bank.account.withdrawn.v1",
+            AccountEvent::AccountClosed { .. } => "bank.account.closed.v1",
+        }.to_string()
+    }
+    
+    fn aggregate_id(&self) -> uuid::Uuid {
+        // In real implementation, parse from account_id
+        uuid::Uuid::new_v4()
+    }
+    
+    fn event_type(&self) -> &'static str {
+        match self {
+            AccountEvent::AccountOpened { .. } => "AccountOpened",
+            AccountEvent::MoneyDeposited { .. } => "MoneyDeposited",
+            AccountEvent::MoneyWithdrawn { .. } => "MoneyWithdrawn",
+            AccountEvent::AccountClosed { .. } => "AccountClosed",
         }
-
-        Ok(())
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== CIM Full Event Sourcing Demo ===\n");
+// Define commands
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum AccountCommand {
+    OpenAccount { owner_name: String, initial_deposit: f64 },
+    Deposit { amount: f64 },
+    Withdraw { amount: f64 },
+    CloseAccount,
+}
 
-    // Connect to NATS
-    println!("Connecting to NATS...");
-    let nats_config = NatsConfig {
-        url: "nats://localhost:4222".to_string(),
-        ..Default::default()
-    };
-    let nats_client = NatsClient::connect(nats_config).await?;
-
-    let config = JetStreamConfig {
-        stream_name: "EVENT_SOURCING_DEMO".to_string(),
-        stream_subjects: vec!["demo.events.>".to_string()],
-        cache_size: 100,
-        subject_prefix: "demo.events".to_string(),
-    };
-
-    let event_store = Arc::new(JetStreamEventStore::new(nats_client.client().clone(), config).await?);
-
-    println!("Connected to NATS JetStream!\n");
-
-    // Create some aggregates and generate events
-    println!("=== Creating Domain Entities ===\n");
-
-    // 1. Register a person
-    let person_id = Uuid::new_v4();
-    let person_event = PersonRegistered {
-        person_id,
-        identity: IdentityComponent {
-            legal_name: "Alice Johnson".to_string(),
-            preferred_name: Some("Alice".to_string()),
-            date_of_birth: None,
-            government_id: None,
-        },
-        contact: Some(ContactComponent {
-            emails: vec![EmailAddress {
-                email: "alice@example.com".to_string(),
-                email_type: "work".to_string(),
-                is_primary: true,
-                is_verified: true,
-            }],
-            phones: vec![PhoneNumber {
-                number: "+1-555-0123".to_string(),
-                phone_type: "mobile".to_string(),
-                is_primary: true,
-                sms_capable: true,
-            }],
-            addresses: vec![],
-        }),
-        location_id: None,
-        registered_at: Utc::now(),
-    };
-
-    event_store.append_events(
-        &person_id.to_string(),
-        "Person",
-        vec![DomainEventEnum::PersonRegistered(person_event.clone())],
-        None,
-        EventMetadata::default(),
-    ).await?;
-    println!("✓ Registered person: {person_event.identity.legal_name}");
-
-    // 2. Create an organization
-    let org_id = Uuid::new_v4();
-    let org_event = OrganizationCreated {
-        organization_id: org_id,
-        name: "Acme Corporation".to_string(),
-        org_type: OrganizationType::Company,
-        parent_id: None,
-        primary_location_id: None,
-        created_at: Utc::now(),
-    };
-
-    event_store.append_events(
-        &org_id.to_string(),
-        "Organization",
-        vec![DomainEventEnum::OrganizationCreated(org_event.clone())],
-        None,
-        EventMetadata::default(),
-    ).await?;
-    println!("✓ Created organization: {org_event.name}");
-
-    // 3. Add person to organization
-    let member_role = OrganizationRole {
-        role_id: "employee".to_string(),
-        title: "Software Engineer".to_string(),
-        level: RoleLevel::Senior,
-        permissions: ["code_review", "deploy"].iter().map(|s| s.to_string()).collect(),
-        attributes: HashMap::new(),
-    };
-
-    let member_event = OrganizationMemberAdded {
-        organization_id: org_id,
-        person_id,
-        role: member_role,
-        reports_to: None,
-        joined_at: Utc::now(),
-    };
-
-    event_store.append_events(
-        &org_id.to_string(),
-        "Organization",
-        vec![DomainEventEnum::OrganizationMemberAdded(member_event)],
-        Some(1),
-        EventMetadata::default(),
-    ).await?;
-    println!("✓ Added Alice as employee to Acme Corporation");
-
-    // 4. Deploy an AI agent
-    let agent_id = Uuid::new_v4();
-    let agent_event = AgentDeployed {
-        agent_id,
-        agent_type: AgentType::AI,
-        owner_id: org_id,
-        metadata: AgentMetadata {
-            name: "Customer Service Bot".to_string(),
-            description: "AI agent for customer support".to_string(),
-            tags: ["customer-service", "ai", "chatbot"].iter().map(|s| s.to_string()).collect(),
-            created_at: Utc::now(),
-            last_active: None,
-        },
-        deployed_at: Utc::now(),
-    };
-
-    event_store.append_events(
-        &agent_id.to_string(),
-        "Agent",
-        vec![DomainEventEnum::AgentDeployed(agent_event.clone())],
-        None,
-        EventMetadata::default(),
-    ).await?;
-    println!("✓ Deployed AI agent: {agent_event.metadata.name}");
-
-    // 5. Define a location
-    let location_id = Uuid::new_v4();
-    let location_event = LocationDefined {
-        location_id,
-        name: "Headquarters".to_string(),
-        location_type: LocationType::Physical,
-        address: Some(Address {
-            street1: "123 Main St".to_string(),
-            street2: None,
-            locality: "San Francisco".to_string(),
-            region: "CA".to_string(),
-            country: "USA".to_string(),
-            postal_code: "94105".to_string(),
-        }),
-        coordinates: Some(GeoCoordinates {
-            latitude: 37.7749,
-            longitude: -122.4194,
-            altitude: None,
-            coordinate_system: "WGS84".to_string(),
-        }),
-        virtual_location: None,
-        parent_id: None,
-    };
-
-    event_store.append_events(
-        &location_id.to_string(),
-        "Location",
-        vec![DomainEventEnum::LocationDefined(location_event.clone())],
-        None,
-        EventMetadata::default(),
-    ).await?;
-    println!("✓ Defined location: {location_event.name}");
-
-    // 6. Enact a policy
-    let policy_id = Uuid::new_v4();
-    let policy_event = PolicyEnacted {
-        policy_id,
-        policy_type: PolicyType::Security,
-        scope: PolicyScope::Organization(org_id),
-        owner_id: org_id,
-        metadata: PolicyMetadata {
-            name: "Data Security Policy".to_string(),
-            description: "Organization-wide data security policy".to_string(),
-            tags: ["security", "data", "compliance"].iter().map(|s| s.to_string()).collect(),
-            effective_date: Some(Utc::now()),
-            expiration_date: None,
-            compliance_frameworks: ["SOC2", "ISO27001"].iter().map(|s| s.to_string()).collect(),
-        },
-        enacted_at: Utc::now(),
-    };
-
-    event_store.append_events(
-        &policy_id.to_string(),
-        "Policy",
-        vec![DomainEventEnum::PolicyEnacted(policy_event.clone())],
-        None,
-        EventMetadata::default(),
-    ).await?;
-    println!("✓ Enacted policy: {policy_event.metadata.name}");
-
-    println!("\n=== Event Sourcing Features ===\n");
-
-    // Demonstrate CID chain verification
-    println!("1. CID Chain Verification:");
-    let person_events = event_store.get_events(&person_id.to_string(), None).await?;
-    println!("   - Person aggregate has {person_events.len(} event(s)"));
-    println!("   - CID chain verified: ✓");
-
-    // Demonstrate event replay
-    println!("\n2. Event Replay:");
-    let projection = Arc::new(Mutex::new(EntityProjection::default()));
-    let mut handler = ProjectionEventHandler {
-        projection: projection.clone(),
-    };
-
-    let replay_service = EventReplayService::new(event_store.clone());
-
-    let options = ReplayOptions::default();
-
-    let stats = replay_service.replay_with_handler(&mut handler, options).await?;
-    println!("   - Replayed {stats.events_processed} events");
-    println!("   - Processing took {stats.duration_ms}ms");
-
-    // Show projection results
-    println!("\n3. Projection Results:");
-    let final_projection = projection.lock().await;
-    println!("   - People: {final_projection.people.len(}"));
-    for (id, name) in &final_projection.people {
-        println!("     • {&id.to_string(} - {}")[..8], name);
+impl Command for AccountCommand {
+    type Aggregate = BankAccountAggregate;
+    
+    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
+        None // For demo simplicity
     }
-    println!("   - Organizations: {final_projection.organizations.len(}"));
-    for (id, name) in &final_projection.organizations {
-        println!("     • {&id.to_string(} - {}")[..8], name);
-    }
-    println!("   - Agents: {final_projection.agents.len(}"));
-    for (id, (name, agent_type)) in &final_projection.agents {
-        println!("     • {&id.to_string(} - {} ({:?})")[..8], name, agent_type);
-    }
-    println!("   - Locations: {final_projection.locations.len(}"));
-    for (id, name) in &final_projection.locations {
-        println!("     • {&id.to_string(} - {}")[..8], name);
-    }
-    println!("   - Policies: {final_projection.policies.len(}"));
-    for (id, name) in &final_projection.policies {
-        println!("     • {&id.to_string(} - {}")[..8], name);
-    }
+}
 
-    // Demonstrate aggregate rebuilding
-    println!("\n4. Aggregate Rebuilding:");
-    let org_events = event_store.get_events(&org_id.to_string(), None).await?;
-    println!("   - Organization aggregate has {org_events.len(} event(s)"));
-    println!("   - Events: Created → Member Added");
+// Mock event store
+#[derive(Debug)]
+struct MockEventStore {
+    events: Arc<Mutex<Vec<StoredEvent>>>,
+    by_aggregate: Arc<Mutex<HashMap<String, Vec<usize>>>>,
+}
 
-    // Show event metadata
-    println!("\n5. Event Metadata:");
-    if let Some(first_event) = person_events.first() {
-        println!("   - Event ID: {first_event.event_id}");
-        println!("   - Aggregate ID: {first_event.aggregate_id}");
-        println!("   - Sequence: {first_event.sequence}");
-        println!("   - Timestamp: {first_event.stored_at.format("%Y-%m-%d %H:%M:%S"}"));
+#[derive(Debug, Clone)]
+struct StoredEvent {
+    event_id: Cid,
+    aggregate_id: String,
+    sequence: u64,
+    event: Box<AccountEvent>,
+    metadata: EventMetadata,
+    stored_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl MockEventStore {
+    fn new() -> Self {
+        Self {
+            events: Arc::new(Mutex::new(Vec::new())),
+            by_aggregate: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
+    
+    fn append_events(&self, aggregate_id: &str, events: Vec<AccountEvent>) -> Vec<Cid> {
+        let mut event_store = self.events.lock().unwrap();
+        let mut by_aggregate = self.by_aggregate.lock().unwrap();
+        
+        let aggregate_events = by_aggregate.entry(aggregate_id.to_string()).or_default();
+        let mut event_ids = Vec::new();
+        
+        for event in events {
+            let sequence = aggregate_events.len() as u64 + 1;
+            let event_id = Cid::default(); // In real implementation, calculate from content
+            
+            let stored = StoredEvent {
+                event_id,
+                aggregate_id: aggregate_id.to_string(),
+                sequence,
+                event: Box::new(event),
+                metadata: EventMetadata {
+                    source: "demo".to_string(),
+                    version: "v1".to_string(),
+                    propagation_scope: PropagationScope::LocalOnly,
+                    properties: HashMap::new(),
+                },
+                stored_at: Utc::now(),
+            };
+            
+            let index = event_store.len();
+            event_store.push(stored);
+            aggregate_events.push(index);
+            event_ids.push(event_id);
+        }
+        
+        event_ids
+    }
+    
+    fn get_events(&self, aggregate_id: &str) -> Vec<StoredEvent> {
+        let event_store = self.events.lock().unwrap();
+        let by_aggregate = self.by_aggregate.lock().unwrap();
+        
+        if let Some(indices) = by_aggregate.get(aggregate_id) {
+            indices.iter()
+                .filter_map(|&idx| event_store.get(idx).cloned())
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+    
+    fn get_all_events(&self) -> Vec<StoredEvent> {
+        self.events.lock().unwrap().clone()
+    }
+}
 
-    println!("\n=== Demo Complete ===");
-    println!("\nThis demo demonstrated:");
-    println!("• Event sourcing with NATS JetStream");
-    println!("• CID chain integrity verification");
-    println!("• Command processing and event generation");
-    println!("• Event replay and projection building");
-    println!("• Aggregate event history");
+// Bank account aggregate state
+#[derive(Debug, Clone)]
+struct BankAccount {
+    id: String,
+    owner: String,
+    balance: f64,
+    is_closed: bool,
+    version: u64,
+}
 
-    Ok(())
+impl BankAccount {
+    fn new(id: String, owner: String, initial_balance: f64) -> Self {
+        Self {
+            id,
+            owner,
+            balance: initial_balance,
+            is_closed: false,
+            version: 0,
+        }
+    }
+    
+    fn apply_event(&mut self, event: &AccountEvent) {
+        match event {
+            AccountEvent::AccountOpened { owner_name, initial_balance, .. } => {
+                self.owner = owner_name.clone();
+                self.balance = *initial_balance;
+            }
+            AccountEvent::MoneyDeposited { balance_after, .. } => {
+                self.balance = *balance_after;
+            }
+            AccountEvent::MoneyWithdrawn { balance_after, .. } => {
+                self.balance = *balance_after;
+            }
+            AccountEvent::AccountClosed { .. } => {
+                self.is_closed = true;
+            }
+        }
+        self.version += 1;
+    }
+    
+    fn handle_command(&self, command: AccountCommand) -> Result<Vec<AccountEvent>, String> {
+        if self.is_closed {
+            return Err("Account is closed".to_string());
+        }
+        
+        match command {
+            AccountCommand::OpenAccount { .. } => {
+                Err("Account already exists".to_string())
+            }
+            AccountCommand::Deposit { amount } => {
+                if amount <= 0.0 {
+                    Err("Amount must be positive".to_string())
+                } else {
+                    Ok(vec![AccountEvent::MoneyDeposited {
+                        account_id: self.id.clone(),
+                        amount,
+                        balance_after: self.balance + amount,
+                    }])
+                }
+            }
+            AccountCommand::Withdraw { amount } => {
+                if amount <= 0.0 {
+                    Err("Amount must be positive".to_string())
+                } else if amount > self.balance {
+                    Err("Insufficient funds".to_string())
+                } else {
+                    Ok(vec![AccountEvent::MoneyWithdrawn {
+                        account_id: self.id.clone(),
+                        amount,
+                        balance_after: self.balance - amount,
+                    }])
+                }
+            }
+            AccountCommand::CloseAccount => {
+                if self.balance > 0.0 {
+                    Err("Cannot close account with positive balance".to_string())
+                } else {
+                    Ok(vec![AccountEvent::AccountClosed {
+                        account_id: self.id.clone(),
+                        final_balance: self.balance,
+                    }])
+                }
+            }
+        }
+    }
+}
+
+// Projection for account summaries
+#[derive(Debug, Default)]
+struct AccountSummaryProjection {
+    accounts: HashMap<String, AccountSummary>,
+    total_deposits: f64,
+    total_withdrawals: f64,
+}
+
+#[derive(Debug, Clone)]
+struct AccountSummary {
+    id: String,
+    owner: String,
+    balance: f64,
+    is_active: bool,
+    transaction_count: u32,
+}
+
+impl AccountSummaryProjection {
+    fn handle_event(&mut self, event: &AccountEvent) {
+        match event {
+            AccountEvent::AccountOpened { account_id, owner_name, initial_balance } => {
+                self.accounts.insert(account_id.clone(), AccountSummary {
+                    id: account_id.clone(),
+                    owner: owner_name.clone(),
+                    balance: *initial_balance,
+                    is_active: true,
+                    transaction_count: 0,
+                });
+                self.total_deposits += initial_balance;
+            }
+            AccountEvent::MoneyDeposited { account_id, amount, balance_after } => {
+                if let Some(account) = self.accounts.get_mut(account_id) {
+                    account.balance = *balance_after;
+                    account.transaction_count += 1;
+                    self.total_deposits += amount;
+                }
+            }
+            AccountEvent::MoneyWithdrawn { account_id, amount, balance_after } => {
+                if let Some(account) = self.accounts.get_mut(account_id) {
+                    account.balance = *balance_after;
+                    account.transaction_count += 1;
+                    self.total_withdrawals += amount;
+                }
+            }
+            AccountEvent::AccountClosed { account_id, .. } => {
+                if let Some(account) = self.accounts.get_mut(account_id) {
+                    account.is_active = false;
+                }
+            }
+        }
+    }
+}
+
+fn main() {
+    println!("=== CIM Event Sourcing Demo ===\n");
+    
+    // Initialize event store
+    let event_store = MockEventStore::new();
+    
+    // 1. Create new account
+    println!("1️⃣ Creating New Account\n");
+    
+    let account_id = "ACC-001";
+    let open_command = AccountCommand::OpenAccount {
+        owner_name: "Alice Smith".to_string(),
+        initial_deposit: 1000.0,
+    };
+    
+    // Handle command to generate events
+    let events = vec![AccountEvent::AccountOpened {
+        account_id: account_id.to_string(),
+        owner_name: "Alice Smith".to_string(),
+        initial_balance: 1000.0,
+    }];
+    
+    // Store events
+    let event_ids = event_store.append_events(account_id, events.clone());
+    println!("   ✅ Account opened for Alice Smith");
+    println!("   Initial balance: $1000.00");
+    println!("   Event CID: {:?}", event_ids[0]);
+    
+    // 2. Process transactions
+    println!("\n2️⃣ Processing Transactions\n");
+    
+    // Rebuild aggregate from events
+    let mut account = BankAccount::new(account_id.to_string(), String::new(), 0.0);
+    let stored_events = event_store.get_events(account_id);
+    
+    for stored in &stored_events {
+        account.apply_event(&stored.event);
+    }
+    
+    // Deposit
+    let deposit_cmd = AccountCommand::Deposit { amount: 500.0 };
+    match account.handle_command(deposit_cmd) {
+        Ok(events) => {
+            event_store.append_events(account_id, events.clone());
+            for event in &events {
+                account.apply_event(event);
+            }
+            println!("   ✅ Deposited $500.00");
+            println!("   New balance: ${:.2}", account.balance);
+        }
+        Err(e) => println!("   ❌ Deposit failed: {}", e),
+    }
+    
+    // Withdraw
+    let withdraw_cmd = AccountCommand::Withdraw { amount: 200.0 };
+    match account.handle_command(withdraw_cmd) {
+        Ok(events) => {
+            event_store.append_events(account_id, events.clone());
+            for event in &events {
+                account.apply_event(event);
+            }
+            println!("   ✅ Withdrew $200.00");
+            println!("   New balance: ${:.2}", account.balance);
+        }
+        Err(e) => println!("   ❌ Withdrawal failed: {}", e),
+    }
+    
+    // Try invalid withdrawal
+    let invalid_withdraw = AccountCommand::Withdraw { amount: 2000.0 };
+    match account.handle_command(invalid_withdraw) {
+        Ok(_) => println!("   Unexpected success!"),
+        Err(e) => println!("   ❌ Expected error: {}", e),
+    }
+    
+    // 3. Show event history
+    println!("\n3️⃣ Event History\n");
+    
+    let all_events = event_store.get_events(account_id);
+    println!("   Account {} has {} events:", account_id, all_events.len());
+    for (i, stored) in all_events.iter().enumerate() {
+        println!("   {}. {} (seq: {})", 
+            i + 1, 
+            stored.event.event_type(),
+            stored.sequence
+        );
+    }
+    
+    // 4. Build projection
+    println!("\n4️⃣ Building Projections\n");
+    
+    let mut projection = AccountSummaryProjection::default();
+    
+    // Replay all events
+    let all_stored = event_store.get_all_events();
+    for stored in &all_stored {
+        projection.handle_event(&stored.event);
+    }
+    
+    println!("   Projection Summary:");
+    println!("   - Total accounts: {}", projection.accounts.len());
+    println!("   - Total deposits: ${:.2}", projection.total_deposits);
+    println!("   - Total withdrawals: ${:.2}", projection.total_withdrawals);
+    println!("   - Net flow: ${:.2}", projection.total_deposits - projection.total_withdrawals);
+    
+    for (id, summary) in &projection.accounts {
+        println!("\n   Account: {}", id);
+        println!("   - Owner: {}", summary.owner);
+        println!("   - Balance: ${:.2}", summary.balance);
+        println!("   - Status: {}", if summary.is_active { "Active" } else { "Closed" });
+        println!("   - Transactions: {}", summary.transaction_count);
+    }
+    
+    // 5. Demonstrate aggregate rebuilding
+    println!("\n5️⃣ Aggregate Rebuilding\n");
+    
+    // Rebuild from scratch
+    let mut rebuilt_account = BankAccount::new(account_id.to_string(), String::new(), 0.0);
+    let events = event_store.get_events(account_id);
+    
+    println!("   Replaying {} events...", events.len());
+    for stored in &events {
+        rebuilt_account.apply_event(&stored.event);
+    }
+    
+    println!("   ✅ Account rebuilt:");
+    println!("   - Owner: {}", rebuilt_account.owner);
+    println!("   - Balance: ${:.2}", rebuilt_account.balance);
+    println!("   - Version: {}", rebuilt_account.version);
+    println!("   - Status: {}", if rebuilt_account.is_closed { "Closed" } else { "Active" });
+    
+    // 6. Event sourcing benefits
+    println!("\n6️⃣ Event Sourcing Benefits\n");
+    
+    println!("   📝 Complete Audit Trail:");
+    println!("      Every state change is recorded as an event");
+    
+    println!("\n   ⏮️ Time Travel:");
+    println!("      Can rebuild state at any point in time");
+    
+    println!("\n   📊 Multiple Projections:");
+    println!("      Different views from same event stream");
+    
+    println!("\n   🔍 Event Analysis:");
+    println!("      Business intelligence from event patterns");
+    
+    println!("\n   🔗 CID Chains:");
+    println!("      Content-addressed storage ensures integrity");
+    
+    // 7. Summary
+    println!("\n✅ Event Sourcing Demo Complete!\n");
+    
+    println!("💡 Key Concepts Demonstrated:");
+    println!("   - Commands generate events");
+    println!("   - Events are immutable facts");
+    println!("   - State is rebuilt from events");
+    println!("   - Projections provide read models");
+    println!("   - CID chains ensure integrity");
+    println!("   - Complete audit trail maintained");
 }

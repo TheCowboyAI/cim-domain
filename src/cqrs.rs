@@ -387,7 +387,7 @@ mod tests {
     /// Test command for testing
     #[derive(Debug, Clone)]
     struct TestCommand {
-        name: String,
+        _name: String,
         aggregate_id: Option<EntityId<AggregateMarker>>,
     }
 
@@ -402,7 +402,7 @@ mod tests {
     /// Test query for testing
     #[derive(Debug, Clone)]
     struct TestQuery {
-        filter: String,
+        _filter: String,
     }
 
     impl Query for TestQuery {}
@@ -418,7 +418,7 @@ mod tests {
     #[test]
     fn test_command_envelope_new() {
         let command = TestCommand {
-            name: "test".to_string(),
+            _name: "test".to_string(),
             aggregate_id: Some(EntityId::new()),
         };
 
@@ -453,14 +453,14 @@ mod tests {
     fn test_command_envelope_from_command() {
         // Create parent command
         let parent_command = TestCommand {
-            name: "parent".to_string(),
+            _name: "parent".to_string(),
             aggregate_id: None,
         };
         let parent_envelope = CommandEnvelope::new(parent_command, "user".to_string());
 
         // Create child command
         let child_command = TestCommand {
-            name: "child".to_string(),
+            _name: "child".to_string(),
             aggregate_id: None,
         };
 
@@ -491,7 +491,7 @@ mod tests {
     #[test]
     fn test_query_envelope_new() {
         let query = TestQuery {
-            filter: "active".to_string(),
+            _filter: "active".to_string(),
         };
 
         let envelope = QueryEnvelope::new(query, "user456".to_string());
@@ -533,7 +533,7 @@ mod tests {
         };
 
         let query = TestQuery {
-            filter: "by-event".to_string(),
+            _filter: "by-event".to_string(),
         };
 
         let envelope = QueryEnvelope::from_event(
@@ -662,7 +662,7 @@ mod tests {
         };
 
         let command = TestCommand {
-            name: "test".to_string(),
+            _name: "test".to_string(),
             aggregate_id: None,
         };
 

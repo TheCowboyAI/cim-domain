@@ -1,359 +1,568 @@
-//! State Machine Demo
+//! State Machine Demo - CIM Architecture
 //!
-//! This demo shows state machine transitions for all aggregates,
-//! demonstrating how domain entities move through their lifecycles.
+//! This demo showcases the state machine capabilities in CIM's domain model,
+//! including Moore and Mealy machines, state transitions, and practical usage.
+//!
+//! Key concepts demonstrated:
+//! - Moore machines (output based on state)
+//! - Mealy machines (output based on state and input)
+//! - State transitions with validation
+//! - Domain events from state changes
+//! - Practical workflow example
 
 use cim_domain::{
-    // Aggregates and types
-    Agent, AgentType, AgentStatus,
-    Policy, PolicyType, PolicyScope, PolicyStatus, PolicyMetadata,
-    Document, DocumentStatus, DocumentInfoComponent, EntityId, DocumentMarker,
-    // For CID creation
-    DomainError,
+    // State machine types
+    State, MooreMachine, MealyMachine,
+    MooreStateTransitions, MealyStateTransitions,
+    TransitionInput, TransitionOutput,
+    DocumentState,
+    
+    // Domain types
+    EntityId, DomainEvent, AggregateRoot,
 };
-use chrono::Utc;
-use std::collections::{HashSet, HashMap};
-use uuid::Uuid;
-use cid::Cid;
+use serde::{Serialize, Deserialize};
 
-/// Demo showing state transitions
-struct StateMachineDemo {
-    agents: Vec<Agent>,
-    policies: Vec<Policy>,
-    documents: Vec<Document>,
+// Define custom states for an order processing workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+enum OrderState {
+    Draft,
+    Submitted,
+    Validated,
+    Processing,
+    Shipped,
+    Delivered,
+    Cancelled,
 }
 
-impl StateMachineDemo {
-    fn new() -> Self {
-        Self {
-            agents: Vec::new(),
-            policies: Vec::new(),
-            documents: Vec::new(),
+impl State for OrderState {
+    fn name(&self) -> &'static str {
+        match self {
+            OrderState::Draft => "Draft",
+            OrderState::Submitted => "Submitted",
+            OrderState::Validated => "Validated",
+            OrderState::Processing => "Processing",
+            OrderState::Shipped => "Shipped",
+            OrderState::Delivered => "Delivered",
+            OrderState::Cancelled => "Cancelled",
         }
     }
-
-    /// Demonstrate agent state transitions
-    fn demo_agent_states(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("=== Agent State Machine Demo ===\n");
-
-        // Create an agent
-        let agent_id = Uuid::new_v4();
-        let owner_id = Uuid::new_v4();
-        let mut agent = Agent::new(agent_id, AgentType::AI, owner_id);
-
-        println!("1. Agent created in Initializing state");
-        println!("   Status: {:?}", agent.status());
-
-        // Activate the agent
-        agent.activate()?;
-        println!("\n2. Agent activated");
-        println!("   Status: {:?}", agent.status());
-
-        // Suspend the agent
-        agent.suspend("Maintenance required".to_string())?;
-        println!("\n3. Agent suspended");
-        println!("   Status: {:?}", agent.status());
-
-        // Reactivate
-        agent.activate()?;
-        println!("\n4. Agent reactivated");
-        println!("   Status: {:?}", agent.status());
-
-        // Set offline
-        agent.set_offline()?;
-        println!("\n5. Agent went offline");
-        println!("   Status: {:?}", agent.status());
-
-        // Try to activate from offline
-        agent.activate()?;
-        println!("\n6. Agent back online");
-        println!("   Status: {:?}", agent.status());
-
-        // Decommission
-        agent.decommission()?;
-        println!("\n7. Agent decommissioned");
-        println!("   Status: {:?}", agent.status());
-
-        // Try invalid transition
-        println!("\n8. Attempting invalid transition (decommissioned -> active)");
-        match agent.activate() {
-            Err(e) => println!("   Error (expected): {e}"),
-            Ok(_) => println!("   Unexpected success!"),
-        }
-
-        self.agents.push(agent);
-        Ok(())
-    }
-
-    /// Demonstrate policy state transitions
-    fn demo_policy_states(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n\n=== Policy State Machine Demo ===\n");
-
-        // Create a policy
-        let policy_id = Uuid::new_v4();
-        let owner_id = Uuid::new_v4();
-        let mut policy = Policy::new(
-            policy_id,
-            PolicyType::Security,
-            PolicyScope::Organization(owner_id),
-            owner_id,
-        );
-
-        // Add metadata as a component
-        let metadata = PolicyMetadata {
-            name: "Security Policy".to_string(),
-            description: "Organization security policy".to_string(),
-            tags: ["security", "compliance"].iter().map(|s| s.to_string()).collect(),
-            effective_date: Some(Utc::now()),
-            expiration_date: None,
-            compliance_frameworks: ["SOC2", "ISO27001"].iter().map(|s| s.to_string()).collect(),
-        };
-        policy.add_component(metadata)?;
-
-        println!("1. Policy created in Draft state");
-        println!("   Status: {:?}", policy.status());
-
-        // Submit for approval
-        policy.submit_for_approval()?;
-        println!("\n2. Policy submitted for approval");
-        println!("   Status: {:?}", policy.status());
-
-        // Approve the policy
-        policy.approve()?;
-        println!("\n3. Policy approved");
-        println!("   Status: {:?}", policy.status());
-
-        // Suspend the policy
-        policy.suspend("Review required".to_string())?;
-        println!("\n4. Policy suspended");
-        println!("   Status: {:?}", policy.status());
-
-        // Reactivate
-        policy.reactivate()?;
-        println!("\n5. Policy reactivated");
-        println!("   Status: {:?}", policy.status());
-
-        // Create another policy to supersede
-        let new_policy_id = Uuid::new_v4();
-        policy.supersede(new_policy_id)?;
-        println!("\n6. Policy superseded by new version");
-        println!("   Status: {:?}", policy.status());
-
-        // Try to reactivate superseded policy
-        println!("\n7. Attempting to reactivate superseded policy");
-        match policy.reactivate() {
-            Err(e) => println!("   Error (expected): {e}"),
-            Ok(_) => println!("   Unexpected success!"),
-        }
-
-        self.policies.push(policy);
-
-        // Demo rejection flow
-        let mut policy2 = Policy::new(
-            Uuid::new_v4(),
-            PolicyType::DataGovernance,
-            PolicyScope::Global,
-            owner_id,
-        );
-
-        let metadata2 = PolicyMetadata {
-            name: "Data Policy".to_string(),
-            description: "Data governance policy".to_string(),
-            tags: HashSet::new(),
-            effective_date: None,
-            expiration_date: None,
-            compliance_frameworks: HashSet::new(),
-        };
-        policy2.add_component(metadata2)?;
-
-        policy2.submit_for_approval()?;
-        policy2.reject("Needs more detail".to_string())?;
-        println!("\n8. Second policy rejected");
-        println!("   Status: {:?}", policy2.status());
-
-        self.policies.push(policy2);
-        Ok(())
-    }
-
-    /// Demonstrate document state transitions
-    fn demo_document_states(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n\n=== Document State Machine Demo ===\n");
-
-        // Create a document
-        let doc_id = EntityId::<DocumentMarker>::new();
-        let info = DocumentInfoComponent {
-            title: "Technical Specification".to_string(),
-            description: Some("System architecture document".to_string()),
-            mime_type: "application/pdf".to_string(),
-            filename: Some("tech_spec.pdf".to_string()),
-            size_bytes: 1024 * 1024, // 1MB
-            language: Some("en".to_string()),
-        };
-
-        // Create a dummy CID for the content
-        let content_cid = Cid::default();
-        let mut document = Document::new(doc_id, info, content_cid);
-
-        println!("1. Document created");
-        println!("   Has info component: {}", document.has_component::<DocumentInfoComponent>());
-
-        // Add lifecycle component to track status
-        use cim_domain::{LifecycleComponent, DocumentStatus};
-        let lifecycle = LifecycleComponent {
-            status: DocumentStatus::Draft,
-            created_at: Utc::now(),
-            modified_at: Utc::now(),
-            version_number: "1.0".to_string(),
-            previous_version_cid: None,
-            expires_at: None,
-            retention_policy: Some("7 years".to_string()),
-        };
-        document.add_component(lifecycle, "system", Some("Initial lifecycle".to_string()))?;
-
-        if let Some(lc) = document.get_component::<LifecycleComponent>() {
-            println!("   Status: {:?}", lc.status);
-        }
-
-        // Update status to under review
-        document.remove_component::<LifecycleComponent>()?;
-        let mut lifecycle = LifecycleComponent {
-            status: DocumentStatus::UnderReview,
-            created_at: Utc::now(),
-            modified_at: Utc::now(),
-            version_number: "1.0".to_string(),
-            previous_version_cid: None,
-            expires_at: None,
-            retention_policy: Some("7 years".to_string()),
-        };
-        document.add_component(lifecycle, "reviewer", Some("Document under review".to_string()))?;
-
-        println!("\n2. Document under review");
-        if let Some(lc) = document.get_component::<LifecycleComponent>() {
-            println!("   Status: {:?}", lc.status);
-        }
-
-        // Publish the document
-        document.remove_component::<LifecycleComponent>()?;
-        lifecycle = LifecycleComponent {
-            status: DocumentStatus::Published,
-            created_at: Utc::now(),
-            modified_at: Utc::now(),
-            version_number: "1.0".to_string(),
-            previous_version_cid: None,
-            expires_at: None,
-            retention_policy: Some("7 years".to_string()),
-        };
-        document.add_component(lifecycle, "publisher", Some("Document published".to_string()))?;
-
-        println!("\n3. Document published");
-        if let Some(lc) = document.get_component::<LifecycleComponent>() {
-            println!("   Status: {:?}", lc.status);
-        }
-
-        // Archive the document
-        document.remove_component::<LifecycleComponent>()?;
-        lifecycle = LifecycleComponent {
-            status: DocumentStatus::Archived,
-            created_at: Utc::now(),
-            modified_at: Utc::now(),
-            version_number: "1.0".to_string(),
-            previous_version_cid: None,
-            expires_at: None,
-            retention_policy: Some("7 years".to_string()),
-        };
-        document.add_component(lifecycle, "archiver", Some("End of active use".to_string()))?;
-
-        println!("\n4. Document archived");
-        if let Some(lc) = document.get_component::<LifecycleComponent>() {
-            println!("   Status: {:?}", lc.status);
-        }
-
-        self.documents.push(document);
-
-        // Demo superseded flow
-        let doc2_id = EntityId::<DocumentMarker>::new();
-        let info2 = DocumentInfoComponent {
-            title: "Updated Specification".to_string(),
-            description: Some("Version 2 of the system architecture".to_string()),
-            mime_type: "application/pdf".to_string(),
-            filename: Some("tech_spec_v2.pdf".to_string()),
-            size_bytes: 2 * 1024 * 1024, // 2MB
-            language: Some("en".to_string()),
-        };
-
-        let mut doc2 = Document::new(doc2_id, info2, Cid::default());
-
-        let lifecycle2 = LifecycleComponent {
-            status: DocumentStatus::Published,
-            created_at: Utc::now(),
-            modified_at: Utc::now(),
-            version_number: "2.0".to_string(),
-            previous_version_cid: Some(content_cid), // Reference to v1
-            expires_at: None,
-            retention_policy: Some("7 years".to_string()),
-        };
-        doc2.add_component(lifecycle2, "publisher", Some("New version published".to_string()))?;
-
-        println!("\n5. New document version created");
-        if let Some(lc) = doc2.get_component::<LifecycleComponent>() {
-            println!("   Status: {:?}", lc.status);
-            println!("   Version: {}", lc.version_number);
-            println!("   Supersedes previous: {}", lc.previous_version_cid.is_some());
-        }
-
-        self.documents.push(doc2);
-        Ok(())
-    }
-
-    /// Show summary of all state machines
-    fn show_summary(&self) {
-        println!("\n\n=== State Machine Summary ===\n");
-
-        println!("Agent States:");
-        println!("  Initializing → Active → Suspended → Active");
-        println!("  Active → Offline → Active");
-        println!("  Any → Decommissioned (terminal)");
-
-        println!("\nPolicy States:");
-        println!("  Draft → PendingApproval → Active");
-        println!("  PendingApproval → Draft (rejection)");
-        println!("  Active → Suspended → Active");
-        println!("  Active → Superseded (terminal)");
-        println!("  Superseded → Archived (terminal)");
-
-        println!("\nDocument States (via LifecycleComponent):");
-        println!("  Draft → UnderReview → Published");
-        println!("  Published → Archived");
-        println!("  Published → Superseded (by new version)");
-
-        println!("\nDemonstrated Entities:");
-        println!("  - {} Agents", self.agents.len());
-        println!("  - {} Policies", self.policies.len());
-        println!("  - {} Documents", self.documents.len());
+    
+    fn is_terminal(&self) -> bool {
+        matches!(self, OrderState::Delivered | OrderState::Cancelled)
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+// Define a simple text output type
+#[derive(Debug, Clone, Default)]
+struct TextOutput {
+    message: String,
+}
+
+impl TransitionOutput for TextOutput {
+    fn to_events(&self) -> Vec<Box<dyn DomainEvent>> {
+        vec![] // For demo, no events
+    }
+}
+
+// Moore machine transitions (output depends only on state)
+impl MooreStateTransitions for OrderState {
+    type Output = TextOutput;
+    
+    fn can_transition_to(&self, target: &Self) -> bool {
+        use OrderState::*;
+        let valid_transitions = match self {
+            Draft => vec![Submitted, Cancelled],
+            Submitted => vec![Validated, Draft, Cancelled],
+            Validated => vec![Processing, Cancelled],
+            Processing => vec![Shipped, Cancelled],
+            Shipped => vec![Delivered],
+            Delivered => vec![],
+            Cancelled => vec![],
+        };
+        valid_transitions.contains(target)
+    }
+    
+    fn valid_transitions(&self) -> Vec<Self> {
+        use OrderState::*;
+        match self {
+            Draft => vec![Submitted, Cancelled],
+            Submitted => vec![Validated, Draft, Cancelled],
+            Validated => vec![Processing, Cancelled],
+            Processing => vec![Shipped, Cancelled],
+            Shipped => vec![Delivered],
+            Delivered => vec![],
+            Cancelled => vec![],
+        }
+    }
+    
+    fn entry_output(&self) -> Self::Output {
+        TextOutput {
+            message: match self {
+                OrderState::Draft => "Order is being prepared".to_string(),
+                OrderState::Submitted => "Order submitted for processing".to_string(),
+                OrderState::Validated => "Order validated successfully".to_string(),
+                OrderState::Processing => "Order processing started".to_string(),
+                OrderState::Shipped => "Order shipped to customer".to_string(),
+                OrderState::Delivered => "Order delivered to customer".to_string(),
+                OrderState::Cancelled => "Order has been cancelled".to_string(),
+            }
+        }
+    }
+}
+
+// Define inputs for Mealy machine
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum OrderInput {
+    Submit { customer_email: String },
+    Validate { payment_confirmed: bool },
+    StartProcessing { warehouse_id: String },
+    Ship { tracking_number: String },
+    Deliver { signature: String },
+    Cancel { reason: String },
+}
+
+impl TransitionInput for OrderInput {
+    fn description(&self) -> String {
+        match self {
+            OrderInput::Submit { customer_email } => format!("Submit order for {}", customer_email),
+            OrderInput::Validate { payment_confirmed } => format!("Validate payment: {}", payment_confirmed),
+            OrderInput::StartProcessing { warehouse_id } => format!("Start processing at {}", warehouse_id),
+            OrderInput::Ship { tracking_number } => format!("Ship with tracking {}", tracking_number),
+            OrderInput::Deliver { signature } => format!("Deliver to {}", signature),
+            OrderInput::Cancel { reason } => format!("Cancel: {}", reason),
+        }
+    }
+}
+
+// Define outputs for Mealy machine
+#[derive(Debug, Clone)]
+enum OrderOutput {
+    Event(OrderEvent),
+    Error(String),
+}
+
+impl TransitionOutput for OrderOutput {
+    fn to_events(&self) -> Vec<Box<dyn DomainEvent>> {
+        match self {
+            OrderOutput::Event(event) => vec![Box::new(event.clone()) as Box<dyn DomainEvent>],
+            OrderOutput::Error(_) => vec![],
+        }
+    }
+}
+
+// Define domain events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum OrderEvent {
+    OrderSubmitted { order_id: String, customer_email: String },
+    OrderValidated { order_id: String },
+    ProcessingStarted { order_id: String, warehouse_id: String },
+    OrderShipped { order_id: String, tracking_number: String },
+    OrderDelivered { order_id: String, signature: String },
+    OrderCancelled { order_id: String, reason: String },
+}
+
+impl DomainEvent for OrderEvent {
+    fn subject(&self) -> String {
+        match self {
+            OrderEvent::OrderSubmitted { .. } => "orders.order.submitted.v1",
+            OrderEvent::OrderValidated { .. } => "orders.order.validated.v1",
+            OrderEvent::ProcessingStarted { .. } => "orders.order.processing_started.v1",
+            OrderEvent::OrderShipped { .. } => "orders.order.shipped.v1",
+            OrderEvent::OrderDelivered { .. } => "orders.order.delivered.v1",
+            OrderEvent::OrderCancelled { .. } => "orders.order.cancelled.v1",
+        }.to_string()
+    }
+    
+    fn aggregate_id(&self) -> uuid::Uuid {
+        // In a real implementation, we'd parse the order_id
+        uuid::Uuid::new_v4()
+    }
+    
+    fn event_type(&self) -> &'static str {
+        match self {
+            OrderEvent::OrderSubmitted { .. } => "OrderSubmitted",
+            OrderEvent::OrderValidated { .. } => "OrderValidated",
+            OrderEvent::ProcessingStarted { .. } => "ProcessingStarted",
+            OrderEvent::OrderShipped { .. } => "OrderShipped",
+            OrderEvent::OrderDelivered { .. } => "OrderDelivered",
+            OrderEvent::OrderCancelled { .. } => "OrderCancelled",
+        }
+    }
+}
+
+// Mealy machine transitions (output depends on state and input)
+impl MealyStateTransitions for OrderState {
+    type Input = OrderInput;
+    type Output = OrderOutput;
+    
+    fn can_transition_to(&self, target: &Self, input: &Self::Input) -> bool {
+        use OrderState::*;
+        match (self, target, input) {
+            (Draft, Submitted, OrderInput::Submit { .. }) => true,
+            (Draft, Cancelled, OrderInput::Cancel { .. }) => true,
+            (Submitted, Validated, OrderInput::Validate { payment_confirmed }) => *payment_confirmed,
+            (Submitted, Draft, OrderInput::Validate { payment_confirmed }) => !*payment_confirmed,
+            (Submitted, Cancelled, OrderInput::Cancel { .. }) => true,
+            (Validated, Processing, OrderInput::StartProcessing { .. }) => true,
+            (Validated, Cancelled, OrderInput::Cancel { .. }) => true,
+            (Processing, Shipped, OrderInput::Ship { .. }) => true,
+            (Processing, Cancelled, OrderInput::Cancel { .. }) => true,
+            (Shipped, Delivered, OrderInput::Deliver { .. }) => true,
+            _ => false,
+        }
+    }
+    
+    fn valid_transitions(&self, input: &Self::Input) -> Vec<Self> {
+        use OrderState::*;
+        match (self, input) {
+            (Draft, OrderInput::Submit { .. }) => vec![Submitted],
+            (Draft, OrderInput::Cancel { .. }) => vec![Cancelled],
+            (Submitted, OrderInput::Validate { payment_confirmed }) => {
+                if *payment_confirmed { vec![Validated] } else { vec![Draft] }
+            }
+            (Submitted, OrderInput::Cancel { .. }) => vec![Cancelled],
+            (Validated, OrderInput::StartProcessing { .. }) => vec![Processing],
+            (Validated, OrderInput::Cancel { .. }) => vec![Cancelled],
+            (Processing, OrderInput::Ship { .. }) => vec![Shipped],
+            (Processing, OrderInput::Cancel { .. }) => vec![Cancelled],
+            (Shipped, OrderInput::Deliver { .. }) => vec![Delivered],
+            _ => vec![],
+        }
+    }
+    
+    fn transition_output(&self, target: &Self, input: &Self::Input) -> Self::Output {
+        let order_id = "ORDER-123".to_string(); // Simplified for demo
+        
+        use OrderState::*;
+        match (self, target, input) {
+            (Draft, Submitted, OrderInput::Submit { customer_email }) => {
+                OrderOutput::Event(OrderEvent::OrderSubmitted {
+                    order_id,
+                    customer_email: customer_email.clone(),
+                })
+            }
+            (Submitted, Validated, OrderInput::Validate { .. }) => {
+                OrderOutput::Event(OrderEvent::OrderValidated { order_id })
+            }
+            (Submitted, Draft, OrderInput::Validate { .. }) => {
+                OrderOutput::Error("Payment not confirmed".to_string())
+            }
+            (Validated, Processing, OrderInput::StartProcessing { warehouse_id }) => {
+                OrderOutput::Event(OrderEvent::ProcessingStarted {
+                    order_id,
+                    warehouse_id: warehouse_id.clone(),
+                })
+            }
+            (Processing, Shipped, OrderInput::Ship { tracking_number }) => {
+                OrderOutput::Event(OrderEvent::OrderShipped {
+                    order_id,
+                    tracking_number: tracking_number.clone(),
+                })
+            }
+            (Shipped, Delivered, OrderInput::Deliver { signature }) => {
+                OrderOutput::Event(OrderEvent::OrderDelivered {
+                    order_id,
+                    signature: signature.clone(),
+                })
+            }
+            (_, Cancelled, OrderInput::Cancel { reason }) => {
+                OrderOutput::Event(OrderEvent::OrderCancelled {
+                    order_id,
+                    reason: reason.clone(),
+                })
+            }
+            _ => OrderOutput::Error("Invalid transition".to_string()),
+        }
+    }
+}
+
+// Demo Moore machine with simple toggle states
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ToggleState {
+    On,
+    Off,
+}
+
+impl State for ToggleState {
+    fn name(&self) -> &'static str {
+        match self {
+            ToggleState::On => "On",
+            ToggleState::Off => "Off",
+        }
+    }
+    
+    fn is_terminal(&self) -> bool {
+        false // Toggle can always change state
+    }
+}
+
+impl MooreStateTransitions for ToggleState {
+    type Output = TextOutput;
+    
+    fn can_transition_to(&self, target: &Self) -> bool {
+        match (self, target) {
+            (ToggleState::On, ToggleState::Off) => true,
+            (ToggleState::Off, ToggleState::On) => true,
+            _ => false,
+        }
+    }
+    
+    fn valid_transitions(&self) -> Vec<Self> {
+        match self {
+            ToggleState::On => vec![ToggleState::Off],
+            ToggleState::Off => vec![ToggleState::On],
+        }
+    }
+    
+    fn entry_output(&self) -> Self::Output {
+        TextOutput {
+            message: match self {
+                ToggleState::On => "System is ON".to_string(),
+                ToggleState::Off => "System is OFF".to_string(),
+            }
+        }
+    }
+}
+
+// Define aggregates for the state machines
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OrderAggregate;
+
+impl AggregateRoot for OrderAggregate {
+    type Id = EntityId<OrderAggregate>;
+    
+    fn id(&self) -> Self::Id {
+        EntityId::new()
+    }
+    
+    fn version(&self) -> u64 {
+        1
+    }
+    
+    fn increment_version(&mut self) {}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SystemAggregate;
+
+impl AggregateRoot for SystemAggregate {
+    type Id = EntityId<SystemAggregate>;
+    
+    fn id(&self) -> Self::Id {
+        EntityId::new()
+    }
+    
+    fn version(&self) -> u64 {
+        1
+    }
+    
+    fn increment_version(&mut self) {}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DocumentAggregate;
+
+impl AggregateRoot for DocumentAggregate {
+    type Id = EntityId<DocumentAggregate>;
+    
+    fn id(&self) -> Self::Id {
+        EntityId::new()
+    }
+    
+    fn version(&self) -> u64 {
+        1
+    }
+    
+    fn increment_version(&mut self) {}
+}
+
+fn main() {
     println!("=== CIM State Machine Demo ===\n");
-    println!("This demo shows state transitions for domain aggregates.\n");
-
-    let mut demo = StateMachineDemo::new();
-
-    // Run state machine demos
-    demo.demo_agent_states()?;
-    demo.demo_policy_states()?;
-    demo.demo_document_states()?;
-
-    // Show summary
-    demo.show_summary();
-
-    println!("\n=== Demo Complete ===");
-    println!("\nKey Takeaways:");
-    println!("• Each aggregate has well-defined state transitions");
-    println!("• Invalid transitions are prevented by the domain model");
-    println!("• Terminal states cannot be exited");
-    println!("• State changes generate domain events (in full implementation)");
-    println!("• Business rules are enforced at the aggregate level");
-
-    Ok(())
+    
+    // 1. Moore Machine Demo - Simple Toggle
+    println!("1️⃣ Moore Machine Demo - Toggle Switch");
+    println!("   (Output depends only on current state)\n");
+    
+    let toggle_id = EntityId::<SystemAggregate>::new();
+    let mut toggle = MooreMachine::new(ToggleState::Off, toggle_id);
+    println!("   Initial state: {:?}", toggle.current_state());
+    println!("   Output: {}", toggle.current_state().entry_output().message);
+    
+    // Transition the toggle
+    if let Ok(transition) = toggle.transition_to(ToggleState::On) {
+        println!("   Transitioned to: {:?}", transition.to);
+        println!("   Message: {}", transition.output.message);
+        println!("   Current state: {:?}", toggle.current_state());
+    }
+    
+    if let Ok(transition) = toggle.transition_to(ToggleState::Off) {
+        println!("   Transitioned to: {:?}", transition.to);
+        println!("   Message: {}", transition.output.message);
+        println!("   Current state: {:?}", toggle.current_state());
+    }
+    
+    // 2. Moore Machine Demo - Order Workflow
+    println!("\n2️⃣ Moore Machine Demo - Order Workflow");
+    println!("   (Using order states with Moore semantics)\n");
+    
+    let order_id = EntityId::<OrderAggregate>::new();
+    let mut order_moore = MooreMachine::new(OrderState::Draft, order_id);
+    println!("   Initial state: {:?}", order_moore.current_state());
+    println!("   Status: {}", order_moore.current_state().entry_output().message);
+    
+    // Move through workflow
+    let transitions = vec![
+        (OrderState::Submitted, "submitting"),
+        (OrderState::Validated, "validating"),
+        (OrderState::Processing, "processing"),
+        (OrderState::Shipped, "shipping"),
+        (OrderState::Delivered, "delivering"),
+    ];
+    
+    for (next_state, action) in transitions {
+        println!("\n   {} order...", action);
+        match order_moore.transition_to(next_state) {
+            Ok(transition) => {
+                println!("   ✅ {}", transition.output.message);
+                println!("   Current state: {:?}", order_moore.current_state());
+            }
+            Err(e) => println!("   ❌ Error: {}", e),
+        }
+    }
+    
+    // 3. Mealy Machine Demo - Order Workflow with Inputs
+    println!("\n3️⃣ Mealy Machine Demo - Order Workflow");
+    println!("   (Output depends on state AND input)\n");
+    
+    let mealy_order_id = EntityId::<OrderAggregate>::new();
+    let mut order_mealy = MealyMachine::new(OrderState::Draft, mealy_order_id);
+    println!("   Initial state: {:?}", order_mealy.current_state());
+    
+    // Submit order
+    let submit_input = OrderInput::Submit {
+        customer_email: "customer@example.com".to_string(),
+    };
+    
+    println!("\n   Submitting order...");
+    // For Mealy machines, we need to find the next state manually
+    let next_states = order_mealy.valid_next_states(&submit_input);
+    if let Some(next_state) = next_states.first() {
+        match order_mealy.transition_to(*next_state, submit_input) {
+            Ok(transition) => {
+                match &transition.output {
+                    OrderOutput::Event(event) => {
+                        println!("   ✅ Event generated: {:?}", event.event_type());
+                        println!("   Subject: {}", event.subject());
+                    }
+                    OrderOutput::Error(err) => println!("   ❌ Error: {}", err),
+                }
+                println!("   Current state: {:?}", order_mealy.current_state());
+            }
+            Err(e) => println!("   ❌ Transition error: {}", e),
+        }
+    }
+    
+    // Validate order
+    let validate_input = OrderInput::Validate {
+        payment_confirmed: true,
+    };
+    
+    println!("\n   Validating order...");
+    let next_states = order_mealy.valid_next_states(&validate_input);
+    if let Some(next_state) = next_states.first() {
+        match order_mealy.transition_to(*next_state, validate_input) {
+            Ok(transition) => {
+                if let OrderOutput::Event(event) = &transition.output {
+                    println!("   ✅ Event: {:?}", event.event_type());
+                    println!("   Current state: {:?}", order_mealy.current_state());
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    // Start processing
+    let process_input = OrderInput::StartProcessing {
+        warehouse_id: "WH-001".to_string(),
+    };
+    
+    println!("\n   Starting processing...");
+    let next_states = order_mealy.valid_next_states(&process_input);
+    if let Some(next_state) = next_states.first() {
+        match order_mealy.transition_to(*next_state, process_input) {
+            Ok(transition) => {
+                if let OrderOutput::Event(event) = &transition.output {
+                    println!("   ✅ Event: {:?}", event.event_type());
+                    println!("   Current state: {:?}", order_mealy.current_state());
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    // Try invalid transition
+    println!("\n   Attempting to deliver directly from processing (invalid)...");
+    let deliver_input = OrderInput::Deliver {
+        signature: "John Doe".to_string(),
+    };
+    
+    let next_states = order_mealy.valid_next_states(&deliver_input);
+    if next_states.is_empty() {
+        println!("   ❌ Expected: No valid transitions (correct!)");
+    } else {
+        println!("   Unexpected: Found valid transitions!");
+    }
+    
+    // 4. Using built-in DocumentState
+    println!("\n4️⃣ Built-in State Machine - DocumentState");
+    println!("   (Predefined document lifecycle states)\n");
+    
+    let doc_id = EntityId::<DocumentAggregate>::new();
+    let mut doc_state = MooreMachine::new(DocumentState::Draft, doc_id);
+    println!("   Initial: {:?}", doc_state.current_state());
+    
+    // Document workflow
+    let doc_transitions = vec![
+        (DocumentState::UnderReview, "submitting for review"),
+        (DocumentState::Published, "publishing"),
+        (DocumentState::Archived, "archiving"),
+    ];
+    
+    for (next_state, action) in doc_transitions {
+        println!("\n   {} document...", action);
+        match doc_state.transition_to(next_state) {
+            Ok(transition) => {
+                println!("   ✅ Transitioned to: {:?}", transition.to);
+                println!("   Current state: {:?}", doc_state.current_state());
+            }
+            Err(e) => println!("   ❌ Error: {}", e),
+        }
+    }
+    
+    // 5. State Machine Summary
+    println!("\n5️⃣ State Machine Summary\n");
+    
+    println!("   Moore Machines:");
+    println!("   - Output depends only on current state");
+    println!("   - Simple state transitions");
+    println!("   - Good for status indicators");
+    
+    println!("\n   Mealy Machines:");
+    println!("   - Output depends on state AND input");
+    println!("   - Rich transitions with context");
+    println!("   - Good for workflows and processes");
+    
+    println!("\n   Key Benefits:");
+    println!("   - Type-safe state transitions");
+    println!("   - Invalid transitions prevented at compile time");
+    println!("   - Clear business logic encoding");
+    println!("   - Event generation from state changes");
+    println!("   - Terminal states enforce finality");
+    
+    println!("\n✅ State Machine demo completed!");
+    println!("\n💡 In CIM's architecture:");
+    println!("   - State machines encode business rules");
+    println!("   - Transitions generate domain events");
+    println!("   - Invalid transitions are impossible");
+    println!("   - States and transitions are first-class types");
 }

@@ -9,7 +9,6 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use uuid::Uuid;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures::stream::Stream;
@@ -39,11 +38,11 @@ impl MockEventStore {
         *self.fail_on_append.write().await = fail;
     }
 
-    pub async fn set_expected_version_check(&self, check: bool) {
+    pub async fn _set_expected_version_check(&self, check: bool) {
         *self.expected_version_check.write().await = check;
     }
 
-    pub async fn get_all_events(&self) -> Vec<StoredEvent> {
+    pub async fn _get_all_events(&self) -> Vec<StoredEvent> {
         let events = self.events.read().await;
         events.values().flatten().cloned().collect()
     }

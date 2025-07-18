@@ -459,7 +459,7 @@ mod tests {
     struct TestAggregate {
         id: EntityId<AggregateMarker>,
         version: u64,
-        data: String,
+        _data: String,
     }
 
     impl AggregateRoot for TestAggregate {
@@ -492,7 +492,7 @@ mod tests {
         let mut aggregate = TestAggregate {
             id: EntityId::new(),
             version: 1,
-            data: "test".to_string(),
+            _data: "test".to_string(),
         };
 
         let original_id = aggregate.id();

@@ -10,7 +10,6 @@ use chrono::{DateTime, Utc};
 
 use crate::errors::DomainError;
 use crate::composition::DomainComposition;
-use crate::category::{DomainObject, DomainCategory};
 
 /// A domain invariant that must be maintained
 #[async_trait]
@@ -70,16 +69,34 @@ pub struct InvariantViolation {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ViolationLocation {
     /// In a specific domain
-    Domain { name: String },
+    Domain { 
+        /// Name of the domain
+        name: String 
+    },
     
     /// In a specific object
-    Object { domain: String, object_id: String },
+    Object { 
+        /// Domain containing the object
+        domain: String, 
+        /// ID of the object with violation
+        object_id: String 
+    },
     
     /// In a morphism between objects
-    Morphism { domain: String, morphism_id: String },
+    Morphism { 
+        /// Domain containing the morphism
+        domain: String, 
+        /// ID of the morphism with violation
+        morphism_id: String 
+    },
     
     /// In a cross-domain interaction
-    CrossDomain { from: String, to: String },
+    CrossDomain { 
+        /// Source domain
+        from: String, 
+        /// Target domain
+        to: String 
+    },
 }
 
 /// Severity of an invariant violation
@@ -148,7 +165,7 @@ impl InvariantChecker {
             .collect()
     }
     
-    /// Clear history
+    /// Clear all check history
     pub fn clear_history(&mut self) {
         self.history.clear();
     }
@@ -163,6 +180,7 @@ pub struct ReferentialIntegrityInvariant {
 }
 
 impl ReferentialIntegrityInvariant {
+    /// Create a new referential integrity invariant
     pub fn new(
         source_domain: String,
         target_domain: String,
@@ -259,6 +277,7 @@ pub struct DistributedConsistencyInvariant {
 }
 
 impl DistributedConsistencyInvariant {
+    /// Create a new distributed consistency invariant
     pub fn new(domains: Vec<String>, consistency_rule: String) -> Self {
         let name = format!("consistency_{}", domains.join("_"));
         Self {
@@ -281,7 +300,7 @@ impl DomainInvariant for DistributedConsistencyInvariant {
     
     async fn check(
         &self,
-        composition: &DomainComposition,
+        _composition: &DomainComposition,
     ) -> Result<InvariantCheckResult, DomainError> {
         // In a real implementation, this would check specific consistency rules
         // For example: total inventory across warehouses equals sum of individual inventories
@@ -311,6 +330,7 @@ pub struct BusinessConstraintInvariant {
 }
 
 impl BusinessConstraintInvariant {
+    /// Create a new business constraint invariant
     pub fn new<F>(
         name: String,
         constraint: F,
@@ -376,6 +396,7 @@ impl DomainInvariant for BusinessConstraintInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::category::DomainCategory;
     
     #[tokio::test]
     async fn test_referential_integrity() {
@@ -386,7 +407,7 @@ mod tests {
         let mut customer_domain = DomainCategory::new("CustomerDomain".to_string());
         
         // Add customer
-        customer_domain.add_object(DomainObject {
+        customer_domain.add_object(crate::category::DomainObject {
             id: "customer_123".to_string(),
             composition_type: crate::composition_types::DomainCompositionType::Entity {
                 entity_type: "Customer".to_string(),
@@ -398,7 +419,7 @@ mod tests {
         let mut order_metadata = HashMap::new();
         order_metadata.insert("customer_id".to_string(), "customer_123".to_string());
         
-        order_domain.add_object(DomainObject {
+        order_domain.add_object(crate::category::DomainObject {
             id: "order_456".to_string(),
             composition_type: crate::composition_types::DomainCompositionType::Entity {
                 entity_type: "Order".to_string(),
@@ -410,7 +431,7 @@ mod tests {
         let mut invalid_metadata = HashMap::new();
         invalid_metadata.insert("customer_id".to_string(), "customer_999".to_string());
         
-        order_domain.add_object(DomainObject {
+        order_domain.add_object(crate::category::DomainObject {
             id: "order_789".to_string(),
             composition_type: crate::composition_types::DomainCompositionType::Entity {
                 entity_type: "Order".to_string(),

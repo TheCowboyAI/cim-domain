@@ -45,16 +45,22 @@ pub struct Pullback {
     
     /// Objects forming the cospan: A -> C <- B
     pub object_a: DomainObject,
+    /// Second object in the cospan
     pub object_b: DomainObject,
+    /// Common target object in the cospan
     pub object_c: DomainObject,
     
     /// Morphisms of the cospan
-    pub f: DomainMorphism, // A -> C
-    pub g: DomainMorphism, // B -> C
+    /// Morphism from A to C
+    pub f: DomainMorphism,
+    /// Morphism from B to C
+    pub g: DomainMorphism,
     
     /// Projections from pullback
-    pub p1: DomainMorphism, // P -> A
-    pub p2: DomainMorphism, // P -> B
+    /// Projection from pullback P to A
+    pub p1: DomainMorphism,
+    /// Projection from pullback P to B
+    pub p2: DomainMorphism,
 }
 
 impl Pullback {
@@ -189,16 +195,22 @@ pub struct Pushout {
     
     /// Objects forming the span: A <- C -> B
     pub object_a: DomainObject,
+    /// Second object in the span
     pub object_b: DomainObject,
+    /// Common source object in the span
     pub object_c: DomainObject,
     
     /// Morphisms of the span
-    pub f: DomainMorphism, // C -> A
-    pub g: DomainMorphism, // C -> B
+    /// Morphism from C to A
+    pub f: DomainMorphism,
+    /// Morphism from C to B
+    pub g: DomainMorphism,
     
     /// Injections to pushout
-    pub i1: DomainMorphism, // A -> P
-    pub i2: DomainMorphism, // B -> P
+    /// Injection from A to pushout P
+    pub i1: DomainMorphism,
+    /// Injection from B to pushout P
+    pub i2: DomainMorphism,
 }
 
 impl Pushout {
@@ -327,8 +339,11 @@ impl Colimit for Pushout {
 /// Product - limit of discrete diagram
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Product {
+    /// The product object (apex of the limit cone)
     pub apex: DomainObject,
+    /// The component objects being multiplied
     pub components: Vec<DomainObject>,
+    /// Projection morphisms from product to each component
     pub projections: HashMap<String, DomainMorphism>,
 }
 
@@ -390,8 +405,11 @@ impl Product {
 /// Coproduct - colimit of discrete diagram
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Coproduct {
+    /// The coproduct object (apex of the colimit cocone)
     pub apex: DomainObject,
+    /// The component objects being summed
     pub components: Vec<DomainObject>,
+    /// Injection morphisms from each component to coproduct
     pub injections: HashMap<String, DomainMorphism>,
 }
 

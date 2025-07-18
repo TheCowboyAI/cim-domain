@@ -245,3 +245,260 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
 // - Location events: cim-domain-location
 // - Document events: cim-domain-document
 // - Policy events: cim-domain-policy
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct TestEvent {
+        id: Uuid,
+        name: String,
+    }
+    
+    impl DomainEvent for TestEvent {
+        fn subject(&self) -> String {
+            "test.entity.created.v1".to_string()
+        }
+        
+        fn aggregate_id(&self) -> Uuid {
+            self.id
+        }
+        
+        fn event_type(&self) -> &'static str {
+            "TestEvent"
+        }
+        
+        fn version(&self) -> &'static str {
+            "v1"
+        }
+    }
+    
+    #[test]
+    fn test_propagation_scope() {
+        assert_eq!(PropagationScope::LocalOnly as u8, 0);
+        assert_ne!(PropagationScope::Container, PropagationScope::Leaf);
+        
+        // Test serialization
+        let json = serde_json::to_string(&PropagationScope::Cluster).unwrap();
+        assert_eq!(json, "\"Cluster\"");
+        
+        // Test deserialization
+        let scope: PropagationScope = serde_json::from_str("\"SuperCluster\"").unwrap();
+        assert_eq!(scope, PropagationScope::SuperCluster);
+    }
+    
+    #[test]
+    fn test_event_envelope() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "test-event".to_string(),
+        };
+        
+        let envelope = EventEnvelope {
+            event: event.clone(),
+            subject: "test.entity.created.v1".to_string(),
+            propagation: PropagationScope::Container,
+        };
+        
+        assert_eq!(envelope.subject, "test.entity.created.v1");
+        assert_eq!(envelope.propagation, PropagationScope::Container);
+        assert_eq!(envelope.event.name, "test-event");
+    }
+    
+    #[test]
+    fn test_domain_event_trait() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "domain-test".to_string(),
+        };
+        
+        assert_eq!(event.subject(), "test.entity.created.v1");
+        assert_eq!(event.event_type(), "TestEvent");
+        assert_eq!(event.version(), "v1");
+        assert_eq!(event.aggregate_id(), event.id);
+    }
+    
+    #[test]
+    fn test_event_metadata() {
+        let mut metadata = EventMetadata {
+            source: "test-service".to_string(),
+            version: "v1".to_string(),
+            propagation_scope: PropagationScope::Leaf,
+            properties: std::collections::HashMap::new(),
+        };
+        
+        metadata.properties.insert("key".to_string(), serde_json::json!("value"));
+        
+        assert_eq!(metadata.source, "test-service");
+        assert_eq!(metadata.version, "v1");
+        assert_eq!(metadata.propagation_scope, PropagationScope::Leaf);
+        assert_eq!(metadata.properties.get("key").unwrap(), &serde_json::json!("value"));
+    }
+    
+    #[test]
+    fn test_domain_event_envelope() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "envelope-test".to_string(),
+        };
+        
+        let metadata = EventMetadata {
+            source: "test-source".to_string(),
+            version: "v1".to_string(),
+            propagation_scope: PropagationScope::Cluster,
+            properties: std::collections::HashMap::new(),
+        };
+        
+        let envelope = DomainEventEnvelope::new(event.clone(), metadata);
+        
+        assert_eq!(envelope.subject, "test.entity.created.v1");
+        assert_eq!(envelope.metadata.source, "test-source");
+        assert_eq!(envelope.event.name, "envelope-test");
+    }
+    
+    #[test]
+    fn test_subject_parts_parsing() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "subject-test".to_string(),
+        };
+        
+        let metadata = EventMetadata {
+            source: "test".to_string(),
+            version: "v1".to_string(),
+            propagation_scope: PropagationScope::LocalOnly,
+            properties: std::collections::HashMap::new(),
+        };
+        
+        let envelope = DomainEventEnvelope::new(event, metadata);
+        let parts = envelope.subject_parts().unwrap();
+        
+        // Subject parts should parse correctly
+        let subject_str = parts.to_string();
+        assert_eq!(subject_str, "test.entity.created.v1");
+    }
+    
+    #[test]
+    fn test_domain_event_envelope_with_metadata() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "metadata-test".to_string(),
+        };
+        
+        let envelope = DomainEventEnvelopeWithMetadata::new(event.clone(), "test-service".to_string());
+        
+        assert_eq!(envelope.event.name, "metadata-test");
+        assert_eq!(envelope.metadata.source, "test-service");
+        assert_eq!(envelope.metadata.propagation_scope, PropagationScope::LocalOnly);
+        assert!(envelope.occurred_at <= SystemTime::now());
+    }
+    
+    #[test]
+    fn test_envelope_from_command() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "command-test".to_string(),
+        };
+        
+        let command_id = Uuid::new_v4();
+        let envelope = DomainEventEnvelopeWithMetadata::from_command(
+            event.clone(),
+            command_id,
+            "command-service".to_string()
+        );
+        
+        assert_eq!(envelope.event.name, "command-test");
+        assert_eq!(envelope.metadata.source, "command-service");
+        
+        // Check correlation and causation IDs match command ID
+        match &envelope.correlation_id.0 {
+            IdType::Uuid(id) => assert_eq!(*id, command_id),
+            _ => panic!("Expected UUID correlation ID"),
+        }
+        
+        match &envelope.causation_id.0 {
+            IdType::Uuid(id) => assert_eq!(*id, command_id),
+            _ => panic!("Expected UUID causation ID"),
+        }
+    }
+    
+    #[test]
+    fn test_envelope_from_event() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "event-chain-test".to_string(),
+        };
+        
+        let causing_event_id = Cid::default();
+        let correlation_id = CorrelationId(IdType::Uuid(Uuid::new_v4()));
+        
+        let envelope = DomainEventEnvelopeWithMetadata::from_event(
+            event.clone(),
+            causing_event_id,
+            correlation_id.clone(),
+            "event-service".to_string()
+        );
+        
+        assert_eq!(envelope.event.name, "event-chain-test");
+        assert_eq!(envelope.metadata.source, "event-service");
+        assert_eq!(envelope.correlation_id, correlation_id);
+        
+        // Check causation ID is from causing event
+        match &envelope.causation_id.0 {
+            IdType::Cid(cid) => assert_eq!(cid.0, causing_event_id),
+            _ => panic!("Expected CID causation ID"),
+        }
+    }
+    
+    #[test]
+    fn test_with_propagation() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "propagation-test".to_string(),
+        };
+        
+        let envelope = DomainEventEnvelopeWithMetadata::new(event, "test".to_string())
+            .with_propagation(PropagationScope::SuperCluster);
+        
+        assert_eq!(envelope.metadata.propagation_scope, PropagationScope::SuperCluster);
+    }
+    
+    #[test]
+    fn test_with_cid() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "cid-test".to_string(),
+        };
+        
+        let new_cid = Cid::try_from("bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi").unwrap();
+        let envelope = DomainEventEnvelopeWithMetadata::new(event, "test".to_string())
+            .with_cid(new_cid);
+        
+        assert_eq!(envelope.event_id, new_cid);
+    }
+    
+    #[test]
+    fn test_event_envelope_serialization() {
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "serialize-test".to_string(),
+        };
+        
+        let envelope = EventEnvelope {
+            event: event.clone(),
+            subject: "test.subject".to_string(),
+            propagation: PropagationScope::Container,
+        };
+        
+        let json = serde_json::to_string(&envelope).unwrap();
+        assert!(json.contains("serialize-test"));
+        assert!(json.contains("test.subject"));
+        assert!(json.contains("Container"));
+        
+        let deserialized: EventEnvelope<TestEvent> = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.event.name, event.name);
+        assert_eq!(deserialized.subject, envelope.subject);
+        assert_eq!(deserialized.propagation, envelope.propagation);
+    }
+}

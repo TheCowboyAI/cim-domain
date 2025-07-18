@@ -298,9 +298,13 @@ impl ServiceRegistry {
 /// Information about a registered service
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceInfo {
+    /// Name of the service interface
     pub service_name: String,
+    /// Name of the implementation
     pub implementation_name: String,
+    /// Service lifetime strategy
     pub lifetime: ServiceLifetime,
+    /// Additional service metadata
     pub metadata: HashMap<String, String>,
 }
 
@@ -310,12 +314,17 @@ pub struct ServiceCollectionBuilder {
 }
 
 impl ServiceCollectionBuilder {
+    /// Create a new service collection builder
     pub fn new() -> Self {
         Self {
             registry: ServiceRegistry::new(),
         }
     }
     
+    /// Add a singleton service
+    ///
+    /// # Arguments
+    /// * `factory` - Factory function to create the service
     pub async fn add_singleton<TService, TImpl, F>(
         self,
         factory: F,
@@ -329,6 +338,10 @@ impl ServiceCollectionBuilder {
         Ok(self)
     }
     
+    /// Add a transient service
+    ///
+    /// # Arguments
+    /// * `factory` - Factory function to create the service
     pub async fn add_transient<TService, TImpl, F>(
         self,
         factory: F,
@@ -342,6 +355,10 @@ impl ServiceCollectionBuilder {
         Ok(self)
     }
     
+    /// Add a scoped service
+    ///
+    /// # Arguments
+    /// * `factory` - Factory function to create the service
     pub async fn add_scoped<TService, TImpl, F>(
         self,
         factory: F,
@@ -355,6 +372,10 @@ impl ServiceCollectionBuilder {
         Ok(self)
     }
     
+    /// Add tags to a service
+    ///
+    /// # Arguments
+    /// * `tags` - Tags to add to the service
     pub async fn with_tags<T: ?Sized + 'static>(
         self,
         tags: Vec<String>,
@@ -363,6 +384,7 @@ impl ServiceCollectionBuilder {
         Ok(self)
     }
     
+    /// Build the configured service registry
     pub fn build(self) -> ServiceRegistry {
         self.registry
     }

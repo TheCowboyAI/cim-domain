@@ -115,7 +115,7 @@ pub struct AggregateRebuilder {
 
 /// Generic aggregate processor that tracks events by type
 pub struct GenericAggregateProcessor {
-    aggregate_type: String,
+    _aggregate_type: String,
     aggregates: HashMap<String, Vec<DomainEventEnum>>,
 }
 
@@ -123,7 +123,7 @@ impl GenericAggregateProcessor {
     /// Create a new generic processor for an aggregate type
     pub fn new(aggregate_type: &str) -> Self {
         Self {
-            aggregate_type: aggregate_type.to_string(),
+            _aggregate_type: aggregate_type.to_string(),
             aggregates: HashMap::new(),
         }
     }

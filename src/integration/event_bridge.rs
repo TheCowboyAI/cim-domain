@@ -28,7 +28,7 @@ pub struct EventBridge {
     subscribers: Arc<RwLock<HashMap<String, Vec<EventSubscriber>>>>,
     
     /// Bridge configuration
-    config: BridgeConfig,
+    _config: BridgeConfig,
 }
 
 /// Configuration for the event bridge
@@ -97,16 +97,34 @@ pub struct RoutingRule {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RoutingCondition {
     /// Property equals value
-    PropertyEquals { property: String, value: serde_json::Value },
+    PropertyEquals { 
+        /// Property path to check
+        property: String, 
+        /// Expected value
+        value: serde_json::Value 
+    },
     
     /// Property matches regex
-    PropertyMatches { property: String, pattern: String },
+    PropertyMatches { 
+        /// Property path to check
+        property: String, 
+        /// Regex pattern to match
+        pattern: String 
+    },
     
     /// Property exists
-    PropertyExists { property: String },
+    PropertyExists { 
+        /// Property path to check for existence
+        property: String 
+    },
     
     /// Custom condition
-    Custom { condition_type: String, data: serde_json::Value },
+    Custom { 
+        /// Type of custom condition
+        condition_type: String, 
+        /// Condition data
+        data: serde_json::Value 
+    },
 }
 
 /// Event transformer for modifying events during routing
@@ -217,7 +235,7 @@ impl EventBridge {
             transformers: Arc::new(RwLock::new(HashMap::new())),
             filters: Arc::new(RwLock::new(Vec::new())),
             subscribers: Arc::new(RwLock::new(HashMap::new())),
-            config,
+            _config: config,
         }
     }
     
@@ -272,12 +290,12 @@ impl EventBridge {
     /// Route event to a specific target
     async fn route_to_target(
         &self,
-        mut envelope: EventEnvelope,
+        envelope: EventEnvelope,
         source: &str,
         target: &str,
     ) -> Result<(), DomainError> {
         // Apply transformations
-        let transform_context = TransformContext {
+        let _transform_context = TransformContext {
             source: source.to_string(),
             target: target.to_string(),
             routing_metadata: HashMap::new(),
@@ -454,16 +472,21 @@ impl EventRouter {
 
 /// Example: Property-based event filter
 pub struct PropertyFilter {
+    /// Property name to filter on
     property: String,
+    /// Expected property value
     value: serde_json::Value,
+    /// Whether to include (true) or exclude (false) matching events
     include: bool, // true = include matching, false = exclude matching
 }
 
 impl PropertyFilter {
+    /// Create a filter that includes events matching the property
     pub fn include_matching(property: String, value: serde_json::Value) -> Self {
         Self { property, value, include: true }
     }
     
+    /// Create a filter that excludes events matching the property
     pub fn exclude_matching(property: String, value: serde_json::Value) -> Self {
         Self { property, value, include: false }
     }
@@ -471,7 +494,7 @@ impl PropertyFilter {
 
 #[async_trait]
 impl EventFilter for PropertyFilter {
-    async fn should_filter(&self, event: &dyn DomainEvent) -> bool {
+    async fn should_filter(&self, _event: &dyn DomainEvent) -> bool {
         // In real implementation, would check event properties
         // For now, don't filter
         false
@@ -489,10 +512,12 @@ impl EventFilter for PropertyFilter {
 
 /// Example: Field mapping transformer
 pub struct FieldMappingTransformer {
+    /// Field name mappings (source -> target)
     mappings: HashMap<String, String>,
 }
 
 impl FieldMappingTransformer {
+    /// Create a new field mapping transformer
     pub fn new(mappings: HashMap<String, String>) -> Self {
         Self { mappings }
     }
@@ -503,13 +528,13 @@ impl EventTransformer for FieldMappingTransformer {
     async fn transform(
         &self,
         event: Box<dyn DomainEvent>,
-        context: &TransformContext,
+        _context: &TransformContext,
     ) -> Result<Box<dyn DomainEvent>, DomainError> {
         // In real implementation, would map fields
         Ok(event)
     }
     
-    fn applies_to(&self, event_type: &str, source: &str, target: &str) -> bool {
+    fn applies_to(&self, _event_type: &str, _source: &str, _target: &str) -> bool {
         // Apply to all events
         true
     }
@@ -522,6 +547,7 @@ impl EventTransformer for FieldMappingTransformer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::StreamExt;
     
     #[tokio::test]
     async fn test_event_routing() {
@@ -596,5 +622,315 @@ mod tests {
         // Should use default route when no rules match
         let routes = router.determine_routes("unknown_service", "SomeEvent").await.unwrap();
         assert_eq!(routes, vec!["default_handler"]);
+    }
+    
+    #[test]
+    fn test_bridge_config_default() {
+        let config = BridgeConfig::default();
+        assert_eq!(config.buffer_size, 10000);
+        assert_eq!(config.event_ttl_seconds, 3600);
+        assert!(config.enable_dlq);
+        assert_eq!(config.max_retries, 3);
+        assert_eq!(config.retry_backoff_multiplier, 2.0);
+    }
+    
+    #[test]
+    fn test_routing_rule_serialization() {
+        let rule = RoutingRule {
+            name: "test_rule".to_string(),
+            source_pattern: "src.*".to_string(),
+            event_pattern: "Event*".to_string(),
+            targets: vec!["target1".to_string(), "target2".to_string()],
+            priority: 50,
+            conditions: vec![
+                RoutingCondition::PropertyEquals {
+                    property: "status".to_string(),
+                    value: serde_json::json!("active"),
+                },
+                RoutingCondition::PropertyExists {
+                    property: "user_id".to_string(),
+                },
+            ],
+        };
+        
+        // Test serialization
+        let json = serde_json::to_string(&rule).unwrap();
+        assert!(json.contains("test_rule"));
+        assert!(json.contains("src.*"));
+        
+        // Test deserialization
+        let deserialized: RoutingRule = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.name, rule.name);
+        assert_eq!(deserialized.priority, rule.priority);
+        assert_eq!(deserialized.targets.len(), 2);
+        assert_eq!(deserialized.conditions.len(), 2);
+    }
+    
+    #[tokio::test]
+    async fn test_pattern_matching() {
+        let bridge = EventBridge::new(BridgeConfig::default());
+        
+        // Test exact match
+        assert!(bridge.matches_patterns("OrderPlaced", &["OrderPlaced".to_string()]));
+        
+        // Test wildcard match
+        assert!(bridge.matches_patterns("OrderPlaced", &["*".to_string()]));
+        
+        // Test prefix wildcard
+        assert!(bridge.matches_patterns("OrderPlaced", &["Order*".to_string()]));
+        assert!(bridge.matches_patterns("OrderCancelled", &["Order*".to_string()]));
+        assert!(!bridge.matches_patterns("PaymentReceived", &["Order*".to_string()]));
+        
+        // Test multiple patterns
+        assert!(bridge.matches_patterns("PaymentReceived", &[
+            "Order*".to_string(),
+            "Payment*".to_string(),
+        ]));
+    }
+    
+    #[tokio::test]
+    async fn test_multiple_routing_rules() {
+        let bridge = EventBridge::new(BridgeConfig::default());
+        
+        // Add multiple rules with different priorities
+        let rule1 = RoutingRule {
+            name: "high_priority".to_string(),
+            source_pattern: "orders.*".to_string(),
+            event_pattern: "Order*".to_string(),
+            targets: vec!["high_priority_handler".to_string()],
+            priority: 100,
+            conditions: vec![],
+        };
+        
+        let rule2 = RoutingRule {
+            name: "low_priority".to_string(),
+            source_pattern: "orders.*".to_string(),
+            event_pattern: "*".to_string(),
+            targets: vec!["low_priority_handler".to_string()],
+            priority: 10,
+            conditions: vec![],
+        };
+        
+        bridge.add_rule(rule1).await.unwrap();
+        bridge.add_rule(rule2).await.unwrap();
+        
+        // Both rules should match
+        let routes = bridge.router.determine_routes("orders.service", "OrderPlaced").await.unwrap();
+        assert_eq!(routes.len(), 2);
+        assert!(routes.contains(&"high_priority_handler".to_string()));
+        assert!(routes.contains(&"low_priority_handler".to_string()));
+    }
+    
+    #[tokio::test]
+    async fn test_transformer_registration() {
+        let bridge = EventBridge::new(BridgeConfig::default());
+        
+        let transformer = Box::new(FieldMappingTransformer::new(
+            HashMap::from([
+                ("old_field".to_string(), "new_field".to_string()),
+            ])
+        ));
+        
+        // First registration should succeed
+        assert!(bridge.add_transformer("mapper1".to_string(), transformer).await.is_ok());
+        
+        // Duplicate registration should fail
+        let transformer2 = Box::new(FieldMappingTransformer::new(HashMap::new()));
+        let result = bridge.add_transformer("mapper1".to_string(), transformer2).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::AlreadyExists(msg) => assert!(msg.contains("mapper1")),
+            _ => panic!("Expected AlreadyExists error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_filter_functionality() {
+        let bridge = EventBridge::new(BridgeConfig::default());
+        
+        let filter = Box::new(PropertyFilter::include_matching(
+            "status".to_string(),
+            serde_json::json!("active"),
+        ));
+        
+        assert!(bridge.add_filter(filter).await.is_ok());
+        
+        // Test filter description
+        let filter2 = PropertyFilter::exclude_matching(
+            "deleted".to_string(),
+            serde_json::json!(true),
+        );
+        assert_eq!(filter2.description(), "Exclude events where deleted = true");
+    }
+    
+    #[test]
+    fn test_event_envelope_metadata() {
+        let metadata = EventMetadata {
+            event_id: "test-123".to_string(),
+            source: "test_service".to_string(),
+            event_type: "TestEvent".to_string(),
+            timestamp: chrono::Utc::now(),
+            correlation_id: Some("corr-456".to_string()),
+            causation_id: Some("cause-789".to_string()),
+            retry_count: 2,
+            headers: HashMap::from([
+                ("custom-header".to_string(), "value".to_string()),
+            ]),
+        };
+        
+        assert_eq!(metadata.event_id, "test-123");
+        assert_eq!(metadata.retry_count, 2);
+        assert_eq!(metadata.headers.get("custom-header").unwrap(), "value");
+    }
+    
+    #[tokio::test]
+    async fn test_concurrent_subscription() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        
+        let bridge = Arc::new(EventBridge::new(BridgeConfig::default()));
+        let subscription_count = Arc::new(AtomicUsize::new(0));
+        
+        // Spawn multiple tasks to subscribe concurrently
+        let mut handles = vec![];
+        for i in 0..10 {
+            let bridge_clone = bridge.clone();
+            let count_clone = subscription_count.clone();
+            
+            handles.push(tokio::spawn(async move {
+                let (tx, _rx) = mpsc::channel(10);
+                let subscriber = EventSubscriber {
+                    id: format!("sub_{}", i),
+                    name: format!("Subscriber {}", i),
+                    patterns: vec!["*".to_string()],
+                    channel: tx,
+                };
+                
+                bridge_clone.subscribe("test_domain".to_string(), subscriber).await.unwrap();
+                count_clone.fetch_add(1, Ordering::SeqCst);
+            }));
+        }
+        
+        // Wait for all subscriptions
+        for handle in handles {
+            handle.await.unwrap();
+        }
+        
+        assert_eq!(subscription_count.load(Ordering::SeqCst), 10);
+        
+        // Verify all subscribers are registered
+        let subscribers = bridge.subscribers.read().await;
+        assert_eq!(subscribers.get("test_domain").unwrap().len(), 10);
+    }
+    
+    #[test]
+    fn test_routing_condition_variants() {
+        use RoutingCondition::*;
+        
+        let conditions = vec![
+            PropertyEquals {
+                property: "status".to_string(),
+                value: serde_json::json!("active"),
+            },
+            PropertyMatches {
+                property: "email".to_string(),
+                pattern: r".*@example\.com".to_string(),
+            },
+            PropertyExists {
+                property: "user_id".to_string(),
+            },
+            Custom {
+                condition_type: "time_range".to_string(),
+                data: serde_json::json!({
+                    "start": "09:00",
+                    "end": "17:00"
+                }),
+            },
+        ];
+        
+        // Test serialization
+        for condition in conditions {
+            let json = serde_json::to_string(&condition).unwrap();
+            let _deserialized: RoutingCondition = serde_json::from_str(&json).unwrap();
+        }
+    }
+    
+    #[test]
+    fn test_transform_context() {
+        let context = TransformContext {
+            source: "domain_a".to_string(),
+            target: "domain_b".to_string(),
+            routing_metadata: HashMap::from([
+                ("route_id".to_string(), "route-123".to_string()),
+            ]),
+            hints: HashMap::from([
+                ("format".to_string(), serde_json::json!("compact")),
+            ]),
+        };
+        
+        assert_eq!(context.source, "domain_a");
+        assert_eq!(context.target, "domain_b");
+        assert_eq!(context.routing_metadata.get("route_id").unwrap(), "route-123");
+        assert_eq!(context.hints.get("format").unwrap(), &serde_json::json!("compact"));
+    }
+    
+    #[tokio::test]
+    async fn test_route_determination_with_no_matches() {
+        let router = EventRouter {
+            rules: Arc::new(RwLock::new(Vec::new())),
+            default_routes: Arc::new(RwLock::new(HashMap::new())),
+        };
+        
+        // Add rule that won't match
+        let mut rules = router.rules.write().await;
+        rules.push(RoutingRule {
+            name: "no_match".to_string(),
+            source_pattern: "specific_service".to_string(),
+            event_pattern: "SpecificEvent".to_string(),
+            targets: vec!["handler".to_string()],
+            priority: 100,
+            conditions: vec![],
+        });
+        drop(rules);
+        
+        // Should return empty routes
+        let routes = router.determine_routes("other_service", "OtherEvent").await.unwrap();
+        assert_eq!(routes.len(), 0);
+    }
+    
+    #[tokio::test]
+    async fn test_event_stream_creation() {
+        use futures::StreamExt;
+        
+        let bridge = EventBridge::new(BridgeConfig::default());
+        
+        // Create stream with specific patterns
+        let mut stream = bridge.event_stream(
+            "test_domain".to_string(),
+            vec!["Order*".to_string(), "Payment*".to_string()],
+            50,
+        ).await.unwrap();
+        
+        // Test that stream is created and can be polled
+        // In real scenario, would publish events and verify they appear
+        let timeout = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            stream.next()
+        ).await;
+        
+        // Should timeout as no events published
+        assert!(timeout.is_err());
+    }
+    
+    #[test]
+    fn test_field_mapping_transformer() {
+        let mappings = HashMap::from([
+            ("old_name".to_string(), "new_name".to_string()),
+            ("old_status".to_string(), "new_status".to_string()),
+        ]);
+        
+        let transformer = FieldMappingTransformer::new(mappings);
+        
+        assert!(transformer.applies_to("AnyEvent", "source", "target"));
+        assert_eq!(transformer.description(), "Maps 2 fields");
     }
 }

@@ -73,7 +73,9 @@ pub enum SagaState {
     
     /// Currently executing
     Running {
+        /// The step currently being executed
         current_step: String,
+        /// Steps that have been successfully completed
         completed_steps: Vec<String>,
     },
     
@@ -82,7 +84,9 @@ pub enum SagaState {
     
     /// Failed and compensating
     Compensating {
+        /// The step that failed
         failed_step: String,
+        /// Steps that have been compensated
         compensated_steps: Vec<String>,
     },
     
@@ -91,6 +95,7 @@ pub enum SagaState {
     
     /// Failed to compensate
     Failed {
+        /// Error message describing the failure
         error: String,
     },
 }
@@ -120,24 +125,31 @@ pub enum SagaTransitionInput {
     
     /// Step completed successfully
     StepCompleted {
+        /// ID of the completed step
         step_id: String,
+        /// Result data from the step
         result: serde_json::Value,
     },
     
     /// Step failed
     StepFailed {
+        /// ID of the failed step
         step_id: String,
+        /// Error message
         error: String,
     },
     
     /// Compensation step completed
     CompensationCompleted {
+        /// ID of the compensated step
         step_id: String,
     },
     
     /// Compensation failed
     CompensationFailed {
+        /// ID of the step that failed to compensate
         step_id: String,
+        /// Error message
         error: String,
     },
 }
@@ -185,14 +197,19 @@ impl TransitionOutput for SagaTransitionOutput {
 pub enum SagaCommand {
     /// Execute a step
     ExecuteStep {
+        /// ID of the step to execute
         step_id: String,
+        /// Target domain for the command
         domain: String,
+        /// Command to execute
         command: String,
     },
     
     /// Execute compensation
     ExecuteCompensation {
+        /// ID of the step to compensate
         step_id: String,
+        /// Compensation action to perform
         action: CompensationAction,
     },
 }
@@ -210,7 +227,7 @@ impl MealyStateTransitions for SagaState {
             (SagaState::Running { .. }, SagaState::Running { .. }, SagaTransitionInput::StepCompleted { .. }) => true,
             
             // Running -> Completed when all steps done
-            (SagaState::Running { completed_steps, .. }, SagaState::Completed, SagaTransitionInput::StepCompleted { .. }) => {
+            (SagaState::Running { completed_steps: _, .. }, SagaState::Completed, SagaTransitionInput::StepCompleted { .. }) => {
                 // In real implementation, check if all steps are completed
                 true
             }
@@ -262,7 +279,7 @@ impl MealyStateTransitions for SagaState {
     
     fn transition_output(&self, target: &Self, input: &Self::Input) -> Self::Output {
         let mut events = vec![];
-        let mut commands = vec![];
+        let commands = vec![];
         
         match (self, target, input) {
             (SagaState::Pending, SagaState::Running { .. }, SagaTransitionInput::Start) => {
@@ -345,6 +362,7 @@ pub struct SagaAggregate {
 }
 
 impl SagaAggregate {
+    /// Create a new saga aggregate with a unique ID
     pub fn new() -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -386,49 +404,69 @@ pub struct SagaOrchestrator {
 pub enum SagaEvent {
     /// Saga started
     Started {
+        /// ID of the started saga
         saga_id: Uuid,
+        /// When the saga started
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     
     /// Step started
     StepStarted {
+        /// ID of the saga
         saga_id: Uuid,
+        /// ID of the step that started
         step_id: String,
+        /// When the step started
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     
     /// Step completed
     StepCompleted {
+        /// ID of the saga
         saga_id: Uuid,
+        /// ID of the completed step
         step_id: String,
+        /// Result data from the step
         result: serde_json::Value,
+        /// When the step completed
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     
     /// Step failed
     StepFailed {
+        /// ID of the saga
         saga_id: Uuid,
+        /// ID of the failed step
         step_id: String,
+        /// Error message
         error: String,
+        /// When the step failed
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     
     /// Saga completed
     Completed {
+        /// ID of the completed saga
         saga_id: Uuid,
+        /// When the saga completed
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     
     /// Compensation started
     CompensationStarted {
+        /// ID of the saga
         saga_id: Uuid,
+        /// The step that triggered compensation
         failed_step: String,
+        /// When compensation started
         timestamp: chrono::DateTime<chrono::Utc>,
     },
     
     /// Saga compensated
     Compensated {
+        /// ID of the compensated saga
         saga_id: Uuid,
+        /// When compensation completed
         timestamp: chrono::DateTime<chrono::Utc>,
     },
 }
@@ -636,7 +674,7 @@ impl SagaOrchestrator {
     /// Internal step execution
     async fn execute_step_internal(
         &self,
-        saga_id: Uuid,
+        _saga_id: Uuid,
         step_id: &str,
         domain: &str,
         command: &str,
@@ -653,9 +691,9 @@ impl SagaOrchestrator {
     /// Internal compensation execution
     async fn execute_compensation_internal(
         &self,
-        saga_id: Uuid,
-        step_id: &str,
-        action: &CompensationAction,
+        _saga_id: Uuid,
+        _step_id: &str,
+        _action: &CompensationAction,
     ) -> Result<(), DomainError> {
         // In real implementation, this would execute the compensation
         Ok(())
@@ -691,6 +729,10 @@ pub struct SagaBuilder {
 }
 
 impl SagaBuilder {
+    /// Create a new saga builder
+    ///
+    /// # Arguments
+    /// * `name` - Name of the saga
     pub fn new(name: String) -> Self {
         Self {
             saga: Saga {
@@ -705,11 +747,20 @@ impl SagaBuilder {
         }
     }
     
+    /// Add a step to the saga
+    ///
+    /// # Arguments
+    /// * `step` - The saga step to add
     pub fn add_step(mut self, step: SagaStep) -> Self {
         self.saga.steps.push(step);
         self
     }
     
+    /// Add compensation action for a step
+    ///
+    /// # Arguments
+    /// * `step_id` - ID of the step to compensate
+    /// * `compensation` - The compensation action
     pub fn with_compensation(
         mut self,
         step_id: String,
@@ -719,16 +770,27 @@ impl SagaBuilder {
         self
     }
     
+    /// Add context data to the saga
+    ///
+    /// # Arguments
+    /// * `key` - Context key
+    /// * `value` - Context value
     pub fn with_context(mut self, key: String, value: serde_json::Value) -> Self {
         self.saga.context.insert(key, value);
         self
     }
     
+    /// Add metadata to the saga
+    ///
+    /// # Arguments
+    /// * `key` - Metadata key
+    /// * `value` - Metadata value
     pub fn with_metadata(mut self, key: String, value: String) -> Self {
         self.saga.metadata.insert(key, value);
         self
     }
     
+    /// Build the configured saga
     pub fn build(self) -> Saga {
         self.saga
     }

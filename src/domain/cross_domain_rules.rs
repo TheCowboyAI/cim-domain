@@ -53,6 +53,7 @@ pub struct RuleContext {
 }
 
 impl RuleContext {
+    /// Create a new rule context
     pub fn new() -> Self {
         Self {
             actor: None,
@@ -62,16 +63,19 @@ impl RuleContext {
         }
     }
     
+    /// Set the actor for this context
     pub fn with_actor(mut self, actor: String) -> Self {
         self.actor = Some(actor);
         self
     }
     
+    /// Set the operation for this context
     pub fn with_operation(mut self, operation: String) -> Self {
         self.operation = Some(operation);
         self
     }
     
+    /// Add data to the context
     pub fn with_data(mut self, key: String, value: serde_json::Value) -> Self {
         self.data.insert(key, value);
         self
@@ -104,31 +108,60 @@ pub enum RuleAction {
     Allow,
     
     /// Deny the operation
-    Deny { reason: String },
+    Deny { 
+        /// Reason for denial
+        reason: String 
+    },
     
     /// Require additional approval
-    RequireApproval { approver_role: String },
+    RequireApproval { 
+        /// Role that must approve
+        approver_role: String 
+    },
     
     /// Log the event for audit
-    Log { level: LogLevel, message: String },
+    Log { 
+        /// Log level for the message
+        level: LogLevel, 
+        /// Log message content
+        message: String 
+    },
     
     /// Send notification
-    Notify { recipient: String, message: String },
+    Notify { 
+        /// Notification recipient
+        recipient: String, 
+        /// Notification message
+        message: String 
+    },
     
     /// Execute compensation
-    Compensate { action: String },
+    Compensate { 
+        /// Compensation action to execute
+        action: String 
+    },
     
     /// Custom action
-    Custom { action_type: String, data: serde_json::Value },
+    Custom { 
+        /// Type of custom action
+        action_type: String, 
+        /// Additional action data
+        data: serde_json::Value 
+    },
 }
 
 /// Log levels for rule actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogLevel {
+    /// Debug level logging
     Debug,
+    /// Informational logging
     Info,
+    /// Warning level logging
     Warning,
+    /// Error level logging
     Error,
+    /// Critical level logging
     Critical,
 }
 
@@ -147,13 +180,18 @@ pub struct RuleEngine {
 /// Record of a rule evaluation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuleEvaluationRecord {
+    /// Name of the evaluated rule
     pub rule_name: String,
+    /// Context in which the rule was evaluated
     pub context: RuleContext,
+    /// Result of the evaluation
     pub result: RuleEvaluationResult,
+    /// When the evaluation occurred
     pub evaluated_at: DateTime<Utc>,
 }
 
 impl RuleEngine {
+    /// Create a new rule engine
     pub fn new() -> Self {
         Self {
             rules: Vec::new(),
@@ -236,10 +274,12 @@ impl RuleEngine {
 
 /// Example: Data locality rule
 pub struct DataLocalityRule {
+    /// Map of domain names to their required geographical locations
     required_locality: HashMap<String, String>, // domain -> required location
 }
 
 impl DataLocalityRule {
+    /// Create a new data locality rule with default requirements
     pub fn new() -> Self {
         let mut required = HashMap::new();
         required.insert("PersonalData".to_string(), "EU".to_string());
@@ -263,7 +303,7 @@ impl CrossDomainRule for DataLocalityRule {
     
     async fn evaluate(
         &self,
-        composition: &DomainComposition,
+        _composition: &DomainComposition,
         context: &RuleContext,
     ) -> Result<RuleEvaluationResult, DomainError> {
         let mut violations = Vec::new();
@@ -329,10 +369,12 @@ impl CrossDomainRule for DataLocalityRule {
 
 /// Example: Transaction consistency rule
 pub struct TransactionConsistencyRule {
+    /// Maximum allowed inconsistency window in milliseconds
     max_inconsistency_window_ms: u64,
 }
 
 impl TransactionConsistencyRule {
+    /// Create a new transaction consistency rule
     pub fn new(max_window_ms: u64) -> Self {
         Self {
             max_inconsistency_window_ms: max_window_ms,
@@ -352,7 +394,7 @@ impl CrossDomainRule for TransactionConsistencyRule {
     
     async fn evaluate(
         &self,
-        composition: &DomainComposition,
+        _composition: &DomainComposition,
         context: &RuleContext,
     ) -> Result<RuleEvaluationResult, DomainError> {
         // Check if this is a transaction operation

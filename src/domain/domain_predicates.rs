@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::errors::DomainError;
 use crate::composition::DomainComposition;
-use crate::category::{DomainObject, DomainCategory};
 
 /// A predicate that can be evaluated in a domain context
 #[async_trait]
@@ -80,6 +79,7 @@ pub struct PredicateContext {
 }
 
 impl PredicateContext {
+    /// Create a new predicate context
     pub fn new() -> Self {
         Self {
             domain: None,
@@ -88,16 +88,19 @@ impl PredicateContext {
         }
     }
     
+    /// Set the domain for this context
     pub fn with_domain(mut self, domain: String) -> Self {
         self.domain = Some(domain);
         self
     }
     
+    /// Set the object ID for this context
     pub fn with_object(mut self, object_id: String) -> Self {
         self.object_id = Some(object_id);
         self
     }
     
+    /// Add a parameter to the context
     pub fn with_parameter(mut self, key: String, value: serde_json::Value) -> Self {
         self.parameters.insert(key, value);
         self
@@ -165,6 +168,7 @@ pub struct PredicateEvaluator {
 }
 
 impl PredicateEvaluator {
+    /// Create a new predicate evaluator
     pub fn new() -> Self {
         Self {
             predicates: HashMap::new(),
@@ -382,11 +386,14 @@ impl DomainPredicate for ImplicationPredicate {
 
 /// Predicate that checks if an object exists in a domain
 pub struct ExistsPredicate {
+    /// Name of the domain to check
     domain_name: String,
+    /// Type of object to look for
     object_type: String,
 }
 
 impl ExistsPredicate {
+    /// Create a new exists predicate
     pub fn new(domain_name: String, object_type: String) -> Self {
         Self {
             domain_name,
@@ -450,12 +457,16 @@ impl DomainPredicate for ExistsPredicate {
 
 /// Predicate that checks relationships between domains
 pub struct RelationshipPredicate {
+    /// Source domain of the relationship
     source_domain: String,
+    /// Target domain of the relationship
     target_domain: String,
+    /// Type of relationship to check
     relationship_type: String,
 }
 
 impl RelationshipPredicate {
+    /// Create a new relationship predicate
     pub fn new(source_domain: String, target_domain: String, relationship_type: String) -> Self {
         Self {
             source_domain,
@@ -470,7 +481,7 @@ impl DomainPredicate for RelationshipPredicate {
     async fn evaluate(
         &self,
         composition: &DomainComposition,
-        context: &PredicateContext,
+        _context: &PredicateContext,
     ) -> Result<PredicateResult, DomainError> {
         // Check if there are morphisms between the domains
         let source = composition.domains.get(&self.source_domain)
@@ -525,13 +536,14 @@ impl DomainPredicate for RelationshipPredicate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::category::DomainCategory;
     
     #[tokio::test]
     async fn test_exists_predicate() {
         let mut composition = DomainComposition::new("Test".to_string());
         let mut domain = DomainCategory::new("TestDomain".to_string());
         
-        domain.add_object(DomainObject {
+        domain.add_object(crate::category::DomainObject {
             id: "order_123".to_string(),
             composition_type: crate::composition_types::DomainCompositionType::Entity {
                 entity_type: "Order".to_string(),

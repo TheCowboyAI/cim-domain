@@ -146,6 +146,11 @@ pub struct PropertyPredicate {
 }
 
 impl PropertyPredicate {
+    /// Create a new property predicate
+    ///
+    /// # Arguments
+    /// * `property_name` - Name of the property to check
+    /// * `expected_value` - Expected value of the property
     pub fn new(property_name: String, expected_value: String) -> Self {
         Self {
             property_name,
@@ -175,6 +180,10 @@ pub struct TypePredicate {
 }
 
 impl TypePredicate {
+    /// Create a new type predicate
+    ///
+    /// # Arguments
+    /// * `expected_type` - The expected domain composition type
     pub fn new(expected_type: DomainCompositionType) -> Self {
         Self { expected_type }
     }
@@ -204,6 +213,11 @@ impl<F> LambdaPredicate<F>
 where
     F: Fn(&DomainObject) -> bool + Send + Sync,
 {
+    /// Create a new lambda predicate with a custom function
+    ///
+    /// # Arguments
+    /// * `function` - The predicate function
+    /// * `description` - Human-readable description of the predicate
     pub fn new(function: F, description: String) -> Self {
         Self {
             function,
@@ -347,6 +361,7 @@ pub struct OrderComprehension {
 }
 
 impl OrderComprehension {
+    /// Create a new order comprehension engine with business predicates
     pub fn new() -> Self {
         let engine = ComprehensionEngine::new().with_business_predicates();
         Self { engine }

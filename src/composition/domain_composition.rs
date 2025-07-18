@@ -9,7 +9,6 @@ use uuid::Uuid;
 
 use crate::errors::DomainError;
 use crate::events::DomainEvent;
-use crate::commands::DomainCommand;
 use crate::integration::domain_bridge::SerializedCommand;
 use crate::category::DomainCategory;
 use crate::category::limits::{Pullback, Pushout, Product, Coproduct};
@@ -58,7 +57,9 @@ pub enum SharedStructure {
     
     /// Custom limit/colimit
     Custom {
+        /// Type name of the custom structure
         structure_type: String,
+        /// Additional data for the custom structure
         data: HashMap<String, serde_json::Value>,
     },
 }
@@ -267,7 +268,7 @@ impl DomainComposition {
     /// Route a command to the appropriate domain
     pub async fn route_command(
         &self,
-        command: SerializedCommand,
+        _command: SerializedCommand,
     ) -> Result<Vec<Box<dyn DomainEvent>>, DomainError> {
         // In a real implementation, this would:
         // 1. Determine target domain from command metadata
@@ -281,8 +282,8 @@ impl DomainComposition {
     /// Execute a cross-domain query
     pub async fn cross_domain_query(
         &self,
-        query_type: &str,
-        domains: Vec<&str>,
+        _query_type: &str,
+        _domains: Vec<&str>,
     ) -> Result<HashMap<String, serde_json::Value>, DomainError> {
         // In a real implementation, this would:
         // 1. Decompose query into domain-specific parts
@@ -299,22 +300,41 @@ pub struct CompositionBuilder {
 }
 
 impl CompositionBuilder {
+    /// Create a new composition builder
+    ///
+    /// # Arguments
+    /// * `name` - Name for the domain composition
     pub fn new(name: String) -> Self {
         Self {
             composition: DomainComposition::new(name),
         }
     }
     
+    /// Add a domain to the composition
+    ///
+    /// # Arguments
+    /// * `domain` - Domain category to add
     pub fn with_domain(mut self, domain: DomainCategory) -> Result<Self, DomainError> {
         self.composition.add_domain(domain)?;
         Ok(self)
     }
     
+    /// Add metadata to the composition
+    ///
+    /// # Arguments
+    /// * `key` - Metadata key
+    /// * `value` - Metadata value
     pub fn with_metadata(mut self, key: String, value: String) -> Self {
         self.composition.metadata.insert(key, value);
         self
     }
     
+    /// Configure domain synchronization using pullback
+    ///
+    /// # Arguments
+    /// * `domain_a` - First domain to synchronize
+    /// * `domain_b` - Second domain to synchronize
+    /// * `shared` - Shared concept between domains
     pub fn synchronize(
         mut self,
         domain_a: &str,
@@ -325,6 +345,12 @@ impl CompositionBuilder {
         Ok(self)
     }
     
+    /// Configure domain merger using pushout
+    ///
+    /// # Arguments
+    /// * `domain_a` - First domain to merge
+    /// * `domain_b` - Second domain to merge
+    /// * `base` - Common base domain
     pub fn merge(
         mut self,
         domain_a: &str,
@@ -335,16 +361,25 @@ impl CompositionBuilder {
         Ok(self)
     }
     
+    /// Configure parallel composition of domains
+    ///
+    /// # Arguments
+    /// * `domains` - List of domains to compose in parallel
     pub fn parallel(mut self, domains: Vec<&str>) -> Result<Self, DomainError> {
         self.composition.parallel_composition(domains)?;
         Ok(self)
     }
     
+    /// Configure choice composition of domains
+    ///
+    /// # Arguments
+    /// * `options` - List of domain options to choose from
     pub fn choice(mut self, options: Vec<&str>) -> Result<Self, DomainError> {
         self.composition.choice_composition(options)?;
         Ok(self)
     }
     
+    /// Build the final domain composition
     pub fn build(self) -> DomainComposition {
         self.composition
     }

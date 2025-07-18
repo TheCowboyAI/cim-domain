@@ -488,7 +488,7 @@ impl SemanticAnalyzer {
     /// Calculate path distance in ontology
     fn ontology_distance(
         &self,
-        domain: &str,
+        _domain: &str,
         concept_a: &str,
         concept_b: &str,
     ) -> Option<u32> {

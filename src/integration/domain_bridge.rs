@@ -17,12 +17,16 @@ use crate::category::functor::ContextMappingFunctor;
 /// Serializable command wrapper for cross-domain communication
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerializedCommand {
+    /// Type/name of the command
     pub command_type: String,
+    /// ID of the aggregate the command targets
     pub aggregate_id: String,
+    /// Serialized command data
     pub payload: serde_json::Value,
 }
 
 impl SerializedCommand {
+    /// Create a serialized command from a domain command
     pub fn from_command<C: DomainCommand + Serialize>(command: &C) -> Result<Self, DomainError> {
         Ok(Self {
             command_type: command.command_type().to_string(),
@@ -92,6 +96,7 @@ pub struct TranslationContext {
 }
 
 impl TranslationContext {
+    /// Create a new translation context
     pub fn new() -> Self {
         Self {
             source_context: HashMap::new(),
@@ -100,16 +105,23 @@ impl TranslationContext {
         }
     }
     
+    /// Add data to the source context
     pub fn with_source_data(mut self, key: String, value: serde_json::Value) -> Self {
         self.source_context.insert(key, value);
         self
     }
     
+    /// Add data to the target context
     pub fn with_target_data(mut self, key: String, value: serde_json::Value) -> Self {
         self.target_context.insert(key, value);
         self
     }
     
+    /// Add a translation hint
+    ///
+    /// # Arguments
+    /// * `key` - Hint key
+    /// * `value` - Hint value
     pub fn with_hint(mut self, key: String, value: String) -> Self {
         self.hints.insert(key, value);
         self
@@ -238,6 +250,7 @@ pub struct BridgeRegistry {
 }
 
 impl BridgeRegistry {
+    /// Create a new bridge registry
     pub fn new() -> Self {
         Self {
             bridges: Arc::new(RwLock::new(HashMap::new())),
@@ -266,7 +279,7 @@ impl BridgeRegistry {
         target: &str,
     ) -> Result<Arc<DomainBridge>, DomainError> {
         let bridges = self.bridges.read().await;
-        let bridge = bridges.get(&(source.to_string(), target.to_string()))
+        let _bridge = bridges.get(&(source.to_string(), target.to_string()))
             .ok_or_else(|| DomainError::NotFound(
                 format!("Bridge from {} to {} not found", source, target)
             ))?;
@@ -307,6 +320,7 @@ pub struct PropertyBasedTranslator {
 }
 
 impl PropertyBasedTranslator {
+    /// Create a new property-based translator
     pub fn new() -> Self {
         Self {
             command_mappings: HashMap::new(),
@@ -315,14 +329,29 @@ impl PropertyBasedTranslator {
         }
     }
     
+    /// Add a command type mapping
+    ///
+    /// # Arguments
+    /// * `source` - Source command type
+    /// * `target` - Target command type
     pub fn add_command_mapping(&mut self, source: String, target: String) {
         self.command_mappings.insert(source, target);
     }
     
+    /// Add an event type mapping
+    ///
+    /// # Arguments
+    /// * `source` - Source event type
+    /// * `target` - Target event type
     pub fn add_event_mapping(&mut self, source: String, target: String) {
         self.event_mappings.insert(source, target);
     }
     
+    /// Add a property name mapping
+    ///
+    /// # Arguments
+    /// * `source` - Source property name
+    /// * `target` - Target property name
     pub fn add_property_mapping(&mut self, source: String, target: String) {
         self.property_mappings.insert(source, target);
     }
@@ -332,8 +361,8 @@ impl PropertyBasedTranslator {
 impl MessageTranslator for PropertyBasedTranslator {
     async fn translate_command(
         &self,
-        command: SerializedCommand,
-        context: &TranslationContext,
+        _command: SerializedCommand,
+        _context: &TranslationContext,
     ) -> Result<SerializedCommand, DomainError> {
         // In real implementation, would perform actual translation
         // For now, return error
@@ -342,8 +371,8 @@ impl MessageTranslator for PropertyBasedTranslator {
     
     async fn translate_event(
         &self,
-        event: Box<dyn DomainEvent>,
-        context: &TranslationContext,
+        _event: Box<dyn DomainEvent>,
+        _context: &TranslationContext,
     ) -> Result<Box<dyn DomainEvent>, DomainError> {
         // In real implementation, would perform actual translation
         // For now, return error
@@ -369,6 +398,7 @@ pub struct InMemoryBridgeAdapter {
 }
 
 impl InMemoryBridgeAdapter {
+    /// Create a new in-memory bridge adapter
     pub fn new() -> Self {
         Self {
             subscribers: Arc::new(RwLock::new(HashMap::new())),
@@ -386,8 +416,8 @@ impl InMemoryBridgeAdapter {
 impl BridgeAdapter for InMemoryBridgeAdapter {
     async fn send_command(
         &self,
-        command: SerializedCommand,
-        target_domain: &str,
+        _command: SerializedCommand,
+        _target_domain: &str,
     ) -> Result<(), DomainError> {
         // Update health metrics
         let mut health = self.health_metrics.write().await;
@@ -399,8 +429,8 @@ impl BridgeAdapter for InMemoryBridgeAdapter {
     
     async fn send_event(
         &self,
-        event: Box<dyn DomainEvent>,
-        target_domain: &str,
+        _event: Box<dyn DomainEvent>,
+        _target_domain: &str,
     ) -> Result<(), DomainError> {
         // Update health metrics
         let mut health = self.health_metrics.write().await;

@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -18,11 +17,14 @@ use super::event_bridge::EventBridge;
 /// A simplified concept representation for cross-domain search
 #[derive(Debug, Clone)]
 pub struct Concept {
+    /// Name of the concept
     pub name: String,
+    /// Quality dimensions vector
     pub quality_dimensions: Vec<f64>,
 }
 
 impl Concept {
+    /// Create a new concept
     pub fn new(name: String, quality_dimensions: Vec<f64>) -> Self {
         Self { name, quality_dimensions }
     }
@@ -57,7 +59,7 @@ pub struct CrossDomainSearchEngine {
     functors: Arc<RwLock<HashMap<(String, String), Box<dyn std::any::Any + Send + Sync>>>>,
     
     /// Event bridge for cross-domain communication
-    event_bridge: Arc<EventBridge>,
+    _event_bridge: Arc<EventBridge>,
     
     /// Search configuration
     config: SearchConfig,
@@ -237,7 +239,7 @@ impl CrossDomainSearchEngine {
             analyzers: Arc::new(RwLock::new(HashMap::new())),
             domains: Arc::new(RwLock::new(HashMap::new())),
             functors: Arc::new(RwLock::new(HashMap::new())),
-            event_bridge,
+            _event_bridge: event_bridge,
             config,
         }
     }
@@ -713,5 +715,373 @@ mod tests {
         assert_eq!(results.domain_results.len(), 2);
         assert!(results.domain_results.contains_key("Sales"));
         assert!(results.domain_results.contains_key("Billing"));
+    }
+    
+    #[test]
+    fn test_cosine_similarity() {
+        // Test identical vectors
+        let vec1 = vec![1.0, 0.0, 0.0];
+        let vec2 = vec![1.0, 0.0, 0.0];
+        assert_eq!(cosine_similarity(&vec1, &vec2), 1.0);
+        
+        // Test orthogonal vectors
+        let vec3 = vec![1.0, 0.0];
+        let vec4 = vec![0.0, 1.0];
+        assert_eq!(cosine_similarity(&vec3, &vec4), 0.0);
+        
+        // Test opposite vectors
+        let vec5 = vec![1.0, 0.0];
+        let vec6 = vec![-1.0, 0.0];
+        assert_eq!(cosine_similarity(&vec5, &vec6), -1.0);
+        
+        // Test different length vectors
+        let vec7 = vec![1.0, 2.0];
+        let vec8 = vec![1.0, 2.0, 3.0];
+        assert_eq!(cosine_similarity(&vec7, &vec8), 0.0);
+        
+        // Test empty vectors
+        let vec9: Vec<f64> = vec![];
+        let vec10: Vec<f64> = vec![];
+        assert_eq!(cosine_similarity(&vec9, &vec10), 0.0);
+        
+        // Test zero vectors
+        let vec11 = vec![0.0, 0.0, 0.0];
+        let vec12 = vec![1.0, 2.0, 3.0];
+        assert_eq!(cosine_similarity(&vec11, &vec12), 0.0);
+    }
+    
+    #[test]
+    fn test_concept_creation() {
+        let concept = Concept::new("TestConcept".to_string(), vec![0.1, 0.2, 0.3]);
+        assert_eq!(concept.name, "TestConcept");
+        assert_eq!(concept.quality_dimensions, vec![0.1, 0.2, 0.3]);
+    }
+    
+    #[test]
+    fn test_search_config_default() {
+        let config = SearchConfig::default();
+        assert_eq!(config.results_per_domain, 10);
+        assert_eq!(config.min_similarity, 0.7);
+        assert!(config.follow_relationships);
+        assert_eq!(config.max_depth, 3);
+        assert!(config.aggregate_results);
+    }
+    
+    #[tokio::test]
+    async fn test_register_domain_duplicate() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        let domain = DomainCategory::new("TestDomain".to_string());
+        let analyzer = Arc::new(SemanticAnalyzer::new());
+        
+        // First registration should succeed
+        assert!(engine.register_domain(domain.clone(), analyzer.clone()).await.is_ok());
+        
+        // Second registration should fail
+        let result = engine.register_domain(domain, analyzer).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::AlreadyExists(msg) => assert!(msg.contains("TestDomain")),
+            _ => panic!("Expected AlreadyExists error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_compute_query_vector() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        // Test with no domains registered
+        let vector = engine.compute_query_vector("test query", None).await.unwrap();
+        assert_eq!(vector, vec![0.5; 5]); // Default fallback
+        
+        // Register a domain with analyzer
+        let domain = DomainCategory::new("TestDomain".to_string());
+        let analyzer = Arc::new(SemanticAnalyzer::new());
+        engine.register_domain(domain, analyzer).await.unwrap();
+        
+        // Test with start domain
+        let vector = engine.compute_query_vector("test query", Some("TestDomain")).await.unwrap();
+        assert_eq!(vector.len(), 5); // Should return a 5-dimensional vector
+    }
+    
+    #[tokio::test]
+    async fn test_search_with_specific_domains() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        // Register multiple domains
+        for domain_name in &["Domain1", "Domain2", "Domain3"] {
+            let domain = DomainCategory::new(domain_name.to_string());
+            let analyzer = Arc::new(SemanticAnalyzer::new());
+            
+            // Add a concept to each domain
+            analyzer.add_concept(Concept::new(
+                format!("{}_Concept", domain_name),
+                vec![0.5; 5],
+            )).await.unwrap();
+            
+            engine.register_domain(domain, analyzer).await.unwrap();
+        }
+        
+        // Search only specific domains
+        let query = CrossDomainQuery {
+            query: "test".to_string(),
+            start_domain: None,
+            target_domains: vec!["Domain1".to_string(), "Domain3".to_string()],
+            concept_vector: Some(vec![0.5; 5]),
+            config_overrides: None,
+        };
+        
+        let results = engine.search(query).await.unwrap();
+        
+        assert_eq!(results.domain_results.len(), 2);
+        assert!(results.domain_results.contains_key("Domain1"));
+        assert!(results.domain_results.contains_key("Domain3"));
+        assert!(!results.domain_results.contains_key("Domain2"));
+    }
+    
+    #[tokio::test]
+    async fn test_search_invalid_domain() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        let query = CrossDomainQuery {
+            query: "test".to_string(),
+            start_domain: None,
+            target_domains: vec!["NonExistentDomain".to_string()],
+            concept_vector: None,
+            config_overrides: None,
+        };
+        
+        let result = engine.search(query).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::NotFound(msg) => assert!(msg.contains("NonExistentDomain")),
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_search_with_config_overrides() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        // Register domain with many concepts
+        let domain = DomainCategory::new("TestDomain".to_string());
+        let analyzer = Arc::new(SemanticAnalyzer::new());
+        
+        for i in 0..20 {
+            analyzer.add_concept(Concept::new(
+                format!("Concept_{}", i),
+                vec![i as f64 / 20.0; 5],
+            )).await.unwrap();
+        }
+        
+        engine.register_domain(domain, analyzer).await.unwrap();
+        
+        // Search with custom config
+        let custom_config = SearchConfig {
+            results_per_domain: 5,
+            min_similarity: 0.3,
+            follow_relationships: false,
+            max_depth: 1,
+            aggregate_results: false,
+        };
+        
+        let query = CrossDomainQuery {
+            query: "test".to_string(),
+            start_domain: None,
+            target_domains: vec![],
+            concept_vector: Some(vec![0.5; 5]),
+            config_overrides: Some(custom_config),
+        };
+        
+        let results = engine.search(query).await.unwrap();
+        
+        // Should respect custom results_per_domain limit
+        let test_domain_results = results.domain_results.get("TestDomain").unwrap();
+        assert!(test_domain_results.len() <= 5);
+        
+        // Should not aggregate results
+        assert_eq!(results.aggregated_concepts.len(), 0);
+    }
+    
+    #[tokio::test]
+    async fn test_deduplicate_relationships() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        let relationships = vec![
+            DomainRelationship {
+                domain_a: "A".to_string(),
+                domain_b: "B".to_string(),
+                relationship_type: "type1".to_string(),
+                shared_concepts: vec!["concept1".to_string()],
+                strength: 0.8,
+            },
+            DomainRelationship {
+                domain_a: "B".to_string(),
+                domain_b: "A".to_string(),
+                relationship_type: "type1".to_string(),
+                shared_concepts: vec!["concept2".to_string()],
+                strength: 0.7,
+            },
+            DomainRelationship {
+                domain_a: "A".to_string(),
+                domain_b: "C".to_string(),
+                relationship_type: "type2".to_string(),
+                shared_concepts: vec!["concept3".to_string()],
+                strength: 0.9,
+            },
+        ];
+        
+        let deduplicated = engine.deduplicate_relationships(relationships);
+        
+        assert_eq!(deduplicated.len(), 2); // A-B and A-C
+        
+        // Check merged A-B relationship
+        let ab_rel = deduplicated.iter().find(|r| 
+            (r.domain_a == "A" && r.domain_b == "B") || 
+            (r.domain_a == "B" && r.domain_b == "A")
+        ).unwrap();
+        assert_eq!(ab_rel.shared_concepts.len(), 2); // concept1 and concept2
+        assert_eq!(ab_rel.strength, 0.75); // Average of 0.8 and 0.7
+    }
+    
+    #[tokio::test]
+    async fn test_aggregate_concepts() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        // Register two domains
+        let domain1 = DomainCategory::new("Domain1".to_string());
+        let analyzer1 = Arc::new(SemanticAnalyzer::new());
+        analyzer1.add_concept(Concept::new(
+            "Customer".to_string(),
+            vec![0.9, 0.8, 0.7, 0.6, 0.5],
+        )).await.unwrap();
+        engine.register_domain(domain1, analyzer1).await.unwrap();
+        
+        let domain2 = DomainCategory::new("Domain2".to_string());
+        let analyzer2 = Arc::new(SemanticAnalyzer::new());
+        analyzer2.add_concept(Concept::new(
+            "Client".to_string(),
+            vec![0.88, 0.79, 0.69, 0.59, 0.49], // Very similar to Customer
+        )).await.unwrap();
+        engine.register_domain(domain2, analyzer2).await.unwrap();
+        
+        // Create domain results
+        let mut domain_results = HashMap::new();
+        domain_results.insert("Domain1".to_string(), vec![
+            DomainSearchResult {
+                domain: "Domain1".to_string(),
+                concept_id: Uuid::new_v4().to_string(),
+                concept_name: "Customer".to_string(),
+                similarity: 0.95,
+                metadata: HashMap::new(),
+                cross_domain_links: Vec::new(),
+            }
+        ]);
+        domain_results.insert("Domain2".to_string(), vec![
+            DomainSearchResult {
+                domain: "Domain2".to_string(),
+                concept_id: Uuid::new_v4().to_string(),
+                concept_name: "Client".to_string(),
+                similarity: 0.92,
+                metadata: HashMap::new(),
+                cross_domain_links: Vec::new(),
+            }
+        ]);
+        
+        let aggregated = engine.aggregate_concepts(&domain_results).await.unwrap();
+        
+        // Should aggregate similar concepts
+        assert!(aggregated.len() >= 1);
+        let agg = &aggregated[0];
+        assert_eq!(agg.domains.len(), 2);
+        assert!(agg.variations.contains_key("Domain1"));
+        assert!(agg.variations.contains_key("Domain2"));
+    }
+    
+    #[test]
+    fn test_cross_domain_query_serialization() {
+        let query = CrossDomainQuery {
+            query: "test query".to_string(),
+            start_domain: Some("Sales".to_string()),
+            target_domains: vec!["Billing".to_string(), "Support".to_string()],
+            concept_vector: Some(vec![0.1, 0.2, 0.3]),
+            config_overrides: Some(SearchConfig {
+                results_per_domain: 5,
+                min_similarity: 0.5,
+                follow_relationships: false,
+                max_depth: 2,
+                aggregate_results: true,
+            }),
+        };
+        
+        // Test serialization
+        let json = serde_json::to_string(&query).unwrap();
+        assert!(json.contains("test query"));
+        assert!(json.contains("Sales"));
+        assert!(json.contains("Billing"));
+        
+        // Test deserialization
+        let deserialized: CrossDomainQuery = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.query, query.query);
+        assert_eq!(deserialized.start_domain, query.start_domain);
+        assert_eq!(deserialized.target_domains, query.target_domains);
+    }
+    
+    #[test]
+    fn test_search_metadata() {
+        let query = CrossDomainQuery {
+            query: "test".to_string(),
+            start_domain: None,
+            target_domains: vec![],
+            concept_vector: None,
+            config_overrides: None,
+        };
+        
+        let metadata = SearchMetadata {
+            query: query.clone(),
+            total_results: 25,
+            domains_searched: vec!["Domain1".to_string(), "Domain2".to_string()],
+            duration_ms: 150,
+            truncated: false,
+            max_depth_reached: 2,
+        };
+        
+        assert_eq!(metadata.total_results, 25);
+        assert_eq!(metadata.domains_searched.len(), 2);
+        assert_eq!(metadata.duration_ms, 150);
+        assert!(!metadata.truncated);
+    }
+    
+    #[tokio::test]
+    async fn test_empty_search_results() {
+        let event_bridge = Arc::new(EventBridge::new(Default::default()));
+        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        
+        // Register domain without concepts
+        let domain = DomainCategory::new("EmptyDomain".to_string());
+        let analyzer = Arc::new(SemanticAnalyzer::new());
+        engine.register_domain(domain, analyzer).await.unwrap();
+        
+        let query = CrossDomainQuery {
+            query: "nonexistent".to_string(),
+            start_domain: None,
+            target_domains: vec![],
+            concept_vector: Some(vec![0.1; 5]),
+            config_overrides: None,
+        };
+        
+        let results = engine.search(query).await.unwrap();
+        
+        assert_eq!(results.domain_results.len(), 1);
+        assert_eq!(results.domain_results.get("EmptyDomain").unwrap().len(), 0);
+        assert_eq!(results.metadata.total_results, 0);
+        assert_eq!(results.aggregated_concepts.len(), 0);
     }
 }

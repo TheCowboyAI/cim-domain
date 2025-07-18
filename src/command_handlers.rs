@@ -113,8 +113,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Location command handler tests have been moved to cim-domain-location
 
     // Workflow command handler tests have been moved to cim-domain-workflow

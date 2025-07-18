@@ -137,7 +137,7 @@ fn main() {
     
     println!("Created document");
     println!("Initial state: {:?}", document.current_state());
-    println!("Version: {document.version(}\n"));
+    println!("Version: {}\n", document.version());
     
     // Create a metadata component
     let metadata = MetadataComponent {
@@ -147,9 +147,9 @@ fn main() {
     };
     
     println!("Created metadata component:");
-    println!("  Title: {metadata.title}");
-    println!("  Author: {metadata.author}");
-    println!("  Type: {metadata.type_name(}\n"));
+    println!("  Title: {}", metadata.title);
+    println!("  Author: {}", metadata.author);
+    println!("  Type: {}\n", metadata.type_name());
     
     // State transitions
     println!("=== State Transitions ===");
@@ -159,7 +159,7 @@ fn main() {
         Ok(()) => {
             println!("✓ Submitted for review");
             println!("  New state: {:?}", document.current_state());
-            println!("  Version: {document.version(}"));
+            println!("  Version: {}", document.version());
         }
         Err(e) => println!("✗ Failed to submit: {e}"),
     }
@@ -177,7 +177,7 @@ fn main() {
         Ok(()) => {
             println!("✓ Approved");
             println!("  New state: {:?}", document.current_state());
-            println!("  Version: {document.version(}"));
+            println!("  Version: {}", document.version());
         }
         Err(e) => println!("✗ Failed to approve: {e}"),
     }
@@ -191,9 +191,9 @@ fn main() {
     let envelope = CommandEnvelope::new(command, "user123".to_string());
     
     println!("Created command envelope:");
-    println!("  Command ID: {envelope.id}");
-    println!("  Issued by: {envelope.issued_by}");
-    println!("  Correlation ID: {envelope.correlation_id(}"));
+    println!("  Command ID: {}", envelope.id);
+    println!("  Issued by: {}", envelope.issued_by);
+    println!("  Correlation ID: {}", envelope.correlation_id());
     
     println!("\n✅ Example completed successfully!");
 } 

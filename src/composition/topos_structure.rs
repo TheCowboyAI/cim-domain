@@ -223,8 +223,8 @@ impl DomainTopos {
     /// Check if a morphism satisfies a property
     pub fn satisfies(
         &self,
-        morphism: &DomainMorphism,
-        property: &LogicalFormula,
+        _morphism: &DomainMorphism,
+        _property: &LogicalFormula,
     ) -> Result<TruthValue, DomainError> {
         // In a real implementation, this would evaluate the formula
         // against the morphism using the internal logic
@@ -368,10 +368,11 @@ impl LogicalFormula {
 
 /// Example: Business rules as internal logic
 pub struct BusinessRuleTopos {
-    topos: DomainTopos,
+    _topos: DomainTopos,
 }
 
 impl BusinessRuleTopos {
+    /// Create a new business rule topos with predefined axioms
     pub fn new() -> Self {
         let mut topos = DomainTopos::new("BusinessRules".to_string());
         
@@ -392,7 +393,7 @@ impl BusinessRuleTopos {
         
         topos.logic.axioms.push(credit_limit);
         
-        Self { topos }
+        Self { _topos: topos }
     }
     
     /// Check if an order can be approved

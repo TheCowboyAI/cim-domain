@@ -38,6 +38,10 @@ pub struct FactoryProvider<T> {
 }
 
 impl<T> FactoryProvider<T> {
+    /// Create a new factory provider
+    ///
+    /// # Arguments
+    /// * `factory` - Function that creates new instances of the service
     pub fn new<F>(factory: F) -> Self
     where
         F: Fn(&DependencyContainer) -> Result<Arc<T>, DomainError> + Send + Sync + 'static,
@@ -64,6 +68,10 @@ pub struct SingletonProvider<T> {
 }
 
 impl<T> SingletonProvider<T> {
+    /// Create a new singleton provider
+    ///
+    /// # Arguments
+    /// * `factory` - Function that creates the singleton instance
     pub fn new<F>(factory: F) -> Self
     where
         F: Fn(&DependencyContainer) -> Result<Arc<T>, DomainError> + Send + Sync + 'static,
@@ -98,6 +106,7 @@ impl<T: Injectable + 'static> ServiceProvider for SingletonProvider<T> {
 }
 
 /// Dependency injection container
+#[derive(Clone)]
 pub struct DependencyContainer {
     /// Registered services
     services: Arc<RwLock<HashMap<TypeId, Box<dyn Any + Send + Sync>>>>,
@@ -159,7 +168,7 @@ impl DependencyContainer {
     }
     
     /// Register an async factory function
-    pub async fn register_async_factory<T, F, Fut>(&self, factory: F) -> Result<(), DomainError>
+    pub async fn register_async_factory<T, F, Fut>(&self, _factory: F) -> Result<(), DomainError>
     where
         T: Injectable + 'static,
         F: Fn(DependencyContainer) -> Fut + Send + Sync + 'static,
@@ -239,7 +248,7 @@ pub trait DomainCategoryExt {
 impl DomainCategoryExt for DomainCategory {
     async fn create_with_di(
         name: String,
-        container: &DependencyContainer,
+        _container: &DependencyContainer,
     ) -> Result<DomainCategory, DomainError> {
         // In a real implementation, would inject required services
         // For now, just create a basic category
@@ -253,17 +262,26 @@ pub struct ContainerBuilder {
 }
 
 impl ContainerBuilder {
+    /// Create a new container builder
     pub fn new() -> Self {
         Self {
             container: DependencyContainer::new(),
         }
     }
     
+    /// Add a pre-existing instance to the container
+    ///
+    /// # Arguments
+    /// * `service` - The service instance to register
     pub async fn add_instance<T: Injectable + 'static>(self, service: T) -> Result<Self, DomainError> {
         self.container.register_instance(service).await?;
         Ok(self)
     }
     
+    /// Add a factory function that creates new instances
+    ///
+    /// # Arguments
+    /// * `factory` - Factory function that creates service instances
     pub async fn add_factory<T, F>(self, factory: F) -> Result<Self, DomainError>
     where
         T: Injectable + 'static,
@@ -273,6 +291,10 @@ impl ContainerBuilder {
         Ok(self)
     }
     
+    /// Add a singleton factory that creates a single instance
+    ///
+    /// # Arguments
+    /// * `factory` - Factory function that creates the singleton instance
     pub async fn add_singleton<T, F>(self, factory: F) -> Result<Self, DomainError>
     where
         T: Injectable + 'static,
@@ -282,6 +304,7 @@ impl ContainerBuilder {
         Ok(self)
     }
     
+    /// Build the configured dependency container
     pub fn build(self) -> DependencyContainer {
         self.container
     }
@@ -423,5 +446,183 @@ mod tests {
         
         let dependent = container.resolve::<DependentService>().await.unwrap();
         assert_eq!(dependent.id, 999);
+    }
+    
+    #[tokio::test]
+    async fn test_duplicate_registration_error() {
+        let container = DependencyContainer::new();
+        
+        container.register_instance(TestService {
+            value: "first".to_string(),
+        }).await.unwrap();
+        
+        let result = container.register_instance(TestService {
+            value: "second".to_string(),
+        }).await;
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::AlreadyExists(msg) => assert!(msg.contains("already registered")),
+            _ => panic!("Expected AlreadyExists error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_duplicate_provider_error() {
+        let container = DependencyContainer::new();
+        
+        container.register_factory(|_| {
+            Ok(Arc::new(TestService {
+                value: "factory1".to_string(),
+            }))
+        }).await.unwrap();
+        
+        let result = container.register_factory(|_| {
+            Ok(Arc::new(TestService {
+                value: "factory2".to_string(),
+            }))
+        }).await;
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::AlreadyExists(msg) => assert!(msg.contains("already registered")),
+            _ => panic!("Expected AlreadyExists error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_resolve_unregistered_service() {
+        let container = DependencyContainer::new();
+        
+        let result = container.resolve::<TestService>().await;
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::NotFound(msg) => assert!(msg.contains("not registered")),
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_async_factory_not_supported() {
+        let container = DependencyContainer::new();
+        
+        let result = container.register_async_factory(|_| async {
+            Ok(Arc::new(TestService {
+                value: "async".to_string(),
+            }))
+        }).await;
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::NotImplemented(msg) => assert!(msg.contains("not yet supported")),
+            _ => panic!("Expected NotImplemented error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_injectable_trait() {
+        #[derive(Debug)]
+        struct CustomService {
+            name: String,
+        }
+        
+        let service = CustomService {
+            name: "custom".to_string(),
+        };
+        
+        // Injectable trait is implemented for all Send + Sync types
+        let type_id = Injectable::type_id(&service);
+        assert_eq!(type_id, TypeId::of::<CustomService>());
+    }
+    
+    #[tokio::test]
+    async fn test_container_builder_chaining() {
+        let container = ContainerBuilder::new()
+            .add_singleton(|_| {
+                Ok(Arc::new(TestService {
+                    value: "singleton".to_string(),
+                }))
+            }).await.unwrap()
+            .add_factory(|_container| {
+                // In a real scenario, we'd need async factory support
+                // For testing, create a service directly
+                Ok(Arc::new(DependentService {
+                    test_service: Arc::new(TestService {
+                        value: "factory-test".to_string(),
+                    }),
+                    id: 42,
+                }))
+            }).await.unwrap()
+            .build();
+        
+        let service = container.resolve::<TestService>().await.unwrap();
+        assert_eq!(service.value, "singleton");
+    }
+    
+    #[tokio::test]
+    async fn test_domain_category_ext() {
+        let container = DependencyContainer::new();
+        
+        let category = DomainCategory::create_with_di(
+            "TestCategory".to_string(),
+            &container
+        ).await.unwrap();
+        
+        assert_eq!(category.name, "TestCategory");
+    }
+    
+    #[tokio::test]
+    async fn test_singleton_concurrent_access() {
+        let container = DependencyContainer::new();
+        let counter = Arc::new(std::sync::atomic::AtomicU32::new(0));
+        
+        let counter_clone = counter.clone();
+        container.register_singleton(move |_| {
+            // Simulate some work
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            let count = counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(Arc::new(TestService {
+                value: format!("instance-{}", count),
+            }))
+        }).await.unwrap();
+        
+        // Spawn multiple tasks to resolve concurrently
+        let mut handles = vec![];
+        for _ in 0..5 {
+            let container_clone = container.clone();
+            handles.push(tokio::spawn(async move {
+                container_clone.resolve::<TestService>().await.unwrap()
+            }));
+        }
+        
+        let results: Vec<_> = futures::future::join_all(handles).await;
+        
+        // All should get the same instance
+        let first = results[0].as_ref().unwrap();
+        for result in &results {
+            assert!(Arc::ptr_eq(first, result.as_ref().unwrap()));
+        }
+        
+        // Should only have been created once
+        assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
+    
+    #[tokio::test]
+    async fn test_factory_error_propagation() {
+        let container = DependencyContainer::new();
+        
+        container.register_factory(|_| -> Result<Arc<TestService>, DomainError> {
+            Err(DomainError::InvalidOperation {
+                reason: "Factory failed".to_string()
+            })
+        }).await.unwrap();
+        
+        let result = container.resolve::<TestService>().await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DomainError::InvalidOperation { reason } => assert_eq!(reason, "Factory failed"),
+            _ => panic!("Expected InvalidOperation error"),
+        }
     }
 }

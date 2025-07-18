@@ -294,3 +294,205 @@ impl DomainEvent for DomainEventEnum {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use std::time::Duration;
+    
+    #[test]
+    fn test_workflow_started_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowStarted {
+            workflow_id,
+            definition_id: crate::GraphId::new(),
+            initial_state: "initial".to_string(),
+            started_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowStarted");
+        assert_eq!(event.subject(), "workflows.workflow.started.v1");
+        let expected_id: Uuid = workflow_id.into();
+        assert_eq!(event.aggregate_id(), expected_id);
+        assert_eq!(event.initial_state, "initial");
+    }
+    
+    #[test]
+    fn test_workflow_transition_executed_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowTransitionExecuted {
+            workflow_id,
+            from_state: "state1".to_string(),
+            to_state: "state2".to_string(),
+            input: serde_json::json!({"key": "value"}),
+            output: serde_json::json!({"result": true}),
+            executed_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowTransitionExecuted");
+        assert_eq!(event.subject(), "workflows.workflow.transition_executed.v1");
+        assert_eq!(event.from_state, "state1");
+        assert_eq!(event.to_state, "state2");
+    }
+    
+    #[test]
+    fn test_workflow_completed_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowCompleted {
+            workflow_id,
+            final_state: "completed".to_string(),
+            total_duration: Duration::from_secs(3600),
+            completed_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowCompleted");
+        assert_eq!(event.subject(), "workflows.workflow.completed.v1");
+        assert_eq!(event.final_state, "completed");
+        assert_eq!(event.total_duration.as_secs(), 3600);
+    }
+    
+    #[test]
+    fn test_workflow_suspended_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowSuspended {
+            workflow_id,
+            current_state: "processing".to_string(),
+            reason: "User requested pause".to_string(),
+            suspended_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowSuspended");
+        assert_eq!(event.subject(), "workflows.workflow.suspended.v1");
+        assert_eq!(event.reason, "User requested pause");
+    }
+    
+    #[test]
+    fn test_workflow_resumed_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowResumed {
+            workflow_id,
+            current_state: "processing".to_string(),
+            resumed_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowResumed");
+        assert_eq!(event.subject(), "workflows.workflow.resumed.v1");
+        assert_eq!(event.current_state, "processing");
+    }
+    
+    #[test]
+    fn test_workflow_cancelled_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowCancelled {
+            workflow_id,
+            current_state: "running".to_string(),
+            reason: "Timeout exceeded".to_string(),
+            cancelled_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowCancelled");
+        assert_eq!(event.subject(), "workflows.workflow.cancelled.v1");
+        assert_eq!(event.reason, "Timeout exceeded");
+    }
+    
+    #[test]
+    fn test_workflow_failed_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowFailed {
+            workflow_id,
+            current_state: "processing".to_string(),
+            error: "Database connection failed".to_string(),
+            failed_at: Utc::now(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowFailed");
+        assert_eq!(event.subject(), "workflows.workflow.failed.v1");
+        assert_eq!(event.error, "Database connection failed");
+    }
+    
+    #[test]
+    fn test_workflow_transitioned_event() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowTransitioned {
+            workflow_id,
+            from_state: "a".to_string(),
+            to_state: "b".to_string(),
+            transition_id: "transition-123".to_string(),
+        };
+        
+        assert_eq!(event.event_type(), "WorkflowTransitioned");
+        assert_eq!(event.subject(), "workflows.workflow.transitioned.v1");
+        assert_eq!(event.transition_id, "transition-123");
+    }
+    
+    #[test]
+    fn test_domain_event_enum() {
+        let workflow_id = WorkflowId::new();
+        let started = WorkflowStarted {
+            workflow_id,
+            definition_id: crate::GraphId::new(),
+            initial_state: "init".to_string(),
+            started_at: Utc::now(),
+        };
+        
+        let event_enum = DomainEventEnum::WorkflowStarted(started.clone());
+        
+        assert_eq!(event_enum.event_type(), "WorkflowStarted");
+        assert_eq!(event_enum.subject(), "workflows.workflow.started.v1");
+        let expected_id: Uuid = workflow_id.into();
+        assert_eq!(event_enum.aggregate_id(), expected_id);
+    }
+    
+    #[test]
+    fn test_event_serialization() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowStarted {
+            workflow_id,
+            definition_id: crate::GraphId::new(),
+            initial_state: "start".to_string(),
+            started_at: Utc::now(),
+        };
+        
+        // Test serialization
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("workflow_id"));
+        assert!(json.contains("initial_state"));
+        assert!(json.contains("start"));
+        
+        // Test deserialization
+        let deserialized: WorkflowStarted = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.workflow_id, workflow_id);
+        assert_eq!(deserialized.initial_state, "start");
+    }
+    
+    #[test]
+    fn test_enum_serialization() {
+        let workflow_id = WorkflowId::new();
+        let event = WorkflowCompleted {
+            workflow_id,
+            final_state: "done".to_string(),
+            total_duration: Duration::from_secs(120),
+            completed_at: Utc::now(),
+        };
+        
+        let event_enum = DomainEventEnum::WorkflowCompleted(event);
+        
+        // Test serialization
+        let json = serde_json::to_string(&event_enum).unwrap();
+        assert!(json.contains("WorkflowCompleted"));
+        assert!(json.contains("final_state"));
+        assert!(json.contains("done"));
+        
+        // Test deserialization
+        let deserialized: DomainEventEnum = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            DomainEventEnum::WorkflowCompleted(e) => {
+                assert_eq!(e.workflow_id, workflow_id);
+                assert_eq!(e.final_state, "done");
+                assert_eq!(e.total_duration.as_secs(), 120);
+            }
+            _ => panic!("Wrong event type deserialized"),
+        }
+    }
+}

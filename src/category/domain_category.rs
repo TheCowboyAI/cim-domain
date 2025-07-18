@@ -8,7 +8,6 @@
 
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::Hash;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -73,19 +72,34 @@ pub struct DomainMorphism {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum MorphismType {
     /// Command - request to change state
-    Command { command_type: String },
+    Command { 
+        /// The specific type/name of the command
+        command_type: String 
+    },
     
     /// Event - notification of state change
-    Event { event_type: String },
+    Event { 
+        /// The specific type/name of the event
+        event_type: String 
+    },
     
     /// Query - request for information
-    Query { query_type: String },
+    Query { 
+        /// The specific type/name of the query
+        query_type: String 
+    },
     
     /// Transformation - pure data transformation
-    Transformation { transform_type: String },
+    Transformation { 
+        /// The specific type/name of the transformation
+        transform_type: String 
+    },
     
     /// Policy - business rule application
-    Policy { policy_type: String },
+    Policy { 
+        /// The specific type/name of the policy
+        policy_type: String 
+    },
 }
 
 impl DomainCategory {

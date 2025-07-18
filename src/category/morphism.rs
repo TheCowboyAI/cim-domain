@@ -86,6 +86,7 @@ pub struct MorphismIdentity<T> {
 }
 
 impl<T> MorphismIdentity<T> {
+    /// Create a new identity morphism that returns its input unchanged
     pub fn new() -> Self {
         Self {
             _phantom: PhantomData,
@@ -118,7 +119,9 @@ where
 
 /// Command metadata for morphisms
 pub struct CommandMetadata {
+    /// The type/name of the command being processed
     pub command_type: String,
+    /// The ID of the aggregate the command targets
     pub aggregate_id: String,
 }
 
@@ -129,6 +132,11 @@ pub struct CommandMorphism<S, T> {
 }
 
 impl<S, T> CommandMorphism<S, T> {
+    /// Create a new command morphism with explicit metadata
+    ///
+    /// # Arguments
+    /// * `command_metadata` - Metadata about the command
+    /// * `transformer` - Function that transforms state based on events
     pub fn new(
         command_metadata: CommandMetadata,
         transformer: Box<dyn Fn(S, Vec<Box<dyn DomainEvent>>) -> Result<T, DomainError> + Send + Sync>,
@@ -139,6 +147,11 @@ impl<S, T> CommandMorphism<S, T> {
         }
     }
     
+    /// Create a command morphism from a domain command
+    ///
+    /// # Arguments
+    /// * `command` - The command to extract metadata from
+    /// * `transformer` - Function that transforms state based on events
     pub fn from_command<C: DomainCommand>(
         command: &C,
         transformer: Box<dyn Fn(S, Vec<Box<dyn DomainEvent>>) -> Result<T, DomainError> + Send + Sync>,
@@ -181,17 +194,22 @@ where
 /// Event morphism - transforms state via events
 pub struct EventMorphism<S, T> {
     event_type: String,
-    transformer: Box<dyn Fn(S, Box<dyn DomainEvent>) -> Result<T, DomainError> + Send + Sync>,
+    _transformer: Box<dyn Fn(S, Box<dyn DomainEvent>) -> Result<T, DomainError> + Send + Sync>,
 }
 
 impl<S, T> EventMorphism<S, T> {
+    /// Create a new event morphism
+    ///
+    /// # Arguments
+    /// * `event_type` - The type of event this morphism handles
+    /// * `transformer` - Function that transforms state based on the event
     pub fn new(
         event_type: String,
         transformer: Box<dyn Fn(S, Box<dyn DomainEvent>) -> Result<T, DomainError> + Send + Sync>,
     ) -> Self {
         Self {
             event_type,
-            transformer,
+            _transformer: transformer,
         }
     }
 }
@@ -205,7 +223,7 @@ where
     type Source = S;
     type Target = T;
     
-    async fn apply(&self, source: Self::Source) -> Result<Self::Target, DomainError> {
+    async fn apply(&self, _source: Self::Source) -> Result<Self::Target, DomainError> {
         // In a real implementation, this would apply the event
         // For now, return an error indicating not implemented
         Err(DomainError::NotImplemented("Event morphism application".to_string()))
@@ -223,6 +241,11 @@ pub struct QueryMorphism<S, T> {
 }
 
 impl<S, T> QueryMorphism<S, T> {
+    /// Create a new query morphism
+    ///
+    /// # Arguments
+    /// * `query_type` - The type of query this morphism handles
+    /// * `extractor` - Function that extracts data from the source state
     pub fn new(
         query_type: String,
         extractor: Box<dyn Fn(&S) -> Result<T, DomainError> + Send + Sync>,
@@ -259,6 +282,11 @@ pub struct Isomorphism<A, B> {
 }
 
 impl<A, B> Isomorphism<A, B> {
+    /// Create a new isomorphism from forward and backward morphisms
+    ///
+    /// # Arguments
+    /// * `forward` - Morphism from A to B
+    /// * `backward` - Morphism from B to A
     pub fn new(
         forward: Box<dyn Morphism<Source = A, Target = B>>,
         backward: Box<dyn Morphism<Source = B, Target = A>>,
@@ -269,6 +297,7 @@ impl<A, B> Isomorphism<A, B> {
         }
     }
     
+    /// Get the inverse isomorphism (B to A instead of A to B)
     pub fn inverse(self) -> Isomorphism<B, A> {
         Isomorphism {
             forward: self.backward,
@@ -339,7 +368,7 @@ mod tests {
     async fn test_query_morphism() {
         struct User {
             name: String,
-            age: u32,
+            _age: u32,
         }
         
         let get_name = QueryMorphism::new(
@@ -349,7 +378,7 @@ mod tests {
         
         let user = User {
             name: "Alice".to_string(),
-            age: 30,
+            _age: 30,
         };
         
         let name = get_name.apply(user).await.unwrap();
