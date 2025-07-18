@@ -150,6 +150,15 @@ impl AccountEventHandler {
                             TransactionType::Transfer => {} // Handled separately
                         }
                         
+                        // Check if account is frozen
+                        if account.status == AccountStatus::Frozen {
+                            println!("      Warning: Transaction on frozen account!");
+                        }
+                        
+                        println!("      Transaction ID: {}", transaction.id);
+                        println!("      Timestamp: {}", transaction.timestamp);
+                        println!("      Description: {}", transaction.description);
+                        
                         account.transactions.push(transaction);
                         account.increment_version();
                         
@@ -167,6 +176,15 @@ impl AccountEventHandler {
                     account.status = AccountStatus::Closed;
                     account.increment_version();
                     println!("      Closed account");
+                }
+            }
+            
+            DomainEventEnum::WorkflowSuspended(_) => {
+                // Interpret as account freeze
+                if let Some(account) = self.accounts.get_mut(aggregate_id) {
+                    account.status = AccountStatus::Frozen;
+                    account.increment_version();
+                    println!("      Froze account");
                 }
             }
             

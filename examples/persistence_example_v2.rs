@@ -157,11 +157,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Product::new("Webcam".to_string(), 59.99, 0), // Out of stock
     ];
     
-    for product in &products {
-        let metadata = kv_repo.save(product).await?;
+    let mut saved_products = Vec::new();
+    for mut product in products {
+        let metadata = kv_repo.save(&product).await?;
         println!("  Saved {} (stock: {}) - version: {}", 
             product.name, product.stock, metadata.version);
+        
+        // Update stock for one product
+        if product.name == "Monitor" {
+            println!("  Updating Monitor stock...");
+            product.update_stock(10);
+            let updated_metadata = kv_repo.save(&product).await?;
+            println!("  Updated {} stock to {} - version: {}", 
+                product.name, product.stock, updated_metadata.version);
+        }
+        saved_products.push(product);
     }
+    let products = saved_products;
     
     // Part 3: Read Model Store
     println!("\n📊 Part 3: Read Model Store");

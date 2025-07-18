@@ -258,6 +258,26 @@ mod tests {
     }
     
     #[test]
+    fn test_read_model_implementation() {
+        let model = TestReadModel {
+            id: "test-123".to_string(),
+            count: 5,
+            last_event: Some("EventProcessed".to_string()),
+        };
+        
+        // Verify ReadModel implementation
+        assert_eq!(TestReadModel::model_type(), "TestReadModel");
+        assert_eq!(model.id(), "test-123");
+        assert_eq!(model.count, 5);
+        assert_eq!(model.last_event.as_deref(), Some("EventProcessed"));
+        
+        // Test serialization
+        let serialized = serde_json::to_string(&model).unwrap();
+        let deserialized: TestReadModel = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.count, model.count);
+    }
+    
+    #[test]
     fn test_read_model_metadata() {
         let metadata = ReadModelMetadata {
             id: "test-123".to_string(),

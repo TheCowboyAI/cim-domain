@@ -13,15 +13,9 @@
 
 use cim_domain::{
     // Domain types
-    EntityId, DomainEvent, DomainEventEnvelopeWithMetadata,
+    EntityId, DomainEvent,
     EventMetadata, PropagationScope,
-    AggregateRoot, CommandEnvelope, Command,
-    
-    // CQRS types
-    CommandAcknowledgment, CommandStatus, CorrelationId, IdType,
-    
-    // Infrastructure types for demo
-    EventHandler as ReplayEventHandler,
+    AggregateRoot, Command,
 };
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -365,7 +359,15 @@ fn main() {
     let mut account = BankAccount::new(account_id.to_string(), String::new(), 0.0);
     let stored_events = event_store.get_events(account_id);
     
+    println!("   Replaying {} events...", stored_events.len());
     for stored in &stored_events {
+        println!("   Event #{}: {} at {}", 
+            stored.sequence, 
+            stored.event_id,
+            stored.stored_at.format("%H:%M:%S")
+        );
+        println!("     Aggregate: {}", stored.aggregate_id);
+        println!("     Metadata: {}", stored.metadata.source);
         account.apply_event(&stored.event);
     }
     
@@ -434,8 +436,8 @@ fn main() {
     println!("   - Total withdrawals: ${:.2}", projection.total_withdrawals);
     println!("   - Net flow: ${:.2}", projection.total_deposits - projection.total_withdrawals);
     
-    for (id, summary) in &projection.accounts {
-        println!("\n   Account: {}", id);
+    for (_, summary) in &projection.accounts {
+        println!("\n   Account ID: {}", summary.id);
         println!("   - Owner: {}", summary.owner);
         println!("   - Balance: ${:.2}", summary.balance);
         println!("   - Status: {}", if summary.is_active { "Active" } else { "Closed" });

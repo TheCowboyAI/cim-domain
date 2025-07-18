@@ -68,6 +68,7 @@ impl Default for ApprovalOutput {
 
 impl TransitionOutput for ApprovalOutput {
     fn to_events(&self) -> Vec<Box<dyn DomainEvent>> {
+        println!("      Output timestamp: {}", self.timestamp);
         vec![] // In real system, would generate domain events
     }
 }

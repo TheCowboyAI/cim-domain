@@ -13,7 +13,7 @@ mod persistence_tests {
     use std::collections::HashMap;
     
     // Test entity marker
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     struct TestEntityMarker;
     
     // Test entity
@@ -30,6 +30,27 @@ mod persistence_tests {
         fn id(&self) -> EntityId<Self::IdType> {
             self.id
         }
+    }
+    
+    #[test]
+    fn test_entity_implementation() {
+        let id = EntityId::<TestEntityMarker>::new();
+        let entity = TestEntity {
+            id,
+            name: "Test Entity".to_string(),
+            version: 1,
+        };
+        
+        // Verify DomainEntity implementation
+        assert_eq!(entity.id(), id);
+        assert_eq!(entity.name, "Test Entity");
+        assert_eq!(entity.version, 1);
+        
+        // Test serialization
+        let serialized = serde_json::to_string(&entity).unwrap();
+        let deserialized: TestEntity = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.name, entity.name);
+        assert_eq!(deserialized.version, entity.version);
     }
     
     #[test]

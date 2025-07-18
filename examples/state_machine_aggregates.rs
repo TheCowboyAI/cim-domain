@@ -8,7 +8,7 @@
 use cim_domain::{
     Component, ComponentExt,
     DomainComponentSync,
-    state_machine::{State, TransitionOutput},
+    state_machine::{State, TransitionOutput, MooreStateTransitions},
     infrastructure::nats_client::{NatsClient, NatsConfig},
     DomainEvent,
 };
@@ -69,6 +69,38 @@ struct NoEventOutput;
 impl TransitionOutput for NoEventOutput {
     fn to_events(&self) -> Vec<Box<dyn DomainEvent>> {
         vec![]
+    }
+}
+
+impl Default for NoEventOutput {
+    fn default() -> Self {
+        NoEventOutput
+    }
+}
+
+/// Moore machine implementation for door states
+impl MooreStateTransitions for DoorState {
+    type Output = NoEventOutput;
+    
+    fn can_transition_to(&self, target: &Self) -> bool {
+        use DoorState::*;
+        matches!(
+            (self, target),
+            (Open, Closed) | (Closed, Open) | (Closed, Locked) | (Locked, Closed)
+        )
+    }
+    
+    fn valid_transitions(&self) -> Vec<Self> {
+        use DoorState::*;
+        match self {
+            Open => vec![Closed],
+            Closed => vec![Open, Locked],
+            Locked => vec![Closed],
+        }
+    }
+    
+    fn entry_output(&self) -> Self::Output {
+        NoEventOutput
     }
 }
 

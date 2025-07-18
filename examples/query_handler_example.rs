@@ -9,22 +9,18 @@
 //! - Query criteria and filtering
 
 use cim_domain::{
-    // Core types
-    EntityId,
-    markers::{AggregateMarker, QueryMarker},
-    
     // CQRS
     Query, QueryHandler, QueryEnvelope, QueryResponse,
-    QueryStatus, QueryId, CorrelationId, IdType,
     
     // Query support
     DirectQueryHandler, QueryResult, ReadModelStorage,
     InMemoryReadModel, QueryCriteria,
+    
+    // Identifiers
+    IdType,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::HashMap;
-use uuid::Uuid;
 
 /// Example read model: ProductView
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,7 +64,7 @@ struct ProductDirectQueryHandler {
 
 impl ProductDirectQueryHandler {
     fn new() -> Self {
-        let mut storage = InMemoryReadModel::new();
+        let storage = InMemoryReadModel::new();
         
         // Add some sample products
         let products = vec![

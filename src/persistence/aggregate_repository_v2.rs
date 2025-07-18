@@ -198,7 +198,7 @@ mod tests {
         name: String,
     }
     
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     struct TestMarker;
     
     impl DomainEntity for TestAggregate {
@@ -215,6 +215,24 @@ mod tests {
         assert!(options.expected_version.is_none());
         assert!(!options.create_snapshot);
         assert!(options.metadata.is_none());
+    }
+    
+    #[test]
+    fn test_aggregate_creation() {
+        let id = EntityId::<TestMarker>::new();
+        let aggregate = TestAggregate {
+            id,
+            name: "Test Aggregate".to_string(),
+        };
+        
+        // Verify DomainEntity implementation
+        assert_eq!(aggregate.id(), id);
+        assert_eq!(aggregate.name, "Test Aggregate");
+        
+        // Test serialization
+        let serialized = serde_json::to_string(&aggregate).unwrap();
+        let deserialized: TestAggregate = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.name, aggregate.name);
     }
     
     #[test]

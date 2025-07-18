@@ -14,12 +14,10 @@ use cim_domain::infrastructure::{
 use cim_domain::{
     DomainEventEnum,
     WorkflowStarted, WorkflowTransitionExecuted, WorkflowCompleted,
-    WorkflowSuspended, WorkflowResumed, WorkflowCancelled,
+    WorkflowSuspended, WorkflowResumed,
     WorkflowId, GraphId,
 };
-use std::sync::Arc;
 use std::time::Duration;
-use uuid::Uuid;
 use chrono::{self, Utc};
 use serde_json::json;
 
@@ -309,7 +307,6 @@ async fn test_jetstream_event_filtering() {
     let aggregate_type = "Workflow";
 
     let workflow_id = WorkflowId::new();
-    let definition_id = GraphId::new();
     
     // Create many events
     let events: Vec<DomainEventEnum> = (0..10)

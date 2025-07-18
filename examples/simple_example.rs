@@ -23,7 +23,7 @@ use cim_domain::{
     Command, CommandEnvelope,
 };
 use std::any::Any;
-use uuid::Uuid;
+
 
 /// Example component for storing metadata
 #[derive(Debug, Clone)]
@@ -31,6 +31,14 @@ struct MetadataComponent {
     title: String,
     author: String,
     created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl MetadataComponent {
+    fn display(&self) {
+        println!("  Title: {}", self.title);
+        println!("  Author: {}", self.author);
+        println!("  Created: {}", self.created_at);
+    }
 }
 
 impl Component for MetadataComponent {
@@ -109,6 +117,10 @@ impl DocumentAggregateWrapper {
     fn version(&self) -> u64 {
         self.version
     }
+    
+    fn aggregate_id(&self) -> EntityId<AggregateMarker> {
+        self.aggregate.id()
+    }
 }
 
 /// Example command
@@ -149,12 +161,32 @@ fn main() {
     };
     
     println!("Created metadata component:");
-    println!("  Title: {}", metadata.title);
-    println!("  Author: {}", metadata.author);
+    metadata.display();
     println!("  Type: {}\n", metadata.type_name());
     
+    // Display aggregate ID
+    println!("Document ID: {}", document.aggregate_id());
+    
+    // Test command handling
+    println!("\n=== Command Handling ===");
+    
+    // Create command
+    let create_cmd = DocumentCommand::Create {
+        title: "Technical Specification".to_string(),
+        author: "Alice".to_string(),
+    };
+    if let DocumentCommand::Create { title, author } = &create_cmd {
+        println!("Create command - Title: {}, Author: {}", title, author);
+    }
+    
+    // Submit for review command  
+    let submit_cmd = DocumentCommand::SubmitForReview {
+        document_id: document.aggregate_id(),
+    };
+    println!("Submit command aggregate: {:?}", submit_cmd.aggregate_id());
+    
     // State transitions
-    println!("=== State Transitions ===");
+    println!("\n=== State Transitions ===");
     
     // Submit for review
     match document.submit_for_review() {
@@ -175,6 +207,13 @@ fn main() {
     
     // Approve
     println!("\nApproving document...");
+    
+    // Create approve command
+    let approve_cmd = DocumentCommand::Approve {
+        document_id: document.aggregate_id(),
+    };
+    println!("Approve command: {:?}", approve_cmd);
+    
     match document.approve() {
         Ok(()) => {
             println!("✓ Approved");

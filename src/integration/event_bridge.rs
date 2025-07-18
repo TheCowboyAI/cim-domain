@@ -1014,7 +1014,7 @@ mod tests {
                             id: String,
                         }
                         impl DomainEvent for TestEvent {
-                            fn subject(&self) -> String { "test.event".to_string() }
+                            fn subject(&self) -> String { format!("test.event.{}", self.id) }
                             fn aggregate_id(&self) -> uuid::Uuid { uuid::Uuid::new_v4() }
                             fn event_type(&self) -> &'static str { "TestEvent" }
                         }
@@ -1304,7 +1304,7 @@ mod tests {
                         #[derive(Debug)]
                         struct StormEvent { id: usize }
                         impl DomainEvent for StormEvent {
-                            fn subject(&self) -> String { "storm.event".to_string() }
+                            fn subject(&self) -> String { format!("storm.event.{}", self.id) }
                             fn aggregate_id(&self) -> uuid::Uuid { uuid::Uuid::new_v4() }
                             fn event_type(&self) -> &'static str { "Storm" }
                         }
@@ -1368,7 +1368,7 @@ mod tests {
                     #[derive(Debug)]
                     struct BackpressureEvent { id: usize }
                     impl DomainEvent for BackpressureEvent {
-                        fn subject(&self) -> String { "test".to_string() }
+                        fn subject(&self) -> String { format!("backpressure.{}", self.id) }
                         fn aggregate_id(&self) -> uuid::Uuid { uuid::Uuid::new_v4() }
                         fn event_type(&self) -> &'static str { "Backpressure" }
                     }

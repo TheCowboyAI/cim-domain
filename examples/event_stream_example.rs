@@ -9,10 +9,6 @@
 //! - Working with event metadata
 
 use cim_domain::{
-    // Core types
-    EntityId, DomainError, DomainResult,
-    markers::AggregateMarker,
-    
     // Events
     DomainEventEnum,
     WorkflowStarted, WorkflowTransitionExecuted, WorkflowCompleted,

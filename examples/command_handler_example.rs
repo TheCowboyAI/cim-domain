@@ -117,6 +117,11 @@ impl TaskCommandHandler {
         }
     }
     
+    /// Get task details for display
+    fn get_task(&self, task_id: &EntityId<AggregateMarker>) -> Option<&Task> {
+        self.tasks.get(task_id)
+    }
+    
     /// Handle a command and return events
     fn handle_command(&mut self, command: &TaskCommand) -> DomainResult<Vec<DomainEventEnum>> {
         match command {
@@ -273,6 +278,14 @@ fn main() {
     match handler.handle_command(&create_command) {
         Ok(events) => {
             println!("   ✓ Command succeeded, produced {} events", events.len());
+            
+            // Display the created task details
+            if let Some(task) = handler.get_task(&task_id) {
+                println!("   Created Task:");
+                println!("     Title: {}", task.title);
+                println!("     Description: {}", task.description);
+                println!("     Status: {:?}", task.status);
+            }
             
             // Create acknowledgment
             let ack = CommandAcknowledgment {

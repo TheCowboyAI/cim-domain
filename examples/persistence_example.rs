@@ -10,24 +10,19 @@
 
 use cim_domain::{
     // Core types
-    EntityId, AggregateRoot, DomainEntity,
+    EntityId, DomainEntity,
     markers::AggregateMarker,
     
     // Persistence
     persistence::{
         SimpleRepository, NatsKvRepositoryBuilder,
-        AggregateMetadata,
     },
     
     // Query support (for read models)
     ReadModelStorage, InMemoryReadModel,
-    
-    // IDs
-    WorkflowId,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// Example aggregate: UserProfile
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -622,6 +622,20 @@ mod tests {
     
     #[test]
     fn test_event_stream_creation() {
+        // Create TestEvent instances
+        let test_event1 = TestEvent {
+            id: Uuid::new_v4(),
+            name: "Test Event 1".to_string(),
+        };
+        let _test_event2 = TestEvent {
+            id: Uuid::new_v4(),
+            name: "Test Event 2".to_string(),
+        };
+        
+        // Verify TestEvent implements DomainEvent correctly
+        assert_eq!(test_event1.event_type(), "TestEvent");
+        assert_eq!(test_event1.subject(), "test.entity.created.v1");
+        
         let stored1 = create_test_stored_event("event1");
         let stored2 = create_test_stored_event("event2");
         let events = vec![stored1, stored2];

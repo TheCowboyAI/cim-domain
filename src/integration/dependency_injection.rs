@@ -529,9 +529,18 @@ mod tests {
             name: String,
         }
         
+        impl CustomService {
+            fn get_name(&self) -> &str {
+                &self.name
+            }
+        }
+        
         let service = CustomService {
             name: "custom".to_string(),
         };
+        
+        // Verify service name is accessible
+        assert_eq!(service.get_name(), "custom");
         
         // Injectable trait is implemented for all Send + Sync types
         let type_id = Injectable::type_id(&service);

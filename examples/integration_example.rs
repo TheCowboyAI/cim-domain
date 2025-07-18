@@ -219,6 +219,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     println!("   ✓ Registered EmailService as singleton");
     
+    // Create a dependency container
+    let container = DependencyContainer::new();
+    
+    // Create and use NotificationService
+    let email_service = service_registry.resolve::<EmailService>(&container).await?;
+    let notification_service = NotificationService::new(email_service);
+    
+    println!("\n   Using NotificationService...");
+    notification_service.notify_user_created("john_doe", "john@example.com");
+    println!("   ✓ Notification sent");
+    
     // Service registry demonstrates singleton pattern
     println!("   ✓ EmailService registered with singleton lifetime");
     

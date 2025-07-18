@@ -389,7 +389,7 @@ mod tests {
 
     impl SagaCommand for TestCommand {
         fn command_type(&self) -> &str {
-            "TestCommand"
+            &self.name
         }
         
         fn aggregate_id(&self) -> &str {
@@ -408,7 +408,7 @@ mod tests {
 
     impl DomainEvent for TestEvent {
         fn subject(&self) -> String {
-            "test.event.v1".to_string()
+            format!("test.event.{}.v1", self.name)
         }
         
         fn aggregate_id(&self) -> uuid::Uuid {
@@ -482,6 +482,13 @@ mod tests {
         let coordinator = Arc::new(SagaCoordinator::new(command_bus));
         
         coordinator.register_saga(Arc::new(TestSagaDefinition)).await;
+        
+        // Create and verify TestCommand
+        let test_cmd = TestCommand {
+            name: "Test Command".to_string(),
+        };
+        assert_eq!(test_cmd.command_type(), "TestCommand");
+        assert_eq!(test_cmd.aggregate_id(), "test-agg");
         
         let saga_id = coordinator
             .start_saga("TestSaga", serde_json::json!({"test": "data"}))

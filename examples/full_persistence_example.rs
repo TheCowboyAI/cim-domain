@@ -159,8 +159,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         customers.push(customer.clone());
         let metadata = customer_repo.save(&customer).await?;
-        println!("  Created {} (tier: {:?}, spent: ${:.2})", 
-            customer.name, customer.tier, customer.total_spent);
+        println!("  Created {} (tier: {:?}, spent: ${:.2}, version: {})", 
+            customer.name, customer.tier, customer.total_spent, metadata.version);
     }
     
     // Part 2: Statistics and Analytics

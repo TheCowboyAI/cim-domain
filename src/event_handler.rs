@@ -104,6 +104,12 @@ mod tests {
         
         async fn handle(&self, mut event: TestEvent) -> Result<(), Self::Error> {
             // Simulate processing by modifying the event
+            if event.value > 1000 {
+                return Err(TestError::ProcessingError(
+                    format!("Value {} is too large to process", event.value)
+                ));
+            }
+            
             event.value *= 2;
             
             let mut events = self.processed_events.lock().unwrap();
