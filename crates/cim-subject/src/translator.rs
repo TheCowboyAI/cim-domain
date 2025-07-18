@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Subject translation between different schemas
 
 use crate::error::{Result, SubjectError};
@@ -9,7 +11,7 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use crate::correlation::MessageIdentity;
 
-/// Type alias for translation function
+// Type alias to simplify the complex function type
 type TranslateFn = Arc<dyn Fn(&Subject) -> Result<Subject> + Send + Sync>;
 
 /// Type alias for reverse translation function
@@ -172,7 +174,7 @@ impl TranslationRule {
     #[must_use]
     pub fn with_reverse(
         mut self,
-        reverse_fn: Arc<dyn Fn(&Subject) -> Result<Subject> + Send + Sync>,
+        reverse_fn: TranslateFn,
     ) -> Self {
         self.reverse_fn = Some(reverse_fn);
         self
@@ -236,9 +238,23 @@ pub trait MessageTranslator<From, To> {
     type Error;
 
     /// Translate from source to target
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the translation fails due to:
+    /// - Invalid input format
+    /// - Missing translation rules
+    /// - Custom translation logic errors
     fn translate(&self, from: From) -> std::result::Result<To, Self::Error>;
 
     /// Reverse translate from target to source
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the reverse translation fails due to:
+    /// - Invalid input format
+    /// - Missing reverse translation rules
+    /// - Custom reverse translation logic errors
     fn reverse(&self, to: To) -> std::result::Result<From, Self::Error>;
 }
 
@@ -317,6 +333,7 @@ impl TranslatorBuilder {
     }
 
     /// Add a custom translation rule
+    #[must_use]
     pub fn custom(mut self, name: impl Into<String>, rule: TranslationRule) -> Self {
         self.rules.push((name.into(), rule));
         self

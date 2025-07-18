@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Core subject types and operations
 
 use crate::error::{Result, SubjectError};
@@ -143,9 +145,32 @@ impl SubjectParts {
         }
     }
 
-    /// Parse a subject string into its components
+    /// Parse a subject string into a Subject struct
     ///
-    /// Expected format: `<context>.<aggregate>.<event_type>.<version>`
+    /// # Arguments
+    ///
+    /// * `subject` - The subject string to parse
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Subject)` - The parsed subject
+    /// * `Err(Error)` - If the subject is invalid
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The subject string is empty
+    /// - The subject contains invalid characters
+    /// - The subject structure is malformed
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cim_subject::Subject;
+    ///
+    /// let subject = Subject::parse("domain.entity.operation").unwrap();
+    /// assert_eq!(subject.parts(), vec!["domain", "entity", "operation"]);
+    /// ```
     pub fn parse(subject: &str) -> Result<Self> {
         let parts: Vec<&str> = subject.split('.').collect();
 
