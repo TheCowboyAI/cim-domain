@@ -1,296 +1,403 @@
 // Copyright 2025 Cowboy AI, LLC.
 
-//! Command Handler Example - CIM Domain
-//! 
-//! This example demonstrates the command handling patterns in CIM's event-driven architecture.
-//! It showcases how commands flow through handlers to aggregates, generating domain events.
+//! Example demonstrating command handling patterns
 //!
-//! Key concepts demonstrated:
-//! - Command validation and processing
-//! - Event generation from aggregates
-//! - Cross-domain integration via events
-//! - Async/sync bridge patterns
+//! This example shows:
+//! - Implementing commands with the Command trait
+//! - Creating command envelopes with metadata
+//! - Command validation and acknowledgment
+//! - Working with correlation and causation IDs
 
 use cim_domain::{
-    // Core command handling
-    Command, CommandEnvelope, CommandHandler, CommandStatus, CommandId,
-    EventPublisher, AggregateRepository, InMemoryRepository,
-    AggregateRoot, AggregateId, EntityId, AggregateMarker,
-    DomainEvent, DomainEventEnum, DomainError, DomainResult,
-    CorrelationId, CausationId,
+    // Core types
+    EntityId, DomainError, DomainResult,
+    markers::AggregateMarker,
+    AggregateRoot,
     
-    // Infrastructure
-    infrastructure::{
-        event_store::{EventStore, InMemoryEventStore},
-    },
+    // Commands
+    Command, CommandEnvelope, CommandAcknowledgment,
+    CommandStatus, CommandId, CorrelationId, CausationId, IdType,
+    
+    // Events
+    DomainEventEnum,
+    WorkflowStarted, WorkflowTransitionExecuted,
+    
+    // IDs
+    WorkflowId, GraphId,
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use serde_json::json;
 use uuid::Uuid;
 
-/// Example domain aggregate
+/// Example aggregate: Task
 #[derive(Debug, Clone)]
-struct ExampleAggregate {
+struct Task {
     id: EntityId<AggregateMarker>,
-    state: String,
+    title: String,
+    description: String,
+    status: TaskStatus,
+    assigned_to: Option<String>,
     version: u64,
 }
 
-impl ExampleAggregate {
-    fn new(id: EntityId<AggregateMarker>) -> Self {
-        Self {
-            id,
-            state: "initial".to_string(),
-            version: 0,
-        }
-    }
-
-    fn handle_command(&mut self, command: ExampleCommand) -> DomainResult<Vec<ExampleEvent>> {
-        match command {
-            ExampleCommand::Initialize { name } => {
-                if self.version > 0 {
-                    return Err(DomainError::generic("Already initialized"));
-                }
-                Ok(vec![ExampleEvent::Initialized { 
-                    aggregate_id: self.id.clone(),
-                    name 
-                }])
-            }
-            ExampleCommand::UpdateState { new_state } => {
-                if self.version == 0 {
-                    return Err(DomainError::generic("Not initialized"));
-                }
-                Ok(vec![ExampleEvent::StateUpdated { 
-                    aggregate_id: self.id.clone(),
-                    old_state: self.state.clone(),
-                    new_state 
-                }])
-            }
-        }
-    }
-
-    fn apply_event(&mut self, event: &ExampleEvent) -> DomainResult<()> {
-        match event {
-            ExampleEvent::Initialized { .. } => {
-                self.version = 1;
-            }
-            ExampleEvent::StateUpdated { new_state, .. } => {
-                self.state = new_state.clone();
-                self.version += 1;
-            }
-        }
-        Ok(())
-    }
+#[derive(Debug, Clone, PartialEq)]
+enum TaskStatus {
+    Created,
+    Assigned,
+    InProgress,
+    Completed,
+    Cancelled,
 }
 
-impl AggregateRoot for ExampleAggregate {
+impl AggregateRoot for Task {
     type Id = EntityId<AggregateMarker>;
     
     fn id(&self) -> Self::Id {
-        self.id.clone()
+        self.id
+    }
+    
+    fn version(&self) -> u64 {
+        self.version
+    }
+    
+    fn increment_version(&mut self) {
+        self.version += 1;
     }
 }
 
-/// Example commands
+/// Commands for Task aggregate
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum ExampleCommand {
-    Initialize { name: String },
-    UpdateState { new_state: String },
-}
-
-impl Command for ExampleCommand {
-    fn command_type(&self) -> &'static str {
-        match self {
-            Self::Initialize { .. } => "Initialize",
-            Self::UpdateState { .. } => "UpdateState",
-        }
-    }
-}
-
-/// Example events
-#[derive(Debug, Clone, Serialize, Deserialize)]
-enum ExampleEvent {
-    Initialized { 
-        aggregate_id: EntityId<AggregateMarker>,
-        name: String 
+enum TaskCommand {
+    CreateTask {
+        task_id: EntityId<AggregateMarker>,
+        title: String,
+        description: String,
     },
-    StateUpdated { 
-        aggregate_id: EntityId<AggregateMarker>,
-        old_state: String,
-        new_state: String 
+    AssignTask {
+        task_id: EntityId<AggregateMarker>,
+        assignee: String,
+    },
+    StartTask {
+        task_id: EntityId<AggregateMarker>,
+    },
+    CompleteTask {
+        task_id: EntityId<AggregateMarker>,
+        completion_notes: String,
+    },
+    CancelTask {
+        task_id: EntityId<AggregateMarker>,
+        reason: String,
     },
 }
 
-impl DomainEvent for ExampleEvent {
-    fn aggregate_id(&self) -> Uuid {
+impl Command for TaskCommand {
+    type Aggregate = AggregateMarker;
+    
+    fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
         match self {
-            Self::Initialized { aggregate_id, .. } => aggregate_id.as_uuid(),
-            Self::StateUpdated { aggregate_id, .. } => aggregate_id.as_uuid(),
+            Self::CreateTask { task_id, .. } |
+            Self::AssignTask { task_id, .. } |
+            Self::StartTask { task_id } |
+            Self::CompleteTask { task_id, .. } |
+            Self::CancelTask { task_id, .. } => Some(*task_id),
         }
     }
-
-    fn event_type(&self) -> &'static str {
-        match self {
-            Self::Initialized { .. } => "Initialized",
-            Self::StateUpdated { .. } => "StateUpdated",
-        }
-    }
-
-    fn subject(&self) -> String {
-        format!("example.aggregate.{}.v1", self.event_type()).to_lowercase()
-    }
 }
 
-/// Example command handler
-struct ExampleCommandHandler<R: AggregateRepository<ExampleAggregate>> {
-    repository: R,
-    event_publisher: Arc<dyn EventPublisher>,
+/// Command handler for tasks
+struct TaskCommandHandler {
+    tasks: std::collections::HashMap<EntityId<AggregateMarker>, Task>,
 }
 
-impl<R: AggregateRepository<ExampleAggregate>> ExampleCommandHandler<R> {
-    async fn handle_command(
-        &self,
-        envelope: CommandEnvelope<ExampleCommand>,
-    ) -> DomainResult<CommandStatus> {
-        println!("📋 Processing {} command", envelope.payload.command_type());
-        
-        let aggregate_id = EntityId::<AggregateMarker>::new();
-        
-        // Load or create aggregate
-        let mut aggregate = self.repository
-            .load(&aggregate_id)
-            .await
-            .unwrap_or_else(|_| ExampleAggregate::new(aggregate_id.clone()));
-        
-        // Process command
-        let events = aggregate.handle_command(envelope.payload)?;
-        
-        // Apply events to aggregate
-        for event in &events {
-            aggregate.apply_event(event)?;
-        }
-        
-        // Save aggregate
-        self.repository.save(&aggregate).await?;
-        
-        // Publish events
-        let domain_events: Vec<DomainEventEnum> = events.into_iter()
-            .map(|e| DomainEventEnum::WorkflowStarted(cim_domain::WorkflowStarted {
-                workflow_id: cim_domain::WorkflowId::new(),
-                definition_id: cim_domain::GraphId::new(),
-                initial_state: "example".to_string(),
-                started_at: chrono::Utc::now(),
-            }))
-            .collect();
-        
-        self.event_publisher.publish_events(
-            domain_events,
-            envelope.correlation_id.clone()
-        )?;
-        
-        println!("✅ Command processed successfully");
-        
-        Ok(CommandStatus::Accepted)
-    }
-}
-
-/// Mock event publisher
-struct MockEventPublisher {
-    events: Arc<RwLock<Vec<(DomainEventEnum, CorrelationId)>>>,
-}
-
-impl MockEventPublisher {
+impl TaskCommandHandler {
     fn new() -> Self {
         Self {
-            events: Arc::new(RwLock::new(Vec::new())),
+            tasks: std::collections::HashMap::new(),
         }
     }
     
-    async fn get_published_events(&self) -> Vec<(DomainEventEnum, CorrelationId)> {
-        self.events.read().await.clone()
-    }
-}
-
-impl EventPublisher for MockEventPublisher {
-    fn publish_events(
-        &self, 
-        events: Vec<DomainEventEnum>, 
-        correlation_id: CorrelationId
-    ) -> Result<(), String> {
-        let events_clone = self.events.clone();
-        tokio::spawn(async move {
-            let mut guard = events_clone.write().await;
-            for event in events {
-                guard.push((event, correlation_id.clone()));
+    /// Handle a command and return events
+    fn handle_command(&mut self, command: &TaskCommand) -> DomainResult<Vec<DomainEventEnum>> {
+        match command {
+            TaskCommand::CreateTask { task_id, title, description } => {
+                // Check if task already exists
+                if self.tasks.contains_key(task_id) {
+                    return Err(DomainError::ValidationError("Task already exists".to_string()));
+                }
+                
+                // Create new task
+                let task = Task {
+                    id: *task_id,
+                    title: title.clone(),
+                    description: description.clone(),
+                    status: TaskStatus::Created,
+                    assigned_to: None,
+                    version: 1,
+                };
+                
+                self.tasks.insert(*task_id, task);
+                
+                // Return event (using workflow events as example)
+                Ok(vec![DomainEventEnum::WorkflowStarted(WorkflowStarted {
+                    workflow_id: WorkflowId::new(),
+                    definition_id: GraphId::new(),
+                    initial_state: "task_created".to_string(),
+                    started_at: Utc::now(),
+                })])
             }
-        });
-        Ok(())
+            
+            TaskCommand::AssignTask { task_id, assignee } => {
+                let task = self.tasks.get_mut(task_id)
+                    .ok_or_else(|| DomainError::NotFound("Task not found".to_string()))?;
+                
+                // Validate state
+                if task.status != TaskStatus::Created {
+                    return Err(DomainError::ValidationError(
+                        "Can only assign tasks in Created state".to_string()
+                    ));
+                }
+                
+                task.assigned_to = Some(assignee.clone());
+                task.status = TaskStatus::Assigned;
+                task.increment_version();
+                
+                Ok(vec![DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+                    workflow_id: WorkflowId::new(),
+                    from_state: "created".to_string(),
+                    to_state: "assigned".to_string(),
+                    input: json!({"assignee": assignee}),
+                    output: json!({"success": true}),
+                    executed_at: Utc::now(),
+                })])
+            }
+            
+            TaskCommand::StartTask { task_id } => {
+                let task = self.tasks.get_mut(task_id)
+                    .ok_or_else(|| DomainError::NotFound("Task not found".to_string()))?;
+                
+                // Validate state
+                if task.status != TaskStatus::Assigned {
+                    return Err(DomainError::ValidationError(
+                        "Can only start assigned tasks".to_string()
+                    ));
+                }
+                
+                task.status = TaskStatus::InProgress;
+                task.increment_version();
+                
+                Ok(vec![DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+                    workflow_id: WorkflowId::new(),
+                    from_state: "assigned".to_string(),
+                    to_state: "in_progress".to_string(),
+                    input: json!({}),
+                    output: json!({"started_at": Utc::now()}),
+                    executed_at: Utc::now(),
+                })])
+            }
+            
+            TaskCommand::CompleteTask { task_id, completion_notes } => {
+                let task = self.tasks.get_mut(task_id)
+                    .ok_or_else(|| DomainError::NotFound("Task not found".to_string()))?;
+                
+                // Validate state
+                if task.status != TaskStatus::InProgress {
+                    return Err(DomainError::ValidationError(
+                        "Can only complete tasks in progress".to_string()
+                    ));
+                }
+                
+                task.status = TaskStatus::Completed;
+                task.increment_version();
+                
+                Ok(vec![DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+                    workflow_id: WorkflowId::new(),
+                    from_state: "in_progress".to_string(),
+                    to_state: "completed".to_string(),
+                    input: json!({"notes": completion_notes}),
+                    output: json!({"completed_at": Utc::now()}),
+                    executed_at: Utc::now(),
+                })])
+            }
+            
+            TaskCommand::CancelTask { task_id, reason } => {
+                let task = self.tasks.get_mut(task_id)
+                    .ok_or_else(|| DomainError::NotFound("Task not found".to_string()))?;
+                
+                // Can cancel from any state except completed
+                if task.status == TaskStatus::Completed {
+                    return Err(DomainError::ValidationError(
+                        "Cannot cancel completed tasks".to_string()
+                    ));
+                }
+                
+                let from_state = format!("{:?}", task.status).to_lowercase();
+                task.status = TaskStatus::Cancelled;
+                task.increment_version();
+                
+                Ok(vec![DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+                    workflow_id: WorkflowId::new(),
+                    from_state,
+                    to_state: "cancelled".to_string(),
+                    input: json!({"reason": reason}),
+                    output: json!({"cancelled_at": Utc::now()}),
+                    executed_at: Utc::now(),
+                })])
+            }
+        }
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 CIM Command Handler Example\n");
+fn main() {
+    println!("Command Handler Example");
+    println!("======================\n");
     
-    // Setup infrastructure
-    let repository = InMemoryRepository::<ExampleAggregate>::new();
-    let event_publisher = Arc::new(MockEventPublisher::new());
+    let mut handler = TaskCommandHandler::new();
+    let task_id = EntityId::new();
     
-    let handler = ExampleCommandHandler {
-        repository,
-        event_publisher: event_publisher.clone(),
+    // Example 1: Create task command
+    println!("1. Creating a new task...");
+    let create_command = TaskCommand::CreateTask {
+        task_id,
+        title: "Implement feature X".to_string(),
+        description: "Add new functionality to the system".to_string(),
     };
     
-    // Example 1: Initialize aggregate
-    println!("=== Example 1: Initialize Aggregate ===");
+    let envelope = CommandEnvelope::new(create_command.clone(), "user-123".to_string());
     
-    let command = ExampleCommand::Initialize {
-        name: "Example Aggregate".to_string(),
-    };
+    println!("   Command envelope:");
+    println!("     ID: {}", envelope.id);
+    println!("     Issued by: {}", envelope.issued_by);
+    println!("     Correlation ID: {}", envelope.correlation_id());
     
-    let envelope = CommandEnvelope {
-        command_id: CommandId::new(),
-        correlation_id: CorrelationId::from_uuid(Uuid::new_v4()),
-        causation_id: CausationId::from_uuid(Uuid::new_v4()),
-        payload: command,
-    };
-    
-    let status = handler.handle_command(envelope).await?;
-    println!("Command status: {:?}\n", status);
-    
-    // Example 2: Update state
-    println!("=== Example 2: Update State ===");
-    
-    let command = ExampleCommand::UpdateState {
-        new_state: "active".to_string(),
-    };
-    
-    let envelope = CommandEnvelope {
-        command_id: CommandId::new(),
-        correlation_id: CorrelationId::from_uuid(Uuid::new_v4()),
-        causation_id: CausationId::from_uuid(Uuid::new_v4()),
-        payload: command,
-    };
-    
-    let status = handler.handle_command(envelope).await?;
-    println!("Command status: {:?}\n", status);
-    
-    // Example 3: Show published events
-    println!("=== Example 3: Published Events ===");
-    
-    let published = event_publisher.get_published_events().await;
-    println!("Total events published: {}", published.len());
-    
-    for (i, (event, correlation_id)) in published.iter().enumerate() {
-        println!("{}. Event: {} (Correlation: {})",
-            i + 1,
-            event.event_type(),
-            &correlation_id.to_string()[..8]
-        );
+    match handler.handle_command(&create_command) {
+        Ok(events) => {
+            println!("   ✓ Command succeeded, produced {} events", events.len());
+            
+            // Create acknowledgment
+            let ack = CommandAcknowledgment {
+                command_id: envelope.id,
+                status: CommandStatus::Accepted,
+                reason: None,
+                correlation_id: envelope.correlation_id().clone(),
+            };
+            
+            println!("   Acknowledgment:");
+            println!("     Status: {:?}", ack.status);
+            if let Some(reason) = &ack.reason {
+                println!("     Reason: {}", reason);
+            }
+        }
+        Err(e) => {
+            println!("   ✗ Command failed: {}", e);
+        }
     }
+    
+    // Example 2: Assign task
+    println!("\n2. Assigning the task...");
+    let assign_command = TaskCommand::AssignTask {
+        task_id,
+        assignee: "alice@example.com".to_string(),
+    };
+    
+    match handler.handle_command(&assign_command) {
+        Ok(events) => {
+            println!("   ✓ Task assigned, produced {} events", events.len());
+        }
+        Err(e) => {
+            println!("   ✗ Failed to assign: {}", e);
+        }
+    }
+    
+    // Example 3: Start task
+    println!("\n3. Starting the task...");
+    let start_command = TaskCommand::StartTask { task_id };
+    
+    match handler.handle_command(&start_command) {
+        Ok(events) => {
+            println!("   ✓ Task started, produced {} events", events.len());
+        }
+        Err(e) => {
+            println!("   ✗ Failed to start: {}", e);
+        }
+    }
+    
+    // Example 4: Try invalid command
+    println!("\n4. Trying to assign already started task...");
+    let invalid_assign = TaskCommand::AssignTask {
+        task_id,
+        assignee: "bob@example.com".to_string(),
+    };
+    
+    match handler.handle_command(&invalid_assign) {
+        Ok(_) => {
+            println!("   ✗ Unexpected success!");
+        }
+        Err(e) => {
+            println!("   ✓ Expected error: {}", e);
+            
+            // Create rejection acknowledgment
+            let ack = CommandAcknowledgment {
+                command_id: CommandId::new(),
+                status: CommandStatus::Rejected,
+                reason: Some(e.to_string()),
+                correlation_id: CorrelationId(IdType::Uuid(Uuid::new_v4())),
+            };
+            
+            println!("   Rejection acknowledgment:");
+            println!("     Status: {:?}", ack.status);
+            if let Some(reason) = &ack.reason {
+                println!("     Reason: {}", reason);
+            }
+        }
+    }
+    
+    // Example 5: Complete task
+    println!("\n5. Completing the task...");
+    let complete_command = TaskCommand::CompleteTask {
+        task_id,
+        completion_notes: "Feature implemented and tested".to_string(),
+    };
+    
+    match handler.handle_command(&complete_command) {
+        Ok(events) => {
+            println!("   ✓ Task completed, produced {} events", events.len());
+        }
+        Err(e) => {
+            println!("   ✗ Failed to complete: {}", e);
+        }
+    }
+    
+    // Example 6: Command with causation
+    println!("\n6. Creating linked command with causation...");
+    let task2_id = EntityId::new();
+    let create_followup = TaskCommand::CreateTask {
+        task_id: task2_id,
+        title: "Test feature X".to_string(),
+        description: "Write tests for the new feature".to_string(),
+    };
+    
+    // Create envelope with causation from previous command
+    let followup_envelope = CommandEnvelope::new(create_followup, "user-123".to_string());
+    // In real usage, you'd track the event ID that caused this command
+    let causation_id = CausationId(IdType::Uuid(Uuid::new_v4()));
+    
+    println!("   Followup command:");
+    println!("     Caused by: {}", causation_id);
+    println!("     Correlation: {}", followup_envelope.correlation_id());
     
     println!("\n✅ Example completed successfully!");
+    println!("\nThis demonstrates:");
+    println!("  • Implementing commands with the Command trait");
+    println!("  • Creating command envelopes with metadata");
+    println!("  • Command validation and error handling");
+    println!("  • Command acknowledgments and rejections");
+    println!("  • Working with correlation and causation");
     
-    Ok(())
-}
+    // Show command trait usage
+    println!("\nCommand trait features:");
+    println!("  • aggregate_id() - Get the target aggregate");
+    println!("  • CommandEnvelope - Wraps commands with metadata");
+    println!("  • CommandAcknowledgment - Confirms command receipt");
+    println!("  • CommandStatus - Accepted/Rejected/Processing");
+} 

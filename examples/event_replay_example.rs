@@ -2,312 +2,411 @@
 
 //! Example demonstrating event replay functionality
 //!
-//! This example shows how to:
-//! - Replay events to rebuild aggregates
-//! - Build projections from event streams
-//! - Handle replay errors and track progress
+//! This example shows:
+//! - Replaying events from an event store
+//! - Building aggregate state from events
+//! - Event handlers for replay
+//! - Snapshot and replay optimization
 
 use cim_domain::{
+    // Core types
+    EntityId,
+    markers::AggregateMarker,
+    AggregateRoot,
+    
+    // Events
+    DomainEventEnum,
+    WorkflowStarted, WorkflowTransitionExecuted,
+    
+    // Infrastructure
     infrastructure::{
-        EventHandler, ProjectionHandler, ReplayOptions,
-        ReplayError, ReplayStats, StoredEvent,
+        EventStore,
+        event_store::{StoredEvent, EventMetadata},
+        event_replay::{EventHandler, ReplayError, ReplayStats},
+        jetstream_event_store::{JetStreamEventStore, JetStreamConfig},
     },
-    DomainEventEnum, DomainEvent,
-    PersonRegistered, OrganizationCreated, OrganizationMemberAdded,
-    IdentityComponent, OrganizationType, OrganizationRole, RoleLevel,
+    
+    // IDs
+    WorkflowId, GraphId,
 };
 use async_trait::async_trait;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use chrono::{DateTime, Utc};
+use serde_json::json;
+use std::collections::HashMap;
 use uuid::Uuid;
 
-/// Example projection that tracks organization membership
-struct OrganizationMembershipProjection {
-    /// Map of organization ID to member IDs
-    pub organizations: Arc<RwLock<HashMap<Uuid, Vec<Uuid>>>>,
-
-    /// Map of person ID to organization IDs
-    pub people: Arc<RwLock<HashMap<Uuid, Vec<Uuid>>>>,
-
-    /// Total events processed
-    pub events_processed: u64,
+/// Example aggregate that we'll rebuild from events
+#[derive(Debug, Clone)]
+struct Account {
+    id: EntityId<AggregateMarker>,
+    owner: String,
+    balance: f64,
+    transactions: Vec<Transaction>,
+    status: AccountStatus,
+    version: u64,
 }
 
-impl OrganizationMembershipProjection {
+#[derive(Debug, Clone)]
+struct Transaction {
+    id: Uuid,
+    amount: f64,
+    transaction_type: TransactionType,
+    timestamp: DateTime<Utc>,
+    description: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum TransactionType {
+    Deposit,
+    Withdrawal,
+    Transfer,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum AccountStatus {
+    Active,
+    Frozen,
+    Closed,
+}
+
+impl AggregateRoot for Account {
+    type Id = EntityId<AggregateMarker>;
+    
+    fn id(&self) -> Self::Id {
+        self.id
+    }
+    
+    fn version(&self) -> u64 {
+        self.version
+    }
+    
+    fn increment_version(&mut self) {
+        self.version += 1;
+    }
+}
+
+/// Event handler that rebuilds account state from events
+struct AccountEventHandler {
+    accounts: HashMap<String, Account>,
+    event_count: usize,
+    last_event_time: Option<DateTime<Utc>>,
+}
+
+impl AccountEventHandler {
     fn new() -> Self {
         Self {
-            organizations: Arc::new(RwLock::new(HashMap::new())),
-            people: Arc::new(RwLock::new(HashMap::new())),
-            events_processed: 0,
+            accounts: HashMap::new(),
+            event_count: 0,
+            last_event_time: None,
         }
     }
-}
-
-#[async_trait]
-impl ProjectionHandler for OrganizationMembershipProjection {
-    async fn handle_event(&mut self, event: &DomainEventEnum, _sequence: u64) -> Result<(), ReplayError> {
+    
+    fn get_account(&self, id: &str) -> Option<&Account> {
+        self.accounts.get(id)
+    }
+    
+    fn process_workflow_event(&mut self, event: &DomainEventEnum, aggregate_id: &str) -> Result<(), ReplayError> {
         match event {
-            DomainEventEnum::OrganizationCreated(e) => {
-                let mut orgs = self.organizations.write().await;
-                orgs.insert(e.organization_id, Vec::new());
-                println!("Created organization: {} - {}", e.organization_id, e.name);
+            DomainEventEnum::WorkflowStarted(e) => {
+                // Interpret as account creation
+                let account = Account {
+                    id: EntityId::new(),
+                    owner: e.initial_state.clone(), // Using initial_state as owner name for demo
+                    balance: 0.0,
+                    transactions: Vec::new(),
+                    status: AccountStatus::Active,
+                    version: 1,
+                };
+                self.accounts.insert(aggregate_id.to_string(), account);
+                println!("      Created account: {}", aggregate_id);
             }
-            DomainEventEnum::OrganizationMemberAdded(e) => {
-                // Update organization members
-                let mut orgs = self.organizations.write().await;
-                let members = orgs.entry(e.organization_id).or_insert_with(Vec::new);
-                members.push(e.person_id);
-                drop(orgs);
-
-                // Update person organizations
-                let mut people = self.people.write().await;
-                let person_orgs = people.entry(e.person_id).or_insert_with(Vec::new);
-                person_orgs.push(e.organization_id);
-
-                println!("  Added {} to organization {} as {}", e.person_id, e.organization_id, e.role.title);
+            
+            DomainEventEnum::WorkflowTransitionExecuted(e) => {
+                // Interpret as transaction
+                if let Some(account) = self.accounts.get_mut(aggregate_id) {
+                    // Parse transaction from the event
+                    if let Some(amount) = e.input.get("amount").and_then(|v| v.as_f64()) {
+                        let transaction_type = match e.to_state.as_str() {
+                            "deposited" => TransactionType::Deposit,
+                            "withdrawn" => TransactionType::Withdrawal,
+                            _ => TransactionType::Transfer,
+                        };
+                        
+                        let transaction = Transaction {
+                            id: Uuid::new_v4(),
+                            amount,
+                            transaction_type: transaction_type.clone(),
+                            timestamp: e.executed_at,
+                            description: e.input.get("description")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Transaction")
+                                .to_string(),
+                        };
+                        
+                        // Update balance
+                        match transaction_type {
+                            TransactionType::Deposit => account.balance += amount,
+                            TransactionType::Withdrawal => account.balance -= amount,
+                            TransactionType::Transfer => {} // Handled separately
+                        }
+                        
+                        account.transactions.push(transaction);
+                        account.increment_version();
+                        
+                        println!("      Processed transaction: {} {}", 
+                            if amount >= 0.0 { "+" } else { "" }, 
+                            amount
+                        );
+                    }
+                }
             }
+            
+            DomainEventEnum::WorkflowCompleted(_) => {
+                // Interpret as account closure
+                if let Some(account) = self.accounts.get_mut(aggregate_id) {
+                    account.status = AccountStatus::Closed;
+                    account.increment_version();
+                    println!("      Closed account");
+                }
+            }
+            
             _ => {} // Ignore other events
         }
-
-        self.events_processed += 1;
+        
         Ok(())
     }
-
-    fn name(&self) -> &str {
-        "OrganizationMembership"
-    }
-
-    async fn reset(&mut self) -> Result<(), ReplayError> {
-        self.organizations.write().await.clear();
-        self.people.write().await.clear();
-        self.events_processed = 0;
-        println!("Reset OrganizationMembership projection");
-        Ok(())
-    }
-}
-
-/// Example event handler that logs all events
-struct LoggingEventHandler {
-    pub events_logged: u64,
 }
 
 #[async_trait]
-impl EventHandler for LoggingEventHandler {
+impl EventHandler for AccountEventHandler {
     async fn handle_event(&mut self, event: &StoredEvent) -> Result<(), ReplayError> {
-        println!(
-            "[{}] Event #{}: {} for aggregate {}",
-            event.stored_at,
-            event.sequence,
-            event.event.event_type(),
-            event.aggregate_id
-        );
-
-        self.events_logged += 1;
+        self.event_count += 1;
+        self.last_event_time = Some(event.stored_at);
+        
+        // Process the domain event
+        self.process_workflow_event(&event.event, &event.aggregate_id)?;
+        
         Ok(())
     }
-
+    
     async fn on_replay_start(&mut self) -> Result<(), ReplayError> {
-        println!("=== Starting event replay ===");
+        println!("   Starting event replay...");
+        self.event_count = 0;
+        self.last_event_time = None;
         Ok(())
     }
-
+    
     async fn on_replay_complete(&mut self, stats: &ReplayStats) -> Result<(), ReplayError> {
-        println!("\n=== Replay completed ===");
-        println!("Events processed: {}", stats.events_processed);
-        println!("Errors: {}", stats.errors);
-        println!("Duration: {}ms", stats.duration_ms);
-        println!("Events/second: {:.2}", stats.events_per_second);
+        println!("   Replay complete!");
+        println!("   Total events processed: {}", stats.events_processed);
+        println!("   Duration: {}ms", stats.duration_ms);
+        println!("   Events/second: {:.2}", stats.events_per_second);
+        if let Some(last_time) = self.last_event_time {
+            println!("   Last event time: {}", last_time);
+        }
         Ok(())
     }
+}
+
+/// Helper to create test events
+fn create_test_events(_account_id: &str) -> Vec<DomainEventEnum> {
+    let workflow_id = WorkflowId::new();
+    let definition_id = GraphId::new();
+    
+    vec![
+        // Account creation
+        DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id: workflow_id.clone(),
+            definition_id: definition_id.clone(),
+            initial_state: "John Doe".to_string(), // Owner name
+            started_at: Utc::now(),
+        }),
+        
+        // Deposit
+        DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+            workflow_id: workflow_id.clone(),
+            from_state: "created".to_string(),
+            to_state: "deposited".to_string(),
+            input: json!({
+                "amount": 1000.0,
+                "description": "Initial deposit"
+            }),
+            output: json!({"success": true}),
+            executed_at: Utc::now(),
+        }),
+        
+        // Withdrawal
+        DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+            workflow_id: workflow_id.clone(),
+            from_state: "active".to_string(),
+            to_state: "withdrawn".to_string(),
+            input: json!({
+                "amount": 250.0,
+                "description": "ATM withdrawal"
+            }),
+            output: json!({"success": true}),
+            executed_at: Utc::now(),
+        }),
+        
+        // Another deposit
+        DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
+            workflow_id: workflow_id.clone(),
+            from_state: "active".to_string(),
+            to_state: "deposited".to_string(),
+            input: json!({
+                "amount": 500.0,
+                "description": "Paycheck"
+            }),
+            output: json!({"success": true}),
+            executed_at: Utc::now(),
+        }),
+    ]
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Event Replay Example\n");
-
-    // In a real application, you would use the actual event store
-    // For this example, we'll simulate it
-    println!("Note: This example uses simulated events.");
-    println!("In production, you would connect to NATS JetStream.\n");
-
-    // Example 1: Replay with logging handler
-    println!("Example 1: Logging all events");
-    println!("{}", "-".repeat(50));
-
-    let mut logging_handler = LoggingEventHandler { events_logged: 0 };
-
-    // Simulate some events
-    let events = vec![
-        StoredEvent {
-            event_id: Uuid::new_v4().to_string(),
-            aggregate_id: Uuid::new_v4().to_string(),
-            aggregate_type: "Person".to_string(),
-            sequence: 1,
-            event: DomainEventEnum::PersonRegistered(PersonRegistered {
-                person_id: Uuid::parse_str("123e4567-e89b-12d3-a456-426614174000").unwrap(),
-                identity: IdentityComponent {
-                    legal_name: "Alice Smith".to_string(),
-                    preferred_name: None,
-                    date_of_birth: None,
-                    government_id: None,
-                },
-                contact: None,
-                location_id: None,
-                registered_at: chrono::Utc::now(),
-            }),
-            metadata: cim_domain::infrastructure::EventMetadata::default(),
-            stored_at: chrono::Utc::now(),
-        },
-        StoredEvent {
-            event_id: Uuid::new_v4().to_string(),
-            aggregate_id: Uuid::new_v4().to_string(),
-            aggregate_type: "Organization".to_string(),
-            sequence: 2,
-            event: DomainEventEnum::OrganizationCreated(OrganizationCreated {
-                organization_id: Uuid::parse_str("456e7890-e89b-12d3-a456-426614174000").unwrap(),
-                name: "Acme Corp".to_string(),
-                org_type: OrganizationType::Company,
-                parent_id: None,
-                primary_location_id: None,
-                created_at: chrono::Utc::now(),
-            }),
-            metadata: cim_domain::infrastructure::EventMetadata::default(),
-            stored_at: chrono::Utc::now(),
-        },
-    ];
-
-    // Simulate replay
-    for event in &events {
-        logging_handler.handle_event(event).await?;
-    }
-
-    let stats = ReplayStats {
-        events_processed: events.len() as u64,
-        aggregates_rebuilt: 0,
-        errors: 0,
-        duration_ms: 100,
-        events_per_second: (events.len() as f64) * 10.0,
+    println!("Event Replay Example");
+    println!("===================\n");
+    
+    // Note: This example requires a running NATS server with JetStream enabled
+    // Run: docker run -p 4222:4222 nats:latest -js
+    
+    // Connect to NATS
+    println!("1. Setting up event store...");
+    let client = async_nats::connect("nats://localhost:4222").await?;
+    
+    let config = JetStreamConfig {
+        stream_name: "replay-demo".to_string(),
+        stream_subjects: vec!["events.>".to_string()],
+        cache_size: 100,
+        subject_prefix: "events".to_string(),
     };
-
-    logging_handler.on_replay_complete(&stats).await?;
-
-    // Example 2: Build projection
-    println!("\n\nExample 2: Building organization membership projection");
-    println!("{}", "-".repeat(50));
-
-    let mut projection = OrganizationMembershipProjection::new();
-
-    // Create some test events
-    let org_id = Uuid::new_v4();
-    let person1_id = Uuid::new_v4();
-    let person2_id = Uuid::new_v4();
-
-    let projection_events = vec![
-        DomainEventEnum::OrganizationCreated(OrganizationCreated {
-            organization_id: org_id,
-            name: "Tech Startup".to_string(),
-            org_type: OrganizationType::Company,
-            parent_id: None,
-            primary_location_id: None,
-            created_at: chrono::Utc::now(),
-        }),
-        DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id: person1_id,
-            identity: IdentityComponent {
-                legal_name: "Bob Johnson".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
-        }),
-        DomainEventEnum::PersonRegistered(PersonRegistered {
-            person_id: person2_id,
-            identity: IdentityComponent {
-                legal_name: "Carol Davis".to_string(),
-                preferred_name: None,
-                date_of_birth: None,
-                government_id: None,
-            },
-            contact: None,
-            location_id: None,
-            registered_at: chrono::Utc::now(),
-        }),
-        DomainEventEnum::OrganizationMemberAdded(OrganizationMemberAdded {
-            organization_id: org_id,
-            person_id: person1_id,
-            role: OrganizationRole {
-                role_id: "member".to_string(),
-                title: "Member".to_string(),
-                level: RoleLevel::Mid,
-                permissions: HashSet::new(),
-                attributes: HashMap::new(),
-            },
-            reports_to: None,
-            joined_at: chrono::Utc::now(),
-        }),
-        DomainEventEnum::OrganizationMemberAdded(OrganizationMemberAdded {
-            organization_id: org_id,
-            person_id: person2_id,
-            role: OrganizationRole {
-                role_id: "admin".to_string(),
-                title: "Admin".to_string(),
-                level: RoleLevel::Senior,
-                permissions: HashSet::new(),
-                attributes: HashMap::new(),
-            },
-            reports_to: Some(person1_id),
-            joined_at: chrono::Utc::now(),
-        }),
-    ];
-
-    // Process events
-    for (seq, event) in projection_events.iter().enumerate() {
-        projection.handle_event(event, seq as u64).await?;
+    
+    let event_store = JetStreamEventStore::new(client, config).await?;
+    println!("   ✓ Event store ready\n");
+    
+    // Create test account ID
+    let account_id = format!("account-{}", Uuid::new_v4());
+    
+    // Store some events
+    println!("2. Storing events...");
+    let events = create_test_events(&account_id);
+    
+    let metadata = EventMetadata {
+        correlation_id: Some(Uuid::new_v4().to_string()),
+        causation_id: None,
+        triggered_by: Some("system".to_string()),
+        custom: None,
+    };
+    
+    event_store.append_events(
+        &account_id,
+        "Account",
+        events.clone(),
+        None,
+        metadata,
+    ).await?;
+    
+    println!("   ✓ Stored {} events\n", events.len());
+    
+    // Create event handler for replay
+    println!("3. Replaying events...");
+    let mut handler = AccountEventHandler::new();
+    
+    // Get all events for the account
+    let stored_events = event_store.get_events(&account_id, None).await?;
+    
+    // Manually replay events (simulating what a replay service would do)
+    handler.on_replay_start().await?;
+    
+    let start_time = std::time::Instant::now();
+    for event in &stored_events {
+        println!("   Processing event {} (v{})", event.event_type(), event.sequence);
+        handler.handle_event(event).await?;
     }
-
-    // Display projection state
-    println!("\nProjection state after replay:");
-    let orgs = projection.organizations.read().await;
-    for (org_id, members) in orgs.iter() {
-        println!("Organization {}: {} members", org_id, members.len()));
-        for member_id in members {
-            println!("  - Member: {member_id}");
+    
+    // Create stats for completion
+    let duration = start_time.elapsed();
+    let stats = ReplayStats {
+        events_processed: stored_events.len() as u64,
+        aggregates_rebuilt: 1,
+        errors: 0,
+        duration_ms: duration.as_millis() as u64,
+        events_per_second: if duration.as_secs() > 0 {
+            stored_events.len() as f64 / duration.as_secs_f64()
+        } else {
+            stored_events.len() as f64 * 1000.0
+        },
+    };
+    
+    handler.on_replay_complete(&stats).await?;
+    println!();
+    
+    // Show rebuilt state
+    println!("4. Rebuilt account state:");
+    if let Some(account) = handler.get_account(&account_id) {
+        println!("   ID: {}", account.id);
+        println!("   Owner: {}", account.owner);
+        println!("   Balance: ${:.2}", account.balance);
+        println!("   Status: {:?}", account.status);
+        println!("   Version: {}", account.version);
+        println!("   Transactions: {}", account.transactions.len());
+        
+        println!("\n   Transaction history:");
+        for (i, tx) in account.transactions.iter().enumerate() {
+            println!("     {}. {:?} ${:.2} - {}", 
+                i + 1, 
+                tx.transaction_type, 
+                tx.amount,
+                tx.description
+            );
         }
     }
-
-    let people = projection.people.read().await;
-    println!("\nPeople memberships:");
-    for (person_id, org_ids) in people.iter() {
-        println!("Person {}: member of {} organizations", person_id, org_ids.len()));
-    }
-
-    println!("\nTotal events processed by projection: {}", projection.events_processed);
-
-    // Example 3: Replay with filters
-    println!("\n\nExample 3: Replay with filters");
-    println!("{}", "-".repeat(50));
-
-    let options = ReplayOptions {
-        max_events: Some(10),
-        batch_size: 5,
-        continue_on_error: true,
-        aggregate_types: Some(vec!["Organization".to_string()]),
-        event_types: Some(vec!["OrganizationCreated".to_string(), "OrganizationMemberAdded".to_string()]),
-        from_sequence: None,
+    
+    // Demonstrate partial replay
+    println!("\n5. Partial replay (from version 2)...");
+    let mut partial_handler = AccountEventHandler::new();
+    
+    // Only replay events after version 2
+    let partial_events: Vec<_> = stored_events
+        .into_iter()
+        .filter(|e| e.sequence > 2)
+        .collect();
+    
+    println!("   Replaying {} events (out of {})", partial_events.len(), events.len());
+    
+    // First, we need to restore state up to version 2 (in real system, from snapshot)
+    // For demo, we'll just create the initial state
+    let initial_account = Account {
+        id: EntityId::new(),
+        owner: "John Doe".to_string(),
+        balance: 1000.0, // After first deposit
+        transactions: vec![Transaction {
+            id: Uuid::new_v4(),
+            amount: 1000.0,
+            transaction_type: TransactionType::Deposit,
+            timestamp: Utc::now(),
+            description: "Initial deposit".to_string(),
+        }],
+        status: AccountStatus::Active,
+        version: 2,
     };
-
-    println!("Replay options:");
-    println!("  Max events: {:?}", options.max_events);
-    println!("  Batch size: {}", options.batch_size);
-    println!("  Continue on error: {}", options.continue_on_error);
-    println!("  Aggregate types: {:?}", options.aggregate_types);
-    println!("  Event types: {:?}", options.event_types);
-
-    println!("\nIn production, these filters would be applied during event stream processing.");
-
+    partial_handler.accounts.insert(account_id.clone(), initial_account);
+    
+    // Now replay remaining events
+    for event in partial_events {
+        handler.handle_event(&event).await?;
+    }
+    
+    println!("   ✓ Partial replay complete");
+    
+    println!("\n✅ Example completed successfully!");
+    println!("\nThis demonstrates:");
+    println!("  • Replaying events to rebuild aggregate state");
+    println!("  • Custom event handlers for replay");
+    println!("  • Processing events in sequence");
+    println!("  • Partial replay from a specific version");
+    println!("  • Building domain objects from event history");
+    
     Ok(())
 }

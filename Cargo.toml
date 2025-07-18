@@ -73,9 +73,9 @@ path = "tests/jetstream_event_store_tests.rs"
 # name = "category_theory_tests"
 # path = "tests/category_theory_tests.rs"
 
-[[example]]
-name = "command_handler_example"
-path = "examples/command_handler_example.rs"
+# [[example]]
+# name = "command_handler_example"
+# path = "examples/command_handler_example.rs"
 
 [[example]]
 name = "query_handler_example"
@@ -84,6 +84,26 @@ path = "examples/query_handler_example.rs"
 [[example]]
 name = "state_machine_aggregates"
 path = "examples/state_machine_aggregates.rs"
+
+[[example]]
+name = "persistence_example"
+path = "examples/persistence_example.rs"
+
+[[example]]
+name = "persistence_example_v2"
+path = "examples/persistence_example_v2.rs"
+
+[[example]]
+name = "full_persistence_example"
+path = "examples/full_persistence_example.rs"
+
+[[example]]
+name = "advanced_persistence_example"
+path = "examples/advanced_persistence_example.rs"
+
+[[example]]
+name = "integration_example"
+path = "examples/integration_example.rs"
 
 [[example]]
 name = "event_replay_example"
@@ -110,16 +130,24 @@ name = "event_stream_example"
 path = "examples/event_stream_example.rs"
 
 [[example]]
-name = "persistence_example"
-path = "examples/persistence_example.rs"
+name = "bevy_integration"
+path = "examples/bevy_integration.rs"
+
+[[example]]
+name = "workflow_basics"
+path = "examples/workflow_basics.rs"
+
+[[example]]
+name = "simple_example"
+path = "examples/simple_example.rs"
 
 [[example]]
 name = "simple_persistence_example"
 path = "examples/simple_persistence_example.rs"
 
 [[example]]
-name = "integration_example"
-path = "examples/integration_example.rs"
+name = "command_handler_example"
+path = "examples/command_handler_example.rs"
 
 [[example]]
 name = "persistence_metrics_demo"

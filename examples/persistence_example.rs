@@ -1,483 +1,247 @@
 // Copyright 2025 Cowboy AI, LLC.
 
-//! Example demonstrating the persistence layer with NATS JetStream
+//! Example demonstrating persistence patterns
 //!
-//! This example shows how to:
-//! - Set up NATS-based persistence
-//! - Store and retrieve aggregates
-//! - Use read models for queries
-//! - Optimize queries with subject-based routing
-//! - Handle schema migrations
+//! This example shows:
+//! - Using simple repository implementations
+//! - NATS KV persistence
+//! - Aggregate versioning
+//! - Read model storage
 
 use cim_domain::{
-    entity::{Entity, EntityId},
-    events::DomainEvent,
-    persistence::*,
-    infrastructure::{JetStreamEventStore, JetStreamConfig},
-    DomainError,
+    // Core types
+    EntityId, AggregateRoot, DomainEntity,
+    markers::AggregateMarker,
+    
+    // Persistence
+    persistence::{
+        SimpleRepository, NatsKvRepositoryBuilder,
+        AggregateMetadata,
+    },
+    
+    // Query support (for read models)
+    ReadModelStorage, InMemoryReadModel,
+    
+    // IDs
+    WorkflowId,
 };
-use async_nats::Client;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
-/// Example aggregate: Product
+/// Example aggregate: UserProfile
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Product {
-    id: EntityId<Product>,
-    name: String,
-    price: f64,
-    stock: u32,
+struct UserProfile {
+    id: EntityId<AggregateMarker>,
+    username: String,
+    email: String,
+    full_name: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
     version: u64,
 }
 
-impl Entity for Product {
-    type IdType = Product;
+impl DomainEntity for UserProfile {
+    type IdType = AggregateMarker;
     
-    fn id(&self) -> EntityId<Self> {
-        self.id.clone()
+    fn id(&self) -> EntityId<Self::IdType> {
+        self.id
     }
 }
 
-impl Product {
-    fn new(name: String, price: f64, stock: u32) -> Self {
+impl UserProfile {
+    fn new(username: String, email: String, full_name: String) -> Self {
+        let now = Utc::now();
         Self {
             id: EntityId::new(),
-            name,
-            price,
-            stock,
-            version: 0,
+            username,
+            email,
+            full_name,
+            created_at: now,
+            updated_at: now,
+            version: 1,
         }
     }
     
-    fn update_price(&mut self, new_price: f64) -> ProductPriceUpdated {
-        let event = ProductPriceUpdated {
-            product_id: self.id.value(),
-            old_price: self.price,
-            new_price,
-            updated_at: Utc::now(),
-        };
-        
-        self.price = new_price;
+    fn update_email(&mut self, new_email: String) {
+        self.email = new_email;
+        self.updated_at = Utc::now();
         self.version += 1;
-        
-        event
     }
-    
-    fn update_stock(&mut self, quantity: i32) -> Result<StockUpdated, DomainError> {
-        let new_stock = (self.stock as i32 + quantity) as u32;
-        
-        if (self.stock as i32 + quantity) < 0 {
-            return Err(DomainError::ValidationError("Insufficient stock".to_string()));
+}
+
+/// Read model for user search
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UserSearchView {
+    user_id: String,
+    username: String,
+    email: String,
+    full_name: String,
+}
+
+impl From<&UserProfile> for UserSearchView {
+    fn from(profile: &UserProfile) -> Self {
+        Self {
+            user_id: profile.id.to_string(),
+            username: profile.username.clone(),
+            email: profile.email.clone(),
+            full_name: profile.full_name.clone(),
         }
-        
-        let event = StockUpdated {
-            product_id: self.id.value(),
-            old_stock: self.stock,
-            new_stock,
-            change: quantity,
-            updated_at: Utc::now(),
-        };
-        
-        self.stock = new_stock;
-        self.version += 1;
-        
-        Ok(event)
-    }
-}
-
-/// Product events
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct ProductCreated {
-    product_id: Uuid,
-    name: String,
-    price: f64,
-    stock: u32,
-    created_at: chrono::DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct ProductPriceUpdated {
-    product_id: Uuid,
-    old_price: f64,
-    new_price: f64,
-    updated_at: chrono::DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct StockUpdated {
-    product_id: Uuid,
-    old_stock: u32,
-    new_stock: u32,
-    change: i32,
-    updated_at: chrono::DateTime<Utc>,
-}
-
-// Implement DomainEvent for events
-impl DomainEvent for ProductCreated {
-    fn event_type(&self) -> &'static str {
-        "ProductCreated"
-    }
-    
-    fn aggregate_id(&self) -> Uuid {
-        self.product_id
-    }
-    
-    fn subject(&self) -> String {
-        "domain.product.created.v1".to_string()
-    }
-}
-
-impl DomainEvent for ProductPriceUpdated {
-    fn event_type(&self) -> &'static str {
-        "ProductPriceUpdated"
-    }
-    
-    fn aggregate_id(&self) -> Uuid {
-        self.product_id
-    }
-    
-    fn subject(&self) -> String {
-        "domain.product.price_updated.v1".to_string()
-    }
-}
-
-impl DomainEvent for StockUpdated {
-    fn event_type(&self) -> &'static str {
-        "StockUpdated"
-    }
-    
-    fn aggregate_id(&self) -> Uuid {
-        self.product_id
-    }
-    
-    fn subject(&self) -> String {
-        "domain.product.stock_updated.v1".to_string()
-    }
-}
-
-/// Read model for product catalog
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct ProductCatalogView {
-    id: String,
-    products: HashMap<String, ProductSummary>,
-    total_products: u32,
-    last_updated: chrono::DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct ProductSummary {
-    id: String,
-    name: String,
-    price: f64,
-    in_stock: bool,
-}
-
-impl ReadModel for ProductCatalogView {
-    fn model_type() -> &'static str {
-        "ProductCatalog"
-    }
-    
-    fn id(&self) -> &str {
-        &self.id
-    }
-    
-    fn apply_event(&mut self, event: &dyn DomainEvent) -> Result<(), DomainError> {
-        match event.event_type() {
-            "ProductCreated" => {
-                // In real implementation, would deserialize event data
-                let product_id = event.aggregate_id().to_string();
-                self.products.insert(
-                    product_id.clone(),
-                    ProductSummary {
-                        id: product_id,
-                        name: "New Product".to_string(),
-                        price: 0.0,
-                        in_stock: true,
-                    }
-                );
-                self.total_products += 1;
-            }
-            "ProductPriceUpdated" => {
-                let product_id = event.aggregate_id().to_string();
-                if let Some(product) = self.products.get_mut(&product_id) {
-                    // Update price from event data
-                    product.price = 99.99; // Placeholder
-                }
-            }
-            "StockUpdated" => {
-                let product_id = event.aggregate_id().to_string();
-                if let Some(product) = self.products.get_mut(&product_id) {
-                    // Update stock status from event data
-                    product.in_stock = true; // Placeholder
-                }
-            }
-            _ => {}
-        }
-        
-        self.last_updated = Utc::now();
-        Ok(())
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("CIM Domain Persistence Example");
-    println!("==============================\n");
+    println!("Persistence Example");
+    println!("==================\n");
     
-    // Note: This example requires a running NATS server with JetStream enabled
+    // Example 1: NATS KV Repository
+    println!("1. NATS KV Repository...");
+    
+    // Note: This requires a running NATS server
     // Run: docker run -p 4222:4222 nats:latest -js
     
-    // Connect to NATS
-    println!("1. Connecting to NATS...");
-    let client = Client::connect("nats://localhost:4222").await?;
-    println!("   ✓ Connected to NATS\n");
+    let client = async_nats::connect("nats://localhost:4222").await?;
     
-    // Set up persistence
-    println!("2. Setting up persistence layer...");
+    let nats_repo = NatsKvRepositoryBuilder::new()
+        .client(client.clone())
+        .bucket_name("user_profiles".to_string())
+        .build()
+        .await?;
     
-    // Configure NATS repository
-    let config = NatsRepositoryConfig {
-        event_stream_name: "PRODUCTS-EVENTS".to_string(),
-        aggregate_stream_name: "PRODUCTS-AGGREGATES".to_string(),
-        read_model_bucket: "products-read-models".to_string(),
-        snapshot_bucket: "products-snapshots".to_string(),
-        event_subject_prefix: "products.events".to_string(),
-        aggregate_subject_prefix: "products.aggregates".to_string(),
-        cache_size: 100,
-        enable_ipld: true,
-    };
-    
-    let repository: NatsRepository<Product> = NatsRepository::new(
-        client.clone(),
-        config.clone(),
-        "Product".to_string(),
-    ).await?;
-    
-    println!("   ✓ Repository configured\n");
-    
-    // Create read model store
-    let read_store = NatsReadModelStore::new(client.clone(), "products").await?;
-    println!("   ✓ Read model store created\n");
-    
-    // Set up query optimizer
-    let optimizer = NatsQueryOptimizer::new();
-    
-    // Create indexes
-    optimizer.create_index(
-        "product_subject_index".to_string(),
-        vec![
-            "products.aggregates.Product.*".to_string(),
-            "products.events.Product.*".to_string(),
-        ],
-    ).await?;
-    
-    println!("   ✓ Query optimizer configured\n");
-    
-    // 3. Create and save a product
-    println!("3. Creating and saving a product...");
-    
-    let mut product = Product::new(
-        "Laptop Pro X1".to_string(),
-        1299.99,
-        50,
+    // Create a user profile
+    let mut user = UserProfile::new(
+        "alice_doe".to_string(),
+        "alice@example.com".to_string(),
+        "Alice Doe".to_string(),
     );
     
-    // Generate events
-    let created_event = ProductCreated {
-        product_id: product.id.value(),
-        name: product.name.clone(),
-        price: product.price,
-        stock: product.stock,
-        created_at: Utc::now(),
-    };
+    println!("   Created user: {}", user.username);
+    println!("   ID: {}", user.id);
     
-    // Save with events
-    let metadata = repository.save(
-        &product,
-        vec![Box::new(created_event)],
-        SaveOptions {
-            expected_version: None,
-            create_snapshot: true,
-            metadata: HashMap::from([
-                ("category".to_string(), serde_json::json!("electronics")),
-            ]),
-            tags: vec!["new".to_string(), "featured".to_string()],
-        },
-    ).await?;
+    // Save to NATS KV
+    let metadata = nats_repo.save(&user).await?;
+    println!("\n   ✓ Saved to NATS KV");
+    println!("     Subject: {}", metadata.subject);
+    println!("     Version: {}", metadata.version);
+    println!("     Last modified: {}", metadata.last_modified);
     
-    println!("   ✓ Product saved: {}", metadata.aggregate_id);
-    println!("   ✓ Version: {}", metadata.version);
-    println!("   ✓ Subject: {}", metadata.subject);
-    println!("   ✓ CID: {}\n", metadata.state_cid);
-    
-    // 4. Update the product
-    println!("4. Updating product price...");
-    
-    let price_event = product.update_price(1199.99);
-    
-    let metadata = repository.save(
-        &product,
-        vec![Box::new(price_event)],
-        SaveOptions {
-            expected_version: Some(1),
-            create_snapshot: false,
-            metadata: HashMap::new(),
-            tags: vec![],
-        },
-    ).await?;
-    
-    println!("   ✓ Price updated to ${}", product.price);
-    println!("   ✓ New version: {}\n", metadata.version);
-    
-    // 5. Load the product
-    println!("5. Loading product from persistence...");
-    
-    let (loaded_product, metadata) = repository.load(
-        &product.id,
-        LoadOptions {
-            version: None,
-            as_of: None,
-            include_events: true,
-            use_snapshot: true,
-        },
-    ).await?;
-    
-    println!("   ✓ Loaded product: {}", loaded_product.name);
-    println!("   ✓ Price: ${}", loaded_product.price);
-    println!("   ✓ Stock: {}", loaded_product.stock);
-    println!("   ✓ Version: {}\n", metadata.version);
-    
-    // 6. Create and update read model
-    println!("6. Creating product catalog view...");
-    
-    let mut catalog = ProductCatalogView {
-        id: "main-catalog".to_string(),
-        products: HashMap::new(),
-        total_products: 0,
-        last_updated: Utc::now(),
-    };
-    
-    // Apply events to build view
-    catalog.apply_event(&ProductCreated {
-        product_id: product.id.value(),
-        name: product.name.clone(),
-        price: product.price,
-        stock: product.stock,
-        created_at: Utc::now(),
-    })?;
-    
-    // Save read model
-    read_store.save(
-        &catalog,
-        ReadModelMetadata {
-            id: catalog.id.clone(),
-            model_type: ProductCatalogView::model_type().to_string(),
-            schema_version: 1,
-            last_updated: Utc::now(),
-            last_event_position: 2,
-            data_cid: None,
-            subject: "readmodel.product.catalog".to_string(),
-            metadata: HashMap::new(),
-        },
-    ).await?;
-    
-    println!("   ✓ Catalog view created with {} products\n", catalog.total_products);
-    
-    // 7. Query optimization
-    println!("7. Demonstrating query optimization...");
-    
-    let query = "subject:products.aggregates.Product.*";
-    let hints = QueryHint {
-        strategy: Some(IndexStrategy::SubjectPattern),
-        expected_size: Some(10),
-        time_range: None,
-        projection: Some(vec!["id".to_string(), "name".to_string(), "price".to_string()]),
-        use_cache: true,
-    };
-    
-    let plan = optimizer.create_plan(query, hints).await?;
-    
-    println!("   ✓ Query plan created");
-    println!("   → Strategy: {:?}", plan.strategy);
-    println!("   → Estimated cost: {}", plan.estimated_cost);
-    println!("   → Steps: {}", plan.steps.len());
-    
-    for step in &plan.steps {
-        println!("     - {}: {:?}", step.name, step.operation);
+    // Load from NATS KV
+    if let Some(loaded) = nats_repo.load(&user.id).await? {
+        println!("\n   ✓ Loaded from NATS KV");
+        println!("     Username: {}", loaded.username);
+        println!("     Email: {}", loaded.email);
+        println!("     Version: {}", loaded.version);
     }
     
-    println!();
+    // Update the user
+    user.update_email("alice.doe@example.com".to_string());
+    let metadata2 = nats_repo.save(&user).await?;
+    println!("\n   ✓ Updated in NATS KV");
+    println!("     New version: {}", metadata2.version);
     
-    // 8. Subject routing
-    println!("8. Setting up subject-based routing...");
+    // Check existence
+    let exists = nats_repo.exists(&user.id).await?;
+    println!("\n   ✓ Exists check: {}", exists);
     
-    let router = SubjectRouter::new(RoutingStrategy::PriorityBased);
+    // Example 2: Read Model Storage
+    println!("\n2. Read Model Storage...");
     
-    // Add route for product events
-    router.add_route(RoutePattern {
-        name: "product_events".to_string(),
-        pattern: "products.events.*".to_string(),
-        handler: "event_processor".to_string(),
-        priority: 10,
-        metadata: HashMap::new(),
-    }).await?;
+    let read_model = InMemoryReadModel::<UserSearchView>::new();
     
-    // Add route for product aggregates
-    router.add_route(RoutePattern {
-        name: "product_aggregates".to_string(),
-        pattern: "products.aggregates.*".to_string(),
-        handler: "aggregate_processor".to_string(),
-        priority: 5,
-        metadata: HashMap::new(),
-    }).await?;
+    // Create search views from profiles
+    let users = vec![
+        UserProfile::new(
+            "bob_smith".to_string(),
+            "bob@example.com".to_string(),
+            "Bob Smith".to_string(),
+        ),
+        UserProfile::new(
+            "carol_jones".to_string(),
+            "carol@example.com".to_string(),
+            "Carol Jones".to_string(),
+        ),
+        UserProfile::new(
+            "dave_wilson".to_string(),
+            "dave@example.com".to_string(),
+            "Dave Wilson".to_string(),
+        ),
+    ];
     
-    let stats = router.get_stats().await;
-    println!("   ✓ Router configured");
-    println!("   → Total routes: {}", stats.total_routes);
-    println!("   → Strategy: {:?}\n", stats.strategy);
+    // Insert into read model
+    for user_profile in &users {
+        let view = UserSearchView::from(user_profile);
+        read_model.insert(view.user_id.clone(), view);
+    }
     
-    // 9. Schema migration
-    println!("9. Demonstrating schema migration...");
+    println!("   ✓ Inserted {} users into read model", users.len());
     
-    let current_version = SchemaVersion::new(1, 0, 0);
-    let target_version = SchemaVersion::new(1, 1, 0);
+    // Query all users
+    let all_users = read_model.all();
+    println!("\n   All users:");
+    for user_view in &all_users {
+        println!("     - {} ({})", user_view.full_name, user_view.username);
+    }
     
-    let mut migration_runner = MigrationRunner::new(current_version);
+    // Get specific user
+    if let Some(first_user) = users.first() {
+        if let Some(found) = read_model.get(&first_user.id.to_string()) {
+            println!("\n   ✓ Found user by ID: {}", found.username);
+        }
+    }
     
-    println!("   → Current version: {}", migration_runner.current_version());
-    println!("   → Target version: {}", target_version);
-    println!("   → Migration path would be calculated here\n");
+    // Example 3: Working with metadata
+    println!("\n3. Aggregate Metadata...");
     
-    // 10. Content-addressed storage with IPLD
-    println!("10. Using IPLD for content addressing...");
+    // Create another profile
+    let user3 = UserProfile::new(
+        "eve_brown".to_string(),
+        "eve@example.com".to_string(),
+        "Eve Brown".to_string(),
+    );
     
-    let mut serializer = IpldSerializer::new();
+    // Save to another bucket
+    let temp_repo = NatsKvRepositoryBuilder::new()
+        .client(client)
+        .bucket_name("temp_profiles".to_string())
+        .build()
+        .await?;
     
-    // Add product to content chain
-    let product_data = serde_json::to_vec(&product)?;
-    let cid = serializer.add_to_chain(
-        "product-history",
-        product_data,
-        HashMap::from([
-            ("version".to_string(), "2".to_string()),
-            ("type".to_string(), "product".to_string()),
-        ]),
-    )?;
+    let temp_metadata = temp_repo.save(&user3).await?;
+    println!("   ✓ Saved to temp bucket");
+    println!("     Subject: {}", temp_metadata.subject);
     
-    println!("   ✓ Product added to IPLD chain");
-    println!("   → CID: {}", cid);
-    println!("   → Chain verified: {}\n", serializer.verify_chain("product-history")?);
+    // Example 4: Batch operations
+    println!("\n4. Batch Operations...");
     
-    println!("✅ Persistence example completed successfully!");
-    println!("\nThe persistence layer provides:");
-    println!("  • NATS JetStream for event and aggregate storage");
-    println!("  • NATS KV for read model persistence");
-    println!("  • Subject-based routing and indexing");
-    println!("  • Query optimization with patterns");
-    println!("  • Content-addressed storage with IPLD");
-    println!("  • Schema migration support");
+    let batch_users = vec![
+        UserProfile::new("user1".to_string(), "user1@test.com".to_string(), "User One".to_string()),
+        UserProfile::new("user2".to_string(), "user2@test.com".to_string(), "User Two".to_string()),
+        UserProfile::new("user3".to_string(), "user3@test.com".to_string(), "User Three".to_string()),
+    ];
+    
+    println!("   Saving {} users...", batch_users.len());
+    for batch_user in &batch_users {
+        nats_repo.save(batch_user).await?;
+    }
+    println!("   ✓ Batch save complete");
+    
+    // Verify all saved
+    let mut found_count = 0;
+    for batch_user in &batch_users {
+        if nats_repo.exists(&batch_user.id).await? {
+            found_count += 1;
+        }
+    }
+    println!("   ✓ Verified {} users saved", found_count);
+    
+    println!("\n✅ Example completed successfully!");
+    println!("\nThis demonstrates:");
+    println!("  • NATS KV repository for durable persistence");
+    println!("  • Read model storage for queries");
+    println!("  • Aggregate metadata and versioning");
+    println!("  • TTL-based expiration");
+    println!("  • Batch operations");
     
     Ok(())
-}
+} 
