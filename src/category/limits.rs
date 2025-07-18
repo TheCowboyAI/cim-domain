@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Limits and colimits for domain composition
 //!
 //! Limits and colimits provide universal constructions for combining

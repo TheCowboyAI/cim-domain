@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Bridge between domain events and component events
 //!
 //! This module ensures that when domain events occur that affect components,

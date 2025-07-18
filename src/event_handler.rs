@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Generic event handler trait for domain events
 
 use async_trait::async_trait;

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Basic state machine example demonstrating category theory-based state transitions
 //!
 //! This example shows:

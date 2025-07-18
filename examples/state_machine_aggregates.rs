@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Example: State Machine Aggregates with Isomorphic Components
 //!
 //! This example demonstrates how to use state machines with isomorphic components

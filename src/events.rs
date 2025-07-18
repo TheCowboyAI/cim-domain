@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain events for CIM
 //!
 //! Events represent facts that have occurred in the domain. They are immutable

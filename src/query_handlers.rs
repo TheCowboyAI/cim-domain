@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Query handlers for CIM domain aggregates
 //!
 //! Query handlers process queries and return data from read models/projections.

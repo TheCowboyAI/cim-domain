@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Tests for infrastructure components
 
 use super::*;
@@ -77,7 +79,7 @@ impl EventStore for MockEventStore {
         }
 
         let mut event_map = self.events.write().await;
-        let aggregate_events = event_map.entry(aggregate_id.to_string()).or_insert_with(Vec::new);
+        let aggregate_events = event_map.entry(aggregate_id.to_string()).or_default();
 
         let mut new_version = current_version;
         for event in events {
@@ -108,7 +110,7 @@ impl EventStore for MockEventStore {
 
         let filtered: Vec<_> = aggregate_events
             .into_iter()
-            .filter(|e| from_version.map_or(true, |v| e.sequence > v))
+            .filter(|e| from_version.is_none_or(|v| e.sequence > v))
             .collect();
 
         Ok(filtered)
@@ -519,7 +521,7 @@ mod cid_chain_tests {
 
         // Create second event with CID
         let event_with_cid2 = create_event_with_cid(event2, Some(&event_with_cid1)).unwrap();
-        assert_eq!(event_with_cid2.previous_cid, Some(event_with_cid1.cid.clone()));
+        assert_eq!(event_with_cid2.previous_cid, Some(event_with_cid1.cid));
 
         // Verify chain
         let chain = vec![event_with_cid1, event_with_cid2];

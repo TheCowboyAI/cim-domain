@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Simplified repository implementation for NATS persistence
 
 use crate::{

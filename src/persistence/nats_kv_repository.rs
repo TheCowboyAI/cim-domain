@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! NATS KV-based repository implementation with proper type handling
 
 use crate::{

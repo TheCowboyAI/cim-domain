@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! # CQRS (Command Query Responsibility Segregation) Pattern
 //!
 //! This module provides the foundational types and traits for implementing CQRS

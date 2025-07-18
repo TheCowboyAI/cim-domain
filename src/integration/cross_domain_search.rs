@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Cross-domain semantic search using category theory bridges
 //!
 //! This module implements semantic search across multiple domains by leveraging
@@ -249,11 +251,8 @@ impl CrossDomainSearchEngine {
     }
     
     /// Create a new cross-domain search engine with default config
-    pub fn new() -> Self {
-        Self::with_config(
-            Arc::new(EventBridge::new(Default::default())),
-            SearchConfig::default()
-        )
+    pub fn new(event_bridge: Arc<EventBridge>, config: SearchConfig) -> Self {
+        Self::with_config(event_bridge, config)
     }
     
     /// Register a domain with its semantic analyzer
@@ -714,8 +713,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_cross_domain_search() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         // Register test domains
         let sales_domain = DomainCategory::new("Sales".to_string());
@@ -805,8 +806,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_register_domain_duplicate() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         let domain = DomainCategory::new("TestDomain".to_string());
         let analyzer = Arc::new(SemanticAnalyzer::new());
@@ -825,8 +828,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_compute_query_vector() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         // Test with no domains registered
         let vector = engine.compute_query_vector("test query", None).await.unwrap();
@@ -844,8 +849,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_search_with_specific_domains() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         // Register multiple domains
         for domain_name in &["Domain1", "Domain2", "Domain3"] {
@@ -880,8 +887,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_search_invalid_domain() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         let query = CrossDomainQuery {
             query: "test".to_string(),
@@ -901,8 +910,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_search_with_config_overrides() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         // Register domain with many concepts
         let domain = DomainCategory::new("TestDomain".to_string());
@@ -946,8 +957,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_deduplicate_relationships() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         let relationships = vec![
             DomainRelationship {
@@ -988,8 +1001,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_aggregate_concepts() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         // Register two domains
         let domain1 = DomainCategory::new("Domain1".to_string());
@@ -1034,7 +1049,7 @@ mod tests {
         let aggregated = engine.aggregate_concepts(&domain_results).await.unwrap();
         
         // Should aggregate similar concepts
-        assert!(aggregated.len() >= 1);
+        assert!(!aggregated.is_empty());
         let agg = &aggregated[0];
         assert_eq!(agg.domains.len(), 2);
         assert!(agg.variations.contains_key("Domain1"));
@@ -1097,8 +1112,10 @@ mod tests {
     
     #[tokio::test]
     async fn test_empty_search_results() {
-        let event_bridge = Arc::new(EventBridge::new(Default::default()));
-        let engine = CrossDomainSearchEngine::new(event_bridge, SearchConfig::default());
+        let engine = CrossDomainSearchEngine::new(
+            Arc::new(EventBridge::new(Default::default())),
+            SearchConfig::default()
+        );
         
         // Register domain without concepts
         let domain = DomainCategory::new("EmptyDomain".to_string());

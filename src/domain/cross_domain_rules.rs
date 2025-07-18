@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Cross-domain business rules
 //!
 //! Rules that span multiple domains and must be enforced consistently

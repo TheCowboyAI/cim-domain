@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Integration tests for JetStreamEventStore
 //!
 //! These tests require a running NATS server with JetStream enabled.

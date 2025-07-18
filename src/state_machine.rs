@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! State Machine implementation for domain aggregates
 //!
 //! This module provides both Mealy and Moore state machines for managing

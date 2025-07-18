@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Dependency injection for domain instantiation
 //!
 //! This module provides dependency injection capabilities for

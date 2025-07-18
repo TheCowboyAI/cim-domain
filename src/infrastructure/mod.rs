@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Infrastructure layer for cim-domain
 //!
 //! This module contains all infrastructure concerns including:

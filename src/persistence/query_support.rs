@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Query support for persistence layer
 
 use serde::{Deserialize, Serialize};

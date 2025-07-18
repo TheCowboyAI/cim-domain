@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! IPLD serialization for content-addressed storage
 
 use async_trait::async_trait;
@@ -82,7 +84,7 @@ impl IpldSerializer {
         _metadata: HashMap<String, String>,
     ) -> Result<Cid, SerializationError> {
         let chain = self.chains.entry(chain_id.to_string())
-            .or_insert_with(Vec::new);
+            .or_default();
         
         // Calculate CID (simplified)
         let cid = Cid::default();

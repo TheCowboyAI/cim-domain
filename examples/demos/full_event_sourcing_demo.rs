@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Full Event Sourcing Demo - CIM Architecture
 //!
 //! This demo shows event sourcing concepts including:

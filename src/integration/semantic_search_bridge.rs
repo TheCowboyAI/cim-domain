@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Bridge between cross-domain search and agent domain semantic search
 //!
 //! This module provides adapters to connect the category theory-based

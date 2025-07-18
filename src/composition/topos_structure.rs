@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Topos structure for domain composition
 //!
 //! A topos provides internal logic and comprehension principles for

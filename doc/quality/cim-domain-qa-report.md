@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # CIM Domain QA Report
 
 **Date**: 2025-01-09

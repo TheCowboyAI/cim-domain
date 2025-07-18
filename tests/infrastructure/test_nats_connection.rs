@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Infrastructure Layer 1.1: NATS JetStream Connection Tests for cim-domain
 //! 
 //! User Story: As a domain core, I need to connect to NATS JetStream for event persistence

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Integration tests for the persistence layer
 
 use cim_domain::{

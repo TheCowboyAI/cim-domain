@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Infrastructure Layer 1.2: Event Store Tests for cim-domain
 //! 
 //! User Story: As a domain aggregate, I need to persist events with CID chains for integrity

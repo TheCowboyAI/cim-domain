@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Integration tests for persistence layer with real NATS server
 //!
 //! These tests require a running NATS server with JetStream enabled:

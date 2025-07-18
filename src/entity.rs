@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Entity types with identity and lifecycle
 
 use serde::{Deserialize, Serialize};
@@ -537,7 +539,7 @@ mod tests {
         let query_id = EntityId::<QueryMarker>::new();
 
         // All should have unique UUIDs
-        let uuids = vec![
+        let uuids = [
             graph_id.as_uuid(),
             aggregate_id.as_uuid(),
             context_id.as_uuid(),

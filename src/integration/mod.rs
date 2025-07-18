@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Integration module for dependency injection and cross-domain bridges
 //!
 //! This module provides the infrastructure for integrating domains

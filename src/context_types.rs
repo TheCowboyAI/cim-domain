@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Context types for bounded contexts and other domain boundaries
 
 use serde::{Deserialize, Serialize};

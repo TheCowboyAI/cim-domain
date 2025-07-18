@@ -11,202 +11,107 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Cache cargo index
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Cache cargo build
-        uses: actions/cache@v3
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Check
-        run: cargo check --all-features
-
   test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    services:
-      nats:
-        image: nats:latest
-        ports:
-          - 4222:4222
-        options: --health-cmd "nc -z localhost 4222" --health-interval 10s --health-timeout 5s --health-retries 5
-        
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, beta]
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Enable NATS JetStream
-        run: |
-          # Wait for NATS to be ready
-          sleep 5
-          # Enable JetStream
-          docker exec ${{ job.services.nats.id }} nats-server -js
-          
-      - name: Run tests
-        run: cargo test --all-features
-        
-      - name: Run doc tests
-        run: cargo test --doc --all-features
-
-  integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    services:
-      nats:
-        image: nats:latest
-        ports:
-          - 4222:4222
-        options: -v ${{ github.workspace }}/nats.conf:/nats.conf --entrypoint "nats-server -c /nats.conf"
-        
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Create NATS config
-        run: |
-          cat > nats.conf << EOF
-          port: 4222
-          jetstream: enabled
-          jetstream {
-            store_dir: /data
-            max_mem: 1G
-            max_file: 10G
-          }
-          EOF
-          
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Run integration tests
-        run: |
-          cargo test --test nats_integration_tests -- --test-threads=1
-          cargo test --test persistence_tests
-
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-          
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-          
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Run clippy
-        run: cargo clippy --all-features -- -D warnings
-
-  examples:
-    name: Build Examples
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Build all examples
-        run: |
-          cargo build --examples
-          # List all examples
-          ls -la target/debug/examples/
-
-  bench:
-    name: Benchmarks
-    runs-on: ubuntu-latest
-    services:
-      nats:
-        image: nats:latest
-        ports:
-          - 4222:4222
-        options: --entrypoint "nats-server -js"
-        
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Run benchmarks
-        run: cargo bench --no-run
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: rustfmt, clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install NATS Server
+      run: |
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          wget https://github.com/nats-io/nats-server/releases/download/v2.10.7/nats-server-v2.10.7-linux-amd64.tar.gz
+          tar -xzf nats-server-v2.10.7-linux-amd64.tar.gz
+          sudo mv nats-server-v2.10.7-linux-amd64/nats-server /usr/local/bin/
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          brew install nats-server
+        fi
+      shell: bash
+      if: matrix.os != 'windows-latest'
+    
+    - name: Start NATS Server
+      run: nats-server -js &
+      if: matrix.os != 'windows-latest'
+    
+    - name: Check formatting
+      run: cargo fmt -- --check
+    
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+    
+    - name: Build
+      run: cargo build --verbose
+    
+    - name: Run tests
+      run: cargo test --verbose
+      if: matrix.os != 'windows-latest'
+    
+    - name: Run tests (without integration)
+      run: cargo test --verbose --lib
+      if: matrix.os == 'windows-latest'
 
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    services:
-      nats:
-        image: nats:latest
-        ports:
-          - 4222:4222
-        options: --entrypoint "nats-server -js"
-        
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
-        
-      - name: Run coverage
-        run: cargo tarpaulin --out Xml --all-features --timeout 120
-        
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./cobertura.xml
-          fail_ci_if_error: false
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Install tarpaulin
+      run: cargo install cargo-tarpaulin
+    
+    - name: Install NATS Server
+      run: |
+        wget https://github.com/nats-io/nats-server/releases/download/v2.10.7/nats-server-v2.10.7-linux-amd64.tar.gz
+        tar -xzf nats-server-v2.10.7-linux-amd64.tar.gz
+        sudo mv nats-server-v2.10.7-linux-amd64/nats-server /usr/local/bin/
+    
+    - name: Start NATS Server
+      run: nats-server -js &
+    
+    - name: Generate coverage
+      run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out Xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./cobertura.xml
+
+  security_audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: rustsec/audit-check@v1.4.1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}

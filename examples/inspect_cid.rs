@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Utility to inspect CID details
 
 use cid::Cid;

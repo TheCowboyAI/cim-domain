@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain bridge for cross-domain communication
 //!
 //! This module implements the bridge pattern for connecting

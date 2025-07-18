@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # Correlation and Causation Design in CIM
 
 ## Overview

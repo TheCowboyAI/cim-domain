@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain categories - representing domains as categories
 //!
 //! Each domain in CIM is modeled as a category where:

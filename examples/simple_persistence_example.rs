@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Simple example demonstrating basic persistence with NATS JetStream
 //!
 //! This example shows how to:

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! NATS client for event store integration
 
 use async_nats::{Client, ConnectOptions};

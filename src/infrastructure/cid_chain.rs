@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! CID chain implementation for event integrity using cim-ipld
 
 use crate::domain_events::DomainEventEnum;

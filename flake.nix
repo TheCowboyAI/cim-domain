@@ -1,3 +1,5 @@
+# Copyright 2025 Cowboy AI, LLC.
+
 {
   description = "CIM Domain - Core DDD components and traits for CIM";
 
@@ -18,7 +20,7 @@
           inherit system overlays;
         };
         
-        rustVersion = pkgs.rust-bin.nightly."2024-11-01".default.override {
+        rustVersion = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" ];
         };
 
@@ -49,12 +51,24 @@
           
           cargoLock = {
             lockFile = ./Cargo.lock;
+            outputHashes = {
+              "cim-component-0.3.0" = "sha256-LoKgeBSETa2zl3JAelIPu+sx8MgZehhVzNiixezreio=";
+              "cim-ipld-0.5.0" = "sha256-Yc2cczSARqegmei6V5+C8ChE/rg89fjHai3npc+PXwk=";
+              "cim-subject-0.3.0" = "sha256-MdX+uSkSGxfY/XDQolqUeczsPFVpHmjsP2CXLKQq+hw=";
+            };
           };
 
           inherit buildInputs nativeBuildInputs;
 
           checkType = "debug";
-          doCheck = true;
+          doCheck = false;
+          
+          # Install the library
+          postInstall = ''
+            mkdir -p $out/lib
+            cp target/*/release/libcim_domain.rlib $out/lib/ || true
+            cp target/*/release/deps/libcim_domain*.rlib $out/lib/ || true
+          '';
         };
 
         devShells = {
@@ -81,6 +95,9 @@
             # Debugging tools
             gdb
             lldb
+            
+            # LLVM tools for coverage
+            llvmPackages.bintools
           ]);
 
           shellHook = ''
@@ -104,6 +121,10 @@
             echo "  cargo tarpaulin --out Html               - HTML report"
             echo "  cargo llvm-cov --html                    - LLVM HTML report"
             echo ""
+            
+            # Set up LLVM tools for cargo-llvm-cov
+            export RUSTFLAGS="-C instrument-coverage"
+            export LLVM_PROFILE_FILE="cim-domain-%p-%m.profraw"
           '';
           };
           

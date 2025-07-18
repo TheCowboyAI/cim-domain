@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Semantic analysis for cross-domain understanding
 //!
 //! This module provides semantic analysis capabilities to understand
@@ -570,7 +572,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_semantic_distance() {
-        let mut analyzer = SemanticAnalyzer::new();
+        let analyzer = SemanticAnalyzer::new();
         
         // Add test embeddings
         analyzer.add_embedding(ConceptEmbedding {
@@ -606,7 +608,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_concept_alignment() {
-        let mut analyzer = SemanticAnalyzer::new();
+        let analyzer = SemanticAnalyzer::new();
         
         // Add embeddings from two domains
         analyzer.add_embedding(ConceptEmbedding {

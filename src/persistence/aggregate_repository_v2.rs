@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Simplified aggregate repository implementation that avoids complex type dependencies
 
 use crate::{

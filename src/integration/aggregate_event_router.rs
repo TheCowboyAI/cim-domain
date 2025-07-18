@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 use crate::{
     DomainError,
     events::DomainEvent,
@@ -59,7 +61,7 @@ impl AggregateEventRouter {
         let mut routes = self.routes.write().await;
         routes
             .entry(source_aggregate.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(route);
 
         Ok(())
@@ -136,6 +138,20 @@ impl AggregateEventRouter {
             let parts: Vec<&str> = pattern.split('.').collect();
             let subject_parts: Vec<&str> = subject.split('.').collect();
             
+            // Handle patterns like "Person.*" that should match any Person event
+            if parts.last() == Some(&"*") && parts.len() > 1 {
+                // Check if the prefix matches
+                let prefix_parts = &parts[..parts.len() - 1];
+                if subject_parts.len() >= prefix_parts.len() {
+                    return prefix_parts.iter().zip(subject_parts.iter())
+                        .all(|(pattern_part, subject_part)| {
+                            *pattern_part == "*" || *pattern_part == *subject_part
+                        });
+                }
+                return false;
+            }
+            
+            // Exact segment matching for patterns with wildcards in specific positions
             if parts.len() != subject_parts.len() {
                 return false;
             }
@@ -148,7 +164,8 @@ impl AggregateEventRouter {
             
             true
         } else {
-            pattern == subject || pattern == event_type
+            // Check if pattern matches the subject or any prefix of it
+            subject == pattern || subject.starts_with(&format!("{}.", pattern)) || pattern == event_type
         }
     }
 }

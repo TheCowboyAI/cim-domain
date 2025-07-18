@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Tests for event streams
 
 #[cfg(test)]

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Event stream service implementation
 
 use async_trait::async_trait;

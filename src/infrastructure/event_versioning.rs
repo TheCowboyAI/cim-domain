@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Event versioning and schema evolution support
 //!
 //! This module provides infrastructure for handling event schema changes over time,
@@ -87,7 +89,7 @@ impl EventVersioningService {
     pub fn register_upcaster(&mut self, event_type: String, upcaster: Box<dyn EventUpcaster>) {
         self.upcasters
             .entry(event_type)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(upcaster);
     }
 
@@ -220,7 +222,7 @@ mod tests {
                 let name_value = obj.get("name").and_then(|v| v.as_str()).map(|s| s.to_string());
                 if let Some(name) = name_value {
                     let parts: Vec<&str> = name.split_whitespace().collect();
-                    obj.insert("first_name".to_string(), json!(parts.get(0).unwrap_or(&"")));
+                    obj.insert("first_name".to_string(), json!(parts.first().unwrap_or(&"")));
                     obj.insert("last_name".to_string(), json!(parts.get(1).unwrap_or(&"")));
                     obj.remove("name");
                 }
@@ -242,5 +244,258 @@ mod tests {
         assert_eq!(result["last_name"], "Doe");
         assert_eq!(result["email"], "john@example.com");
         assert!(result.get("name").is_none());
+    }
+    
+    #[test]
+    fn test_event_versioning_service_new() {
+        let service = EventVersioningService::new();
+        assert!(service.event_metadata.is_empty());
+        assert!(service.upcasters.is_empty());
+    }
+    
+    #[test]
+    fn test_register_event_type() {
+        let mut service = EventVersioningService::new();
+        
+        service.register_event_type("OrderCreated".to_string(), 3);
+        service.register_event_type("OrderUpdated".to_string(), 2);
+        
+        assert_eq!(service.event_metadata.len(), 2);
+        assert_eq!(service.get_current_version("OrderCreated"), Some(3));
+        assert_eq!(service.get_current_version("OrderUpdated"), Some(2));
+        assert_eq!(service.get_current_version("NonExistent"), None);
+    }
+    
+    #[test]
+    fn test_register_upcaster() {
+        let mut service = EventVersioningService::new();
+        
+        let upcaster1 = SimpleUpcaster::new(1, 2, |data| Ok(data.clone()));
+        let upcaster2 = SimpleUpcaster::new(2, 3, |data| Ok(data.clone()));
+        
+        service.register_upcaster("TestEvent".to_string(), Box::new(upcaster1));
+        service.register_upcaster("TestEvent".to_string(), Box::new(upcaster2));
+        
+        assert_eq!(service.upcasters.len(), 1);
+        assert_eq!(service.upcasters.get("TestEvent").unwrap().len(), 2);
+    }
+    
+    #[test]
+    fn test_upcast_event_same_version() {
+        let mut service = EventVersioningService::new();
+        service.register_event_type("TestEvent".to_string(), 1);
+        
+        let event_data = json!({"field": "value"});
+        let result = service.upcast_event("TestEvent", event_data.clone(), 1).unwrap();
+        
+        assert_eq!(result, event_data);
+    }
+    
+    #[test]
+    fn test_upcast_event_unknown_type() {
+        let service = EventVersioningService::new();
+        
+        let event_data = json!({"field": "value"});
+        let result = service.upcast_event("UnknownEvent", event_data, 1);
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EventVersioningError::UnknownEventType(event_type) => {
+                assert_eq!(event_type, "UnknownEvent");
+            }
+            _ => panic!("Expected UnknownEventType error"),
+        }
+    }
+    
+    #[test]
+    fn test_upcast_event_no_upcaster() {
+        let mut service = EventVersioningService::new();
+        service.register_event_type("TestEvent".to_string(), 3);
+        
+        let event_data = json!({"field": "value"});
+        let result = service.upcast_event("TestEvent", event_data, 1);
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EventVersioningError::NoUpcaster { from, to } => {
+                assert_eq!(from, 1);
+                assert_eq!(to, 3);
+            }
+            _ => panic!("Expected NoUpcaster error"),
+        }
+    }
+    
+    #[test]
+    fn test_upcast_event_missing_intermediate_upcaster() {
+        let mut service = EventVersioningService::new();
+        service.register_event_type("TestEvent".to_string(), 3);
+        
+        // Only register upcaster from v1 to v2, missing v2 to v3
+        let upcaster = SimpleUpcaster::new(1, 2, |data| Ok(data.clone()));
+        service.register_upcaster("TestEvent".to_string(), Box::new(upcaster));
+        
+        let event_data = json!({"field": "value"});
+        let result = service.upcast_event("TestEvent", event_data, 1);
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EventVersioningError::NoUpcaster { from, to } => {
+                assert_eq!(from, 2);
+                assert_eq!(to, 3);
+            }
+            _ => panic!("Expected NoUpcaster error"),
+        }
+    }
+    
+    #[test]
+    fn test_upcast_event_chain() {
+        let mut service = EventVersioningService::new();
+        service.register_event_type("TestEvent".to_string(), 3);
+        
+        // v1 to v2: add "version" field
+        let upcaster_v1_to_v2 = SimpleUpcaster::new(1, 2, |data| {
+            let mut new_data = data.clone();
+            if let Some(obj) = new_data.as_object_mut() {
+                obj.insert("version".to_string(), json!(2));
+            }
+            Ok(new_data)
+        });
+        
+        // v2 to v3: add "upgraded" field
+        let upcaster_v2_to_v3 = SimpleUpcaster::new(2, 3, |data| {
+            let mut new_data = data.clone();
+            if let Some(obj) = new_data.as_object_mut() {
+                obj.insert("upgraded".to_string(), json!(true));
+            }
+            Ok(new_data)
+        });
+        
+        service.register_upcaster("TestEvent".to_string(), Box::new(upcaster_v1_to_v2));
+        service.register_upcaster("TestEvent".to_string(), Box::new(upcaster_v2_to_v3));
+        
+        let old_event = json!({"id": "123"});
+        let result = service.upcast_event("TestEvent", old_event, 1).unwrap();
+        
+        assert_eq!(result["id"], "123");
+        assert_eq!(result["version"], 2);
+        assert_eq!(result["upgraded"], true);
+    }
+    
+    #[test]
+    fn test_upcaster_error_propagation() {
+        let mut service = EventVersioningService::new();
+        service.register_event_type("TestEvent".to_string(), 2);
+        
+        let failing_upcaster = SimpleUpcaster::new(1, 2, |_| {
+            Err(EventVersioningError::UpcastingFailed("Test error".to_string()))
+        });
+        
+        service.register_upcaster("TestEvent".to_string(), Box::new(failing_upcaster));
+        
+        let event_data = json!({"field": "value"});
+        let result = service.upcast_event("TestEvent", event_data, 1);
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            EventVersioningError::UpcastingFailed(msg) => {
+                assert_eq!(msg, "Test error");
+            }
+            _ => panic!("Expected UpcastingFailed error"),
+        }
+    }
+    
+    #[test]
+    fn test_event_versioning_error_display() {
+        let unknown = EventVersioningError::UnknownEventType("TestEvent".to_string());
+        assert_eq!(unknown.to_string(), "Unknown event type: TestEvent");
+        
+        let no_upcaster = EventVersioningError::NoUpcaster { from: 1, to: 3 };
+        assert_eq!(no_upcaster.to_string(), "No upcaster registered for version 1 to 3");
+        
+        let upcasting_failed = EventVersioningError::UpcastingFailed("Parse error".to_string());
+        assert_eq!(upcasting_failed.to_string(), "Upcasting failed: Parse error");
+        
+        let serialization = EventVersioningError::SerializationError("Invalid JSON".to_string());
+        assert_eq!(serialization.to_string(), "Serialization error: Invalid JSON");
+    }
+    
+    #[test]
+    fn test_versioned_event_serialization() {
+        use chrono::Utc;
+        
+        let event = VersionedEvent {
+            event_type: "UserCreated".to_string(),
+            version: 2,
+            data: json!({"id": "123", "name": "Test User"}),
+            metadata: EventMetadata {
+                timestamp: Utc::now(),
+                correlation_id: Some("corr-123".to_string()),
+                causation_id: Some("cause-456".to_string()),
+                user_id: Some("user-789".to_string()),
+                source: Some("api".to_string()),
+            },
+        };
+        
+        // Test serialization
+        let serialized = serde_json::to_string(&event).unwrap();
+        let deserialized: VersionedEvent = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(deserialized.event_type, event.event_type);
+        assert_eq!(deserialized.version, event.version);
+        assert_eq!(deserialized.data, event.data);
+        assert_eq!(deserialized.metadata.correlation_id, event.metadata.correlation_id);
+    }
+    
+    #[test]
+    fn test_event_metadata_optional_fields() {
+        use chrono::Utc;
+        
+        let metadata = EventMetadata {
+            timestamp: Utc::now(),
+            correlation_id: None,
+            causation_id: None,
+            user_id: None,
+            source: None,
+        };
+        
+        // All optional fields should be None
+        assert!(metadata.correlation_id.is_none());
+        assert!(metadata.causation_id.is_none());
+        assert!(metadata.user_id.is_none());
+        assert!(metadata.source.is_none());
+    }
+    
+    #[test]
+    fn test_simple_upcaster_trait_implementation() {
+        let upcaster = SimpleUpcaster::new(5, 6, |data| {
+            let mut new_data = data.clone();
+            if let Some(obj) = new_data.as_object_mut() {
+                obj.insert("test".to_string(), json!("added"));
+            }
+            Ok(new_data)
+        });
+        
+        assert_eq!(upcaster.from_version(), 5);
+        assert_eq!(upcaster.to_version(), 6);
+        
+        let input = json!({"existing": "value"});
+        let output = upcaster.upcast(&input).unwrap();
+        
+        assert_eq!(output["existing"], "value");
+        assert_eq!(output["test"], "added");
+    }
+    
+    #[test]
+    fn test_event_type_metadata_clone() {
+        let metadata = EventTypeMetadata {
+            event_type: "TestEvent".to_string(),
+            current_version: 3,
+            schema_version: 2,
+        };
+        
+        let cloned = metadata.clone();
+        assert_eq!(cloned.event_type, metadata.event_type);
+        assert_eq!(cloned.current_version, metadata.current_version);
+        assert_eq!(cloned.schema_version, metadata.schema_version);
     }
 }

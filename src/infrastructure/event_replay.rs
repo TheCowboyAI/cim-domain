@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Event replay service for rebuilding aggregates and projections
 
 use crate::infrastructure::{EventStore, EventStoreError, StoredEvent};
@@ -147,7 +149,7 @@ impl AggregateEventProcessor for GenericAggregateProcessor {
         // Store event for the aggregate
         self.aggregates
             .entry(aggregate_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(event.clone());
         
         Ok(())

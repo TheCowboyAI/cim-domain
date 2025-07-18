@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Composition types for building complex domain structures
 
 use serde::{Deserialize, Serialize};

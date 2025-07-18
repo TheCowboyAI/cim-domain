@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Saga orchestration for cross-domain workflows
 //!
 //! Sagas represent long-running transactions that span multiple domains.

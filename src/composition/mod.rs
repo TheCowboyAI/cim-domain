@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Composition module for combining domains using category theory
 //!
 //! This module provides the mechanisms for composing multiple domains

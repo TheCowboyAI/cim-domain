@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Projection checkpoint storage for fault-tolerant event processing
 //!
 //! This module provides checkpoint storage to track projection progress,

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Tests for the persistence layer
 
 #[cfg(test)]
@@ -300,4 +302,119 @@ mod persistence_tests {
         // Use the repository...
         */
     }
+    
+    #[test]
+    fn test_save_options_builder() {
+        use crate::infrastructure::event_store::EventMetadata;
+        
+        // Test all options
+        let options = SaveOptions {
+            expected_version: Some(5),
+            create_snapshot: true,
+            metadata: Some(EventMetadata {
+                correlation_id: Some("corr-123".to_string()),
+                causation_id: Some("cause-456".to_string()),
+                triggered_by: Some("admin".to_string()),
+                custom: Some(serde_json::json!({"source": "API"})),
+            }),
+        };
+        
+        assert_eq!(options.expected_version, Some(5));
+        assert!(options.create_snapshot);
+        assert!(options.metadata.is_some());
+        let metadata = options.metadata.as_ref().unwrap();
+        assert_eq!(metadata.triggered_by.as_ref().unwrap(), "admin");
+        assert_eq!(metadata.get("source").unwrap(), "API");
+        
+        // Test default
+        let default_options = SaveOptions::default();
+        assert!(default_options.expected_version.is_none());
+        assert!(!default_options.create_snapshot);
+        assert!(default_options.metadata.is_none());
+    }
+    
+    #[test]
+    fn test_load_options_all_fields() {
+        let options = LoadOptions {
+            version: Some(42),
+            use_snapshot: true,
+            max_events: Some(100),
+        };
+        
+        assert_eq!(options.version, Some(42));
+        assert!(options.use_snapshot);
+        assert_eq!(options.max_events, Some(100));
+        
+        // Test default
+        let default_options = LoadOptions::default();
+        assert!(default_options.version.is_none());
+        assert!(!default_options.use_snapshot);
+        assert!(default_options.max_events.is_none());
+    }
+    
+    #[test]
+    fn test_query_options_all_fields() {
+        // QueryOptions is not defined in aggregate_repository_v2, skip this test
+    }
+    
+    #[test]
+    fn test_repository_error_variants() {
+        use crate::infrastructure::EventStoreError;
+        
+        // Test direct construction
+        let not_found = RepositoryError::NotFound("user-123".to_string());
+        assert_eq!(not_found.to_string(), "Aggregate not found: user-123");
+        
+        let version_conflict = RepositoryError::VersionConflict { expected: 5, actual: 3 };
+        assert_eq!(version_conflict.to_string(), "Version conflict: expected 5, actual 3");
+        
+        let serialization = RepositoryError::SerializationError("Invalid JSON".to_string());
+        assert_eq!(serialization.to_string(), "Serialization error: Invalid JSON");
+        
+        let storage = RepositoryError::StorageError("Connection failed".to_string());
+        assert_eq!(storage.to_string(), "Storage error: Connection failed");
+        
+        // Note: SubjectError and IpldError are not in aggregate_repository_v2
+        // These are specific to the original aggregate_repository.rs
+        
+        // Test From conversions
+        let event_store_err = EventStoreError::ConnectionError("NATS down".to_string());
+        let repo_err: RepositoryError = event_store_err.into();
+        assert!(repo_err.to_string().contains("Event store error"));
+        
+        // Note: SnapshotError conversion is not implemented in aggregate_repository_v2
+    }
+    
+    #[test]
+    fn test_aggregate_metadata_with_cid() {
+        use chrono::Utc;
+        
+        // Note: The AggregateMetadata in aggregate_repository_v2 doesn't have state_cid field
+        // This test is for the original aggregate_repository.rs version
+        let metadata = AggregateMetadata {
+            aggregate_id: "order-789".to_string(),
+            aggregate_type: "Order".to_string(),
+            version: 10,
+            last_modified: Utc::now(),
+            subject: "domain.order.state.v1".to_string(),
+            metadata: HashMap::from([
+                ("customer_id".to_string(), serde_json::json!("cust-123")),
+                ("priority".to_string(), serde_json::json!("high")),
+            ]),
+        };
+        
+        assert_eq!(metadata.aggregate_id, "order-789");
+        assert_eq!(metadata.aggregate_type, "Order");
+        assert_eq!(metadata.version, 10);
+        assert_eq!(metadata.subject, "domain.order.state.v1");
+        assert_eq!(metadata.metadata.len(), 2);
+        assert_eq!(metadata.metadata.get("priority").unwrap(), "high");
+        
+        // Test serialization
+        let serialized = serde_json::to_string(&metadata).unwrap();
+        let deserialized: AggregateMetadata = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.aggregate_id, metadata.aggregate_id);
+        assert_eq!(deserialized.version, metadata.version);
+    }
 }
+

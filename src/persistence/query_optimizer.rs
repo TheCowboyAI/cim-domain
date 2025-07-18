@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Query optimization using NATS subject-based routing and indexing
 
 use crate::DomainError;

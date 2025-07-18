@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # CIM Domain Demos
 
 This directory contains comprehensive demonstrations of the CIM Domain library's capabilities. Each demo showcases different aspects of the event-sourced, domain-driven architecture.

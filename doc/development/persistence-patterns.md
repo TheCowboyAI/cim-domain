@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # Persistence Patterns in CIM Domain
 
 This guide covers the persistence patterns and best practices for using the CIM Domain persistence layer with NATS JetStream.

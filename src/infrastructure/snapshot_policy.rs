@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Automatic snapshot policies for performance optimization
 //!
 //! This module provides configurable policies for automatically creating

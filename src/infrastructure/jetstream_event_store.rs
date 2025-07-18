@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! JetStream-based event store implementation
 
 use crate::domain_events::DomainEventEnum;
@@ -348,7 +350,7 @@ impl EventStore for JetStreamEventStore {
         }
 
         // Update event chain cache
-        if true && !event_chain.is_empty() {
+        if !event_chain.is_empty() {
             let mut chains = self.event_chains.write().await;
             chains.insert(aggregate_id.to_string(), event_chain);
         }

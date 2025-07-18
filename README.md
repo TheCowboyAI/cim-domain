@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # CIM Domain
 
 [![CI](https://github.com/thecowboyai/cim-domain/actions/workflows/ci.yml/badge.svg)](https://github.com/thecowboyai/cim-domain/actions/workflows/ci.yml)

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Schema migration support for persistence layer
 
 use async_trait::async_trait;

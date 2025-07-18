@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Event Stream Example - CIM Architecture
 //!
 //! This example demonstrates event streaming patterns in CIM's production-ready
@@ -58,7 +60,7 @@ impl EventStreamProcessor {
         let mut stored_events = Vec::new();
         
         for (i, event) in events.iter().enumerate() {
-            println!("\n📌 Event {i + 1}: {event_type_name(event}"));
+            println!("\n📌 Event {}: {}", i + 1, event_type_name(event)));
             
             // Store event with CID chain
             let stored = self.event_store
@@ -67,11 +69,9 @@ impl EventStreamProcessor {
             
             // Verify CID chain
             if let Some(prev) = &previous_cid {
-                println!("   CID Chain: {&prev[..8]} → {&stored.event_cid(}").unwrap_or_default()[..8]
-                );
+                println!("   CID Chain: {} → {}", &prev[..8], &stored.event_cid().unwrap_or_default()[..8]);
             } else {
-                println!("   CID Chain: Genesis → {&stored.event_cid(}").unwrap_or_default()[..8]
-                );
+                println!("   CID Chain: Genesis → {}", &stored.event_cid().unwrap_or_default()[..8]);
             }
             
             previous_cid = stored.event_cid();
@@ -103,10 +103,10 @@ impl EventStreamProcessor {
             .filter(|e| e.timestamp() > from_time)
             .collect();
         
-        println!("   Found {replayed.len(} events to replay"));
+        println!("   Found {} events to replay", replayed.len()));
         
         for (i, event) in replayed.iter().enumerate() {
-            println!("   {i + 1}. {event.event_type(} at {}"),
+            println!("   {}. {} at {}", i + 1, event.event_type(), event.stored_at),
                 event.timestamp().format("%H:%M:%S")
             );
         }
@@ -136,7 +136,7 @@ impl EventStreamProcessor {
         // Sort by timestamp
         correlated_events.sort_by_key(|e| e.timestamp());
         
-        println!("   Found {correlated_events.len(} correlated events"));
+        println!("   Found {} correlated events", correlated_events.len()));
         Ok(correlated_events)
     }
     
@@ -172,7 +172,7 @@ impl EventStreamProcessor {
             }
         }
         
-        println!("   Tree contains {tree.size(} events"));
+        println!("   Tree contains {} events", tree.size()));
         Ok(tree)
     }
 }
@@ -222,7 +222,7 @@ impl CausationTree {
     fn print(&self, id: &str, depth: usize) {
         if let Some(node) = self.nodes.get(id) {
             let indent = "  ".repeat(depth);
-            println!("{indent}├─ {&node.event_id[..8]} ({node.event_type})");
+            println!("{}├─ {} ({})", indent, &node.event_id[..8], node.event_type);
             
             for child in &node.children {
                 self.print(child, depth + 1);
@@ -348,15 +348,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let replay_from = Utc::now() - chrono::Duration::seconds(5);
     let replayed = processor.replay_from_timestamp(&workflow_id.to_string(), replay_from).await?;
-    println!("   Replayed {replayed.len(} events"));
+    println!("   Replayed {} events", replayed.len()));
     
     // Example 3: Correlation chain
     println!("\n=== Example 3: Correlation Chain ===");
     
     let correlated = processor.find_correlation_chain(&correlation_id).await?;
-    println!("   Chain contains {correlated.len(} events:"));
+    println!("   Chain contains {} events:", correlated.len()));
     for (i, event) in correlated.iter().enumerate() {
-        println!("     {i + 1}. {event.event_type(} at {}"),
+        println!("     {}. {} at {}", i + 1, event.event_type(), event.stored_at),
             event.timestamp().format("%H:%M:%S")
         );
     }
@@ -401,7 +401,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     println!("\n   Cross-domain flow established:");
     println!("   Workflow Domain → Graph Domain");
-    println!("   (via correlation ID: {&correlation_id.to_string(})")[..8]);
+    println!("   (via correlation ID: {})", &correlation_id.to_string()[..8]);
     
     // Print statistics
     monitor.print_statistics().await;

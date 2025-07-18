@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # CIM Domain Aggregates
 
 This document provides comprehensive documentation of all domain aggregates in the CIM Domain model. Each aggregate represents a core business concept with its own consistency boundary, commands, events, and business rules.

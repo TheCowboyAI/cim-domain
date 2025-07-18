@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain composition using functors and natural transformations
 //!
 //! This module implements the composition of multiple domains into

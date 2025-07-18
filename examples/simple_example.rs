@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Simple example demonstrating core cim-domain functionality
 //!
 //! This example shows:

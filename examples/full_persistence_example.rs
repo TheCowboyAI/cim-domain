@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Comprehensive example demonstrating all persistence features
 //!
 //! This example shows:

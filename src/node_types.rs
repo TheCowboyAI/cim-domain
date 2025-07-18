@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Node types representing DDD concepts
 
 use serde::{Deserialize, Serialize};

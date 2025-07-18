@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Relationship types for edges in domain graphs
 
 use serde::{Deserialize, Serialize};

@@ -1,9 +1,8 @@
+# Copyright 2025 Cowboy AI, LLC.
+
 [workspace]
 members = [
-    ".",
-    "crates/cim-ipld",
-    "crates/cim-subject", 
-    "crates/cim-component"
+    "."
 ]
 resolver = "2"
 
@@ -35,9 +34,9 @@ tokio-stream = "0.1"
 futures = "0.3"
 
 # Domain dependencies
-cim-ipld = { path = "crates/cim-ipld" }
-cim-subject = { path = "crates/cim-subject" }
-cim-component = { path = "crates/cim-component" }
+cim-ipld = { git = "https://github.com/thecowboyai/cim-ipld", version = "0.5" }
+cim-subject = { git = "https://github.com/TheCowboyAI/cim-subject", rev = "4632d7eb68f43adf319b3488e6c4191c54da7868" }
+cim-component = { git = "https://github.com/TheCowboyAI/cim-component", version = "0.3" }
 
 # Content addressing
 cid = { version = "0.11", features = ["serde"] }

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Snapshot store for aggregate state persistence
 
 use async_trait::async_trait;
@@ -97,7 +99,7 @@ impl JetStreamSnapshotStore {
     
     /// Get a snapshot key for an aggregate
     fn get_snapshot_key(aggregate_type: &str, aggregate_id: &str) -> String {
-        format!("{}.{}", aggregate_type, aggregate_id)
+        format!("{aggregate_type}.{aggregate_id}")
     }
 }
 

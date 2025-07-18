@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # Persistence Layer
 
 The persistence layer provides durable storage for CIM Domain using NATS JetStream, with intelligent routing via cim-subject and content addressing through cim-ipld.

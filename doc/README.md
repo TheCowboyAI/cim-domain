@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # CIM Domain Documentation
 
 Welcome to the comprehensive documentation for the CIM Domain - the foundational Domain-Driven Design framework for the Composable Information Machine.

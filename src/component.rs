@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Component storage for attaching data to domain objects
 //!
 //! This module provides storage for components that follow the isomorphic
@@ -401,7 +403,7 @@ mod tests {
         let mut storage = ComponentStorage::new();
 
         // Empty storage
-        let debug_empty = format!("{:?}", storage);
+        let debug_empty = format!("{storage:?}");
         assert!(debug_empty.contains("ComponentStorage"));
         assert!(debug_empty.contains("components: []"));
 
@@ -412,7 +414,7 @@ mod tests {
             value: 42,
         }).unwrap();
 
-        let debug_full = format!("{:?}", storage);
+        let debug_full = format!("{storage:?}");
         assert!(debug_full.contains("ComponentStorage"));
         assert!(debug_full.contains("TestLabel"));
         assert!(debug_full.contains("TestMetadata"));

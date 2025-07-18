@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! # Persistence Layer
 //!
 //! This module provides persistence capabilities for the CIM Domain framework

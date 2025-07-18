@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Identifier types for graphs, nodes, and edges
 
 use serde::{Deserialize, Serialize};

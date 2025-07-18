@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain commands for CIM
 //!
 //! Commands represent requests to change state. They are processed by command handlers
@@ -175,7 +177,7 @@ mod tests {
             value: "debug-value".to_string(),
         };
         
-        let debug_str = format!("{:?}", cmd);
+        let debug_str = format!("{cmd:?}");
         assert!(debug_str.contains("TestCommand"));
         assert!(debug_str.contains("debug-test"));
         assert!(debug_str.contains("debug-value"));

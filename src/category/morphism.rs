@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Morphism abstractions for domain operations
 //!
 //! Morphisms represent structure-preserving transformations between domain objects.

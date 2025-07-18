@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Aggregate repository for persistence using NATS JetStream
 
 use crate::{

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use cim_domain::{
     EntityId,

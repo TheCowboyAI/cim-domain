@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Category theory implementation for domain communication
 //!
 //! This module provides the foundational category theory concepts for

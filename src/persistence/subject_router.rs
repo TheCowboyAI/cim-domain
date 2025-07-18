@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Subject-based routing for persistence layer
 
 use crate::DomainError;

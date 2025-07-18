@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Example demonstrating event replay functionality
 //!
 //! This example shows how to:
@@ -49,7 +51,7 @@ impl ProjectionHandler for OrganizationMembershipProjection {
             DomainEventEnum::OrganizationCreated(e) => {
                 let mut orgs = self.organizations.write().await;
                 orgs.insert(e.organization_id, Vec::new());
-                println!("Created organization: {e.organization_id} - {e.name}");
+                println!("Created organization: {} - {}", e.organization_id, e.name);
             }
             DomainEventEnum::OrganizationMemberAdded(e) => {
                 // Update organization members
@@ -63,7 +65,7 @@ impl ProjectionHandler for OrganizationMembershipProjection {
                 let person_orgs = people.entry(e.person_id).or_insert_with(Vec::new);
                 person_orgs.push(e.organization_id);
 
-                println!("  Added {e.person_id} to organization {e.organization_id} as {e.role.title}");
+                println!("  Added {} to organization {} as {}", e.person_id, e.organization_id, e.role.title);
             }
             _ => {} // Ignore other events
         }
@@ -93,8 +95,12 @@ struct LoggingEventHandler {
 #[async_trait]
 impl EventHandler for LoggingEventHandler {
     async fn handle_event(&mut self, event: &StoredEvent) -> Result<(), ReplayError> {
-        println!("[{event.stored_at}] Event #{event.sequence}: {event.event.event_type(} for aggregate {}"),
-            event.aggregate_id,
+        println!(
+            "[{}] Event #{}: {} for aggregate {}",
+            event.stored_at,
+            event.sequence,
+            event.event.event_type(),
+            event.aggregate_id
         );
 
         self.events_logged += 1;
@@ -108,9 +114,9 @@ impl EventHandler for LoggingEventHandler {
 
     async fn on_replay_complete(&mut self, stats: &ReplayStats) -> Result<(), ReplayError> {
         println!("\n=== Replay completed ===");
-        println!("Events processed: {stats.events_processed}");
-        println!("Errors: {stats.errors}");
-        println!("Duration: {stats.duration_ms}ms");
+        println!("Events processed: {}", stats.events_processed);
+        println!("Errors: {}", stats.errors);
+        println!("Duration: {}ms", stats.duration_ms);
         println!("Events/second: {:.2}", stats.events_per_second);
         Ok(())
     }
@@ -127,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 1: Replay with logging handler
     println!("Example 1: Logging all events");
-    println!("{"-".repeat(50}"));
+    println!("{}", "-".repeat(50));
 
     let mut logging_handler = LoggingEventHandler { events_logged: 0 };
 
@@ -188,7 +194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 2: Build projection
     println!("\n\nExample 2: Building organization membership projection");
-    println!("{"-".repeat(50}"));
+    println!("{}", "-".repeat(50));
 
     let mut projection = OrganizationMembershipProjection::new();
 
@@ -267,7 +273,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nProjection state after replay:");
     let orgs = projection.organizations.read().await;
     for (org_id, members) in orgs.iter() {
-        println!("Organization {org_id}: {members.len(} members"));
+        println!("Organization {}: {} members", org_id, members.len()));
         for member_id in members {
             println!("  - Member: {member_id}");
         }
@@ -276,14 +282,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let people = projection.people.read().await;
     println!("\nPeople memberships:");
     for (person_id, org_ids) in people.iter() {
-        println!("Person {person_id}: member of {org_ids.len(} organizations"));
+        println!("Person {}: member of {} organizations", person_id, org_ids.len()));
     }
 
-    println!("\nTotal events processed by projection: {projection.events_processed}");
+    println!("\nTotal events processed by projection: {}", projection.events_processed);
 
     // Example 3: Replay with filters
     println!("\n\nExample 3: Replay with filters");
-    println!("{"-".repeat(50}"));
+    println!("{}", "-".repeat(50));
 
     let options = ReplayOptions {
         max_events: Some(10),
@@ -296,8 +302,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Replay options:");
     println!("  Max events: {:?}", options.max_events);
-    println!("  Batch size: {options.batch_size}");
-    println!("  Continue on error: {options.continue_on_error}");
+    println!("  Batch size: {}", options.batch_size);
+    println!("  Continue on error: {}", options.continue_on_error);
     println!("  Aggregate types: {:?}", options.aggregate_types);
     println!("  Event types: {:?}", options.event_types);
 

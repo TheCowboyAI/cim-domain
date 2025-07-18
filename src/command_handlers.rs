@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Command handlers for CIM domain aggregates
 //!
 //! Command handlers process commands, validate business rules, and emit events.

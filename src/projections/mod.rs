@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Read model projections for CIM domain
 //!
 //! Projections are optimized read models that are updated by handling domain events.

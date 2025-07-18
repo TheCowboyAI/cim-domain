@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Functors for mapping between domain categories
 //!
 //! Functors preserve the structure of domain categories while allowing

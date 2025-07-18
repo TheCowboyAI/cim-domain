@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Command Handler Example - CIM Domain
 //! 
 //! This example demonstrates the command handling patterns in CIM's event-driven architecture.
@@ -151,7 +153,7 @@ impl<R: AggregateRepository<ExampleAggregate>> ExampleCommandHandler<R> {
         &self,
         envelope: CommandEnvelope<ExampleCommand>,
     ) -> DomainResult<CommandStatus> {
-        println!("📋 Processing {envelope.payload.command_type(} command"));
+        println!("📋 Processing {} command", envelope.payload.command_type());
         
         let aggregate_id = EntityId::<AggregateMarker>::new();
         
@@ -278,10 +280,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Example 3: Published Events ===");
     
     let published = event_publisher.get_published_events().await;
-    println!("Total events published: {published.len(}"));
+    println!("Total events published: {}", published.len());
     
     for (i, (event, correlation_id)) in published.iter().enumerate() {
-        println!("{i + 1}. Event: {event.event_type(} (Correlation: {})"),
+        println!("{}. Event: {} (Correlation: {})",
+            i + 1,
+            event.event_type(),
             &correlation_id.to_string()[..8]
         );
     }

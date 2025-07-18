@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Event streams as first-class domain objects
 
 use async_trait::async_trait;
@@ -475,12 +477,12 @@ impl EventStream {
 
     /// Group events by correlation ID
     pub fn group_by_correlation(&self) -> HashMap<String, Vec<&StoredEvent>> {
-        let mut groups = HashMap::new();
+        let mut groups: HashMap<String, Vec<&StoredEvent>> = HashMap::new();
 
         for event in &self.events {
             if let Some(corr_id) = event.correlation_id() {
                 groups.entry(corr_id.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(event);
             }
         }

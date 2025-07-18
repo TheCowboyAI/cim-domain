@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Instrumented repository wrapper that adds metrics collection
 
 use crate::{
@@ -143,7 +145,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::persistence::NatsSimpleRepository;
     use std::sync::Arc;
     use tokio::sync::Mutex;
     

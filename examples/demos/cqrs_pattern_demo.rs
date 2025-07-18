@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! CQRS Pattern Demo - CIM Architecture
 //!
 //! This demo showcases the Command Query Responsibility Segregation (CQRS) pattern

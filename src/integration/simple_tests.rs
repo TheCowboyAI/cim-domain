@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Simple integration tests that demonstrate core functionality
 
 #[cfg(test)]

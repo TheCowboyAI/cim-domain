@@ -1,3 +1,5 @@
+<!-- Copyright 2025 Cowboy AI, LLC. -->
+
 # Integration Layer
 
 The integration layer provides infrastructure for connecting bounded contexts and aggregates within the CIM Domain framework. It implements Domain-Driven Design patterns to ensure proper communication and consistency across the system.

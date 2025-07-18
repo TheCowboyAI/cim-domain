@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Component synchronization between DDD and ECS via NATS
 //!
 //! This module integrates the isomorphic component architecture from cim-component

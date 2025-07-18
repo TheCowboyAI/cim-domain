@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain invariants that must be maintained across boundaries
 //!
 //! Invariants represent business rules that must always be true,
@@ -483,5 +485,190 @@ mod tests {
         
         let results = checker.check_all(&composition).await.unwrap();
         assert!(!results[0].satisfied);
+    }
+    
+    #[tokio::test]
+    async fn test_invariant_checker_get_violations() {
+        let composition = DomainComposition::new("Test".to_string());
+        let mut checker = InvariantChecker::new();
+        
+        // Add multiple invariants with different severities
+        checker.register(Box::new(BusinessConstraintInvariant::new(
+            "critical_constraint".to_string(),
+            |_| false, // Always violates
+            "Critical business rule".to_string(),
+            vec!["Domain1".to_string()],
+        )));
+        
+        // Check to populate history
+        let _ = checker.check_all(&composition).await.unwrap();
+        
+        // Test get_violations with different severity levels
+        let critical_violations = checker.get_violations(ViolationSeverity::Critical);
+        assert_eq!(critical_violations.len(), 0); // BusinessConstraint creates Error, not Critical
+        
+        let error_violations = checker.get_violations(ViolationSeverity::Error);
+        assert_eq!(error_violations.len(), 1);
+        
+        let info_violations = checker.get_violations(ViolationSeverity::Info);
+        assert_eq!(info_violations.len(), 1); // Should include all violations
+    }
+    
+    #[tokio::test]
+    async fn test_invariant_checker_clear_history() {
+        let composition = DomainComposition::new("Test".to_string());
+        let mut checker = InvariantChecker::new();
+        
+        checker.register(Box::new(BusinessConstraintInvariant::new(
+            "test".to_string(),
+            |_| true,
+            "Test invariant".to_string(),
+            vec!["Domain1".to_string()],
+        )));
+        
+        // Run checks to build history
+        let _ = checker.check_all(&composition).await.unwrap();
+        let _ = checker.check_all(&composition).await.unwrap();
+        
+        // Verify history exists
+        assert!(!checker.history.is_empty());
+        
+        // Clear history
+        checker.clear_history();
+        
+        // Verify history is cleared
+        assert!(checker.history.is_empty());
+        let violations = checker.get_violations(ViolationSeverity::Info);
+        assert_eq!(violations.len(), 0);
+    }
+    
+    #[tokio::test]
+    async fn test_referential_integrity_missing_domains() {
+        let composition = DomainComposition::new("Test".to_string());
+        
+        // Create invariant for non-existent domains
+        let invariant = ReferentialIntegrityInvariant::new(
+            "NonExistentSource".to_string(),
+            "NonExistentTarget".to_string(),
+            "ref_field".to_string(),
+        );
+        
+        // Should return error for missing source domain
+        let result = invariant.check(&composition).await;
+        assert!(result.is_err());
+        
+        match result {
+            Err(DomainError::NotFound(msg)) => {
+                assert!(msg.contains("Source domain NonExistentSource not found"));
+            }
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_referential_integrity_missing_target_domain() {
+        let mut composition = DomainComposition::new("Test".to_string());
+        composition.add_domain(DomainCategory::new("SourceDomain".to_string())).unwrap();
+        
+        let invariant = ReferentialIntegrityInvariant::new(
+            "SourceDomain".to_string(),
+            "NonExistentTarget".to_string(),
+            "ref_field".to_string(),
+        );
+        
+        // Should return error for missing target domain
+        let result = invariant.check(&composition).await;
+        assert!(result.is_err());
+        
+        match result {
+            Err(DomainError::NotFound(msg)) => {
+                assert!(msg.contains("Target domain NonExistentTarget not found"));
+            }
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_distributed_consistency_invariant() {
+        let mut composition = DomainComposition::new("Test".to_string());
+        composition.add_domain(DomainCategory::new("Warehouse1".to_string())).unwrap();
+        composition.add_domain(DomainCategory::new("Warehouse2".to_string())).unwrap();
+        
+        let invariant = DistributedConsistencyInvariant::new(
+            vec!["Warehouse1".to_string(), "Warehouse2".to_string()],
+            "Total inventory must match sum of warehouses".to_string(),
+        );
+        
+        assert_eq!(invariant.name(), "consistency_Warehouse1_Warehouse2");
+        assert_eq!(invariant.description(), "Ensures consistency across distributed aggregates");
+        assert_eq!(invariant.affected_domains(), vec!["Warehouse1", "Warehouse2"]);
+        
+        let result = invariant.check(&composition).await.unwrap();
+        assert!(result.satisfied); // Current implementation always returns true
+        assert_eq!(result.context.get("domains").unwrap(), "Warehouse1,Warehouse2");
+        assert_eq!(result.context.get("rule").unwrap(), "Total inventory must match sum of warehouses");
+    }
+    
+    #[tokio::test]
+    async fn test_violation_severity_ordering() {
+        // Test that severity levels are properly ordered
+        assert!(ViolationSeverity::Info < ViolationSeverity::Warning);
+        assert!(ViolationSeverity::Warning < ViolationSeverity::Error);
+        assert!(ViolationSeverity::Error < ViolationSeverity::Critical);
+        
+        // Test equality
+        assert_eq!(ViolationSeverity::Error, ViolationSeverity::Error);
+    }
+    
+    #[tokio::test]
+    async fn test_invariant_check_result_serialization() {
+        let result = InvariantCheckResult {
+            satisfied: false,
+            violations: vec![
+                InvariantViolation {
+                    invariant_name: "test_invariant".to_string(),
+                    location: ViolationLocation::Domain { name: "TestDomain".to_string() },
+                    message: "Test violation".to_string(),
+                    severity: ViolationSeverity::Warning,
+                    remediation: Some("Fix it".to_string()),
+                }
+            ],
+            checked_at: Utc::now(),
+            context: HashMap::from([("key".to_string(), "value".to_string())]),
+        };
+        
+        // Test serialization/deserialization
+        let serialized = serde_json::to_string(&result).unwrap();
+        let deserialized: InvariantCheckResult = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(result.satisfied, deserialized.satisfied);
+        assert_eq!(result.violations.len(), deserialized.violations.len());
+        assert_eq!(result.context, deserialized.context);
+    }
+    
+    #[tokio::test]
+    async fn test_violation_location_variants() {
+        // Test all ViolationLocation variants
+        let domain_loc = ViolationLocation::Domain { name: "TestDomain".to_string() };
+        let object_loc = ViolationLocation::Object { 
+            domain: "TestDomain".to_string(), 
+            object_id: "obj123".to_string() 
+        };
+        let morphism_loc = ViolationLocation::Morphism { 
+            domain: "TestDomain".to_string(), 
+            morphism_id: "morph456".to_string() 
+        };
+        let cross_domain_loc = ViolationLocation::CrossDomain { 
+            from: "Domain1".to_string(), 
+            to: "Domain2".to_string() 
+        };
+        
+        // Test serialization for each variant
+        for loc in &[domain_loc, object_loc, morphism_loc, cross_domain_loc] {
+            let serialized = serde_json::to_string(loc).unwrap();
+            let deserialized: ViolationLocation = serde_json::from_str(&serialized).unwrap();
+            let reserialized = serde_json::to_string(&deserialized).unwrap();
+            assert_eq!(serialized, reserialized);
+        }
     }
 }

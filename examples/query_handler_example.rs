@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Example of query handlers in CIM domain
 //!
 //! This example demonstrates how to implement query handlers that:
@@ -57,13 +59,12 @@ fn main() {
 
     match person_handler.handle(query) {
         Ok(Some(person)) => {
-            println!("✓ Found person: {person.legal_name} ({person.preferred_name.as_deref(})").unwrap_or("no preferred name")
-            );
+            println!("✓ Found person: {} ({})", person.legal_name, person.preferred_name.as_deref().unwrap_or("no preferred name"));
             if let Some(org) = &person.organization_name {
                 println!("  Organization: {org}");
             }
             if !person.roles.is_empty() {
-                println!("  Roles: {person.roles.join(", "}"));
+                println!("  Roles: {}", person.roles.join(", "));
             }
         }
         Ok(None) => println!("✗ Person not found"),
@@ -80,10 +81,9 @@ fn main() {
 
     match person_handler.handle(query) {
         Ok(people) => {
-            println!("✓ Found {people.len(} people in organization"));
+            println!("✓ Found {} people in organization", people.len());
             for person in people {
-                println!("  - {person.legal_name} ({person.email.as_deref(})").unwrap_or("no email")
-                );
+                println!("  - {} ({})", person.legal_name, person.email.as_deref().unwrap_or("no email"));
             }
         }
         Err(e) => println!("✗ Query failed: {e}"),
@@ -98,10 +98,9 @@ fn main() {
 
     match location_handler.handle(query) {
         Ok(locations) => {
-            println!("✓ Found {locations.len(} physical locations"));
+            println!("✓ Found {} physical locations", locations.len());
             for location in locations {
-                println!("  - {location.name} ({location.address.as_deref(})").unwrap_or("no address")
-                );
+                println!("  - {} ({})", location.name, location.address.as_deref().unwrap_or("no address"));
                 if let Some((lat, lon)) = location.coordinates {
                     println!("    Coordinates: {:.4}, {:.4}", lat, lon);
                 }
@@ -119,9 +118,9 @@ fn main() {
 
     match policy_handler.handle(query) {
         Ok(policies) => {
-            println!("✓ Found {policies.len(} active global policies"));
+            println!("✓ Found {} active global policies", policies.len());
             for policy in policies {
-                println!("  - {policy.name} (Type: {policy.policy_type}, Status: {policy.status})");
+                println!("  - {} (Type: {}, Status: {})", policy.name, policy.policy_type, policy.status);
             }
         }
         Err(e) => println!("✗ Query failed: {e}"),
@@ -136,10 +135,10 @@ fn main() {
 
     match agent_handler.handle(query) {
         Ok(agents) => {
-            println!("✓ Found {agents.len(} agents with text-generation capability"));
+            println!("✓ Found {} agents with text-generation capability", agents.len());
             for agent in agents {
-                println!("  - {agent.name} (Type: {agent.agent_type}, Status: {agent.status})");
-                println!("    Capabilities: {agent.capabilities.join(", "}"));
+                println!("  - {} (Type: {}, Status: {})", agent.name, agent.agent_type, agent.status);
+                println!("    Capabilities: {}", agent.capabilities.join(", "));
             }
         }
         Err(e) => println!("✗ Query failed: {e}"),
@@ -154,10 +153,10 @@ fn main() {
 
     match workflow_handler.handle(query) {
         Ok(workflows) => {
-            println!("✓ Found {workflows.len(} running workflows"));
+            println!("✓ Found {} running workflows", workflows.len());
             for workflow in workflows {
-                println!("  - {workflow.definition_name} (State: {workflow.current_state}, Transitions: {workflow.transition_count})");
-                println!("    Started: {workflow.started_at}");
+                println!("  - {} (State: {}, Transitions: {})", workflow.definition_name, workflow.current_state, workflow.transition_count);
+                println!("    Started: {}", workflow.started_at);
             }
         }
         Err(e) => println!("✗ Query failed: {e}"),

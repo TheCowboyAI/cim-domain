@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain events enum wrapper
 //!
 //! Provides an enum that wraps all domain event types for easier handling

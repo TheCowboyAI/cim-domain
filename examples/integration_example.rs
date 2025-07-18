@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Example demonstrating the complete integration layer
 //!
 //! This example shows how to:

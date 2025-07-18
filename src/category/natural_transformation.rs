@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Natural transformations between functors
 //!
 //! Natural transformations provide a way to transform between different

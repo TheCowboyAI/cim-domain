@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! # CIM Domain
 //!
 //! Core Domain-Driven Design (DDD) components and traits for the Composable Information Machine.

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! State Machine Demo - CIM Architecture
 //!
 //! This demo showcases the state machine capabilities in CIM's domain model,

@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Event store trait and related types
 
 use crate::domain_events::DomainEventEnum;

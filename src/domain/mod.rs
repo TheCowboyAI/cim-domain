@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Cross-domain invariants and logic
 //!
 //! This module implements the mechanisms for maintaining invariants

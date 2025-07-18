@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Demonstrates the persistence metrics collection capabilities
 //! 
 //! This example shows how to:

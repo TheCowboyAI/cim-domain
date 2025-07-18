@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Example of using the Bevy bridge with subject-based routing
 //!
 //! This example demonstrates how NATS domain events can be translated

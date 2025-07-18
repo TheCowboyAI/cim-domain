@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Infrastructure Layer 1.3: CQRS Flow Tests for cim-domain
 //! 
 //! User Story: As a domain system, I need to separate commands and queries for scalability

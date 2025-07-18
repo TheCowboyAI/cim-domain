@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Error types for domain operations
 
 use thiserror::Error;
@@ -354,12 +356,12 @@ mod tests {
         // Success case
         let success: DomainResult<i32> = Ok(42);
         assert!(success.is_ok());
-        assert_eq!(success.unwrap(), 42);
+        assert_eq!(success.ok().unwrap(), 42);
 
         // Error case
         let error: DomainResult<i32> = Err(DomainError::Generic("Failed".to_string()));
         assert!(error.is_err());
-        assert_eq!(error.unwrap_err().to_string(), "Domain error: Failed");
+        assert_eq!(error.err().unwrap().to_string(), "Domain error: Failed");
     }
 
     /// Test error pattern matching
@@ -426,11 +428,140 @@ mod tests {
 
         fn outer_operation() -> DomainResult<i32> {
             inner_operation()
-                .map_err(|e| DomainError::InternalError(e))
+                .map_err(DomainError::InternalError)
         }
 
         let result = outer_operation();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "Internal error: Inner error");
+    }
+    
+    /// Test untested error types
+    #[test]
+    fn test_untested_error_types() {
+        // Test ComponentError
+        let err = DomainError::ComponentError("Component sync failed".to_string());
+        assert_eq!(err.to_string(), "Component error: Component sync failed");
+        
+        // Test NatsError
+        let err = DomainError::NatsError("Connection lost".to_string());
+        assert_eq!(err.to_string(), "NATS error: Connection lost");
+        
+        // Test NotFound (generic)
+        let err = DomainError::NotFound("Resource XYZ".to_string());
+        assert_eq!(err.to_string(), "Not found: Resource XYZ");
+        assert!(!err.is_not_found()); // This is NOT included in is_not_found()
+        
+        // Test AlreadyExists (generic)
+        let err = DomainError::AlreadyExists("Resource ABC".to_string());
+        assert_eq!(err.to_string(), "Already exists: Resource ABC");
+        
+        // Test NotImplemented
+        let err = DomainError::NotImplemented("Feature X".to_string());
+        assert_eq!(err.to_string(), "Not implemented: Feature X");
+    }
+    
+    /// Test serde_json error conversion
+    #[test]
+    fn test_serde_json_conversion() {
+        // Create an invalid JSON to trigger serde_json error
+        let invalid_json = "{ invalid json }";
+        let serde_err = serde_json::from_str::<serde_json::Value>(invalid_json).unwrap_err();
+        
+        // Convert to DomainError
+        let domain_err: DomainError = serde_err.into();
+        
+        // Check it's a SerializationError
+        match domain_err {
+            DomainError::SerializationError(msg) => {
+                // Just verify it's a non-empty error message from serde_json
+                assert!(!msg.is_empty());
+                assert!(msg.contains("key") || msg.contains("expected") || msg.contains("invalid"));
+            }
+            _ => panic!("Expected SerializationError"),
+        }
+    }
+    
+    /// Test error helper methods with NotFound variant
+    #[test]
+    fn test_is_not_found_edge_cases() {
+        // The generic NotFound variant is NOT included in is_not_found()
+        let generic_not_found = DomainError::NotFound("Something".to_string());
+        assert!(!generic_not_found.is_not_found());
+        
+        // But specific not found errors are included
+        let entity_not_found = DomainError::EntityNotFound {
+            entity_type: "User".to_string(),
+            id: "123".to_string(),
+        };
+        assert!(entity_not_found.is_not_found());
+        
+        let component_not_found = DomainError::ComponentNotFound("Comp".to_string());
+        assert!(component_not_found.is_not_found());
+        
+        let aggregate_not_found = DomainError::AggregateNotFound("Agg".to_string());
+        assert!(aggregate_not_found.is_not_found());
+    }
+    
+    /// Test all error variants can be cloned
+    #[test]
+    fn test_all_errors_clone() {
+        let errors: Vec<DomainError> = vec![
+            DomainError::ComponentAlreadyExists("test".to_string()),
+            DomainError::ComponentNotFound("test".to_string()),
+            DomainError::EntityNotFound { entity_type: "Type".to_string(), id: "123".to_string() },
+            DomainError::InvalidOperation { reason: "test".to_string() },
+            DomainError::InvariantViolation("test".to_string()),
+            DomainError::AggregateNotFound("test".to_string()),
+            DomainError::InvalidStateTransition { from: "A".to_string(), to: "B".to_string() },
+            DomainError::ConcurrencyConflict { expected: 1, actual: 2 },
+            DomainError::ValidationError("test".to_string()),
+            DomainError::AuthorizationError("test".to_string()),
+            DomainError::BusinessRuleViolation { rule: "test".to_string() },
+            DomainError::ContextBoundaryViolation("test".to_string()),
+            DomainError::SerializationError("test".to_string()),
+            DomainError::ExternalServiceError { service: "S".to_string(), message: "M".to_string() },
+            DomainError::Generic("test".to_string()),
+            DomainError::InternalError("test".to_string()),
+            DomainError::InvalidSubject("test".to_string()),
+            DomainError::ComponentError("test".to_string()),
+            DomainError::NatsError("test".to_string()),
+            DomainError::NotFound("test".to_string()),
+            DomainError::AlreadyExists("test".to_string()),
+            DomainError::NotImplemented("test".to_string()),
+        ];
+        
+        for error in errors {
+            let cloned = error.clone();
+            assert_eq!(error.to_string(), cloned.to_string());
+        }
+    }
+    
+    /// Test error helper methods don't match incorrect variants
+    #[test]
+    fn test_helper_method_exclusivity() {
+        let concurrency_err = DomainError::ConcurrencyConflict { expected: 1, actual: 2 };
+        
+        // Concurrency error should only match is_concurrency_error
+        assert!(concurrency_err.is_concurrency_error());
+        assert!(!concurrency_err.is_not_found());
+        assert!(!concurrency_err.is_validation_error());
+        
+        let validation_err = DomainError::ValidationError("test".to_string());
+        
+        // Validation error should only match is_validation_error
+        assert!(!validation_err.is_concurrency_error());
+        assert!(!validation_err.is_not_found());
+        assert!(validation_err.is_validation_error());
+        
+        let not_found_err = DomainError::EntityNotFound { 
+            entity_type: "User".to_string(), 
+            id: "123".to_string() 
+        };
+        
+        // Not found error should only match is_not_found
+        assert!(!not_found_err.is_concurrency_error());
+        assert!(not_found_err.is_not_found());
+        assert!(!not_found_err.is_validation_error());
     }
 }

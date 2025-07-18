@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Simplified read model storage using NATS KV
 
 use crate::{

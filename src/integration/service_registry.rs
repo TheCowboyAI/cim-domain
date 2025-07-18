@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Service registry for domain services
 //!
 //! This module provides a registry for managing domain services
@@ -237,9 +239,9 @@ impl ServiceRegistry {
                 // Create new instance
                 let boxed_instance = (descriptor.factory)(container)?;
                 
-                // Try to downcast to Arc<T>
-                if let Ok(arc_t) = boxed_instance.downcast::<Arc<T>>() {
-                    let instance = *arc_t;
+                // Try to downcast to T
+                if let Ok(boxed_t) = boxed_instance.downcast::<T>() {
+                    let instance = Arc::new(*boxed_t);
                     
                     // Store the instance for future use
                     let mut instances = self.instances.write().await;
@@ -257,9 +259,9 @@ impl ServiceRegistry {
                 // Always create new instance
                 let boxed_instance = (descriptor.factory)(container)?;
                 
-                // Try to downcast to Arc<T>
-                if let Ok(arc_t) = boxed_instance.downcast::<Arc<T>>() {
-                    Ok(*arc_t)
+                // Try to downcast to T
+                if let Ok(boxed_t) = boxed_instance.downcast::<T>() {
+                    Ok(Arc::new(*boxed_t))
                 } else {
                     Err(DomainError::InvalidOperation {
                         reason: "Failed to downcast service instance".to_string()
@@ -284,7 +286,7 @@ impl ServiceRegistry {
         for tag in tags {
             discovery.services_by_tag
                 .entry(tag)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(service_type);
         }
         
@@ -451,11 +453,14 @@ mod tests {
         let container = DependencyContainer::new();
         
         // Register singleton
-        registry.register_singleton::<TestServiceImpl, TestServiceImpl, _>(|_| {
-            Ok(Box::new(TestServiceImpl {
-                value: "singleton".to_string(),
-            }))
-        }).await.unwrap();
+        registry.register::<TestServiceImpl, TestServiceImpl, _>(
+            ServiceLifetime::Singleton,
+            |_| {
+                Ok(Box::new(TestServiceImpl {
+                    value: "singleton".to_string(),
+                }))
+            }
+        ).await.unwrap();
         
         // Resolve service
         let service1 = registry.resolve::<TestServiceImpl>(&container).await.unwrap();
@@ -474,12 +479,15 @@ mod tests {
         let counter_clone = counter.clone();
         
         // Register transient
-        registry.register_transient::<TestServiceImpl, TestServiceImpl, _>(move |_| {
-            let id = counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            Ok(Box::new(TestServiceImpl {
-                value: format!("instance_{}", id),
-            }))
-        }).await.unwrap();
+        registry.register::<TestServiceImpl, TestServiceImpl, _>(
+            ServiceLifetime::Transient,
+            move |_| {
+                let id = counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok(Box::new(TestServiceImpl {
+                    value: format!("instance_{}", id),
+                }))
+            }
+        ).await.unwrap();
         
         // Each resolve creates new instance
         let service1 = registry.resolve::<TestServiceImpl>(&container).await.unwrap();

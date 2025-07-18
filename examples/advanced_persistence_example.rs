@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Advanced persistence example using the improved repository implementations
 //!
 //! This example demonstrates:

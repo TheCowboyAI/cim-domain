@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! NATS-specific repository implementation using JetStream and cim-subject
 
 use crate::{

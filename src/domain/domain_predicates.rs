@@ -1,3 +1,5 @@
+// Copyright 2025 Cowboy AI, LLC.
+
 //! Domain predicates for cross-domain reasoning
 //!
 //! Predicates that can be evaluated across domain boundaries to
