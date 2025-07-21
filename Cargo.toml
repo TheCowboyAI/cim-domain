@@ -54,6 +54,7 @@ bytes = "1.5"
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"
+rand = "0.8"
 proptest = "1.6"
 test-case = "3.3"
 pretty_assertions = "1.4"
@@ -152,6 +153,34 @@ path = "examples/command_handler_example.rs"
 [[example]]
 name = "persistence_metrics_demo"
 path = "examples/persistence_metrics_demo.rs"
+
+[[example]]
+name = "user_story_1_component_developer"
+path = "examples/user_story_1_component_developer.rs"
+
+[[example]]
+name = "user_story_2_system_architect"
+path = "examples/user_story_2_system_architect.rs"
+
+[[example]]
+name = "user_story_3_event_stream_manager"
+path = "examples/user_story_3_event_stream_manager.rs"
+
+[[example]]
+name = "user_story_4_data_analyst"
+path = "examples/user_story_4_data_analyst.rs"
+
+[[example]]
+name = "user_story_5_integration_engineer"
+path = "examples/user_story_5_integration_engineer.rs"
+
+[[example]]
+name = "comprehensive_demo"
+path = "examples/comprehensive_demo.rs"
+
+[[example]]
+name = "comprehensive_demo_simple"
+path = "examples/comprehensive_demo_simple.rs"
 
 [[bench]]
 name = "persistence_benchmarks"
