@@ -3,12 +3,9 @@
 //! Simplified aggregate repository implementation that avoids complex type dependencies
 
 use crate::{
-    DomainEntity,
     events::DomainEvent,
-    infrastructure::{
-        EventStore, EventStoreError,
-        event_store::EventMetadata,
-    },
+    infrastructure::{event_store::EventMetadata, EventStore, EventStoreError},
+    DomainEntity,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -60,24 +57,24 @@ pub enum RepositoryError {
     /// Aggregate not found
     #[error("Aggregate not found: {0}")]
     NotFound(String),
-    
+
     /// Version conflict
     #[error("Version conflict: expected {expected}, actual {actual}")]
-    VersionConflict { 
+    VersionConflict {
         /// The expected version
-        expected: u64, 
+        expected: u64,
         /// The actual version found
-        actual: u64 
+        actual: u64,
     },
-    
+
     /// Storage error
     #[error("Storage error: {0}")]
     StorageError(String),
-    
+
     /// Serialization error
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    
+
     /// Event store error
     #[error("Event store error: {0}")]
     EventStoreError(String),
@@ -94,7 +91,7 @@ impl From<EventStoreError> for RepositoryError {
 pub trait AggregateRepository: Send + Sync {
     /// The aggregate type this repository handles
     type Aggregate: DomainEntity + Serialize + for<'de> Deserialize<'de>;
-    
+
     /// Save an aggregate with its events
     async fn save(
         &self,
@@ -102,17 +99,17 @@ pub trait AggregateRepository: Send + Sync {
         events: Vec<Box<dyn DomainEvent>>,
         options: SaveOptions,
     ) -> Result<AggregateMetadata, RepositoryError>;
-    
+
     /// Load an aggregate by ID
     async fn load(
         &self,
         id: &str,
         options: LoadOptions,
     ) -> Result<(Self::Aggregate, AggregateMetadata), RepositoryError>;
-    
+
     /// Check if an aggregate exists
     async fn exists(&self, id: &str) -> Result<bool, RepositoryError>;
-    
+
     /// Delete an aggregate
     async fn delete(&self, id: &str) -> Result<(), RepositoryError>;
 }
@@ -142,7 +139,7 @@ where
     T::IdType: Send + Sync,
 {
     type Aggregate = T;
-    
+
     async fn save(
         &self,
         aggregate: &T,
@@ -150,10 +147,10 @@ where
         options: SaveOptions,
     ) -> Result<AggregateMetadata, RepositoryError> {
         let aggregate_id = aggregate.id().to_string();
-        
+
         // For now, we'll skip the event store integration
         // This would need proper DomainEventEnum conversion
-        
+
         Ok(AggregateMetadata {
             aggregate_id: aggregate_id.clone(),
             aggregate_type: self.aggregate_type.clone(),
@@ -163,7 +160,7 @@ where
             metadata: HashMap::new(),
         })
     }
-    
+
     async fn load(
         &self,
         id: &str,
@@ -172,15 +169,13 @@ where
         // This would need proper event replay implementation
         Err(RepositoryError::NotFound(id.to_string()))
     }
-    
+
     async fn exists(&self, id: &str) -> Result<bool, RepositoryError> {
         // Check with event store
-        let version = self.event_store
-            .get_aggregate_version(id)
-            .await?;
+        let version = self.event_store.get_aggregate_version(id).await?;
         Ok(version.is_some())
     }
-    
+
     async fn delete(&self, _id: &str) -> Result<(), RepositoryError> {
         // Would append a deletion event
         Ok(())
@@ -191,24 +186,24 @@ where
 mod tests {
     use super::*;
     use crate::EntityId;
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     struct TestAggregate {
         id: EntityId<TestMarker>,
         name: String,
     }
-    
+
     #[derive(Debug, Clone, Copy, PartialEq)]
     struct TestMarker;
-    
+
     impl DomainEntity for TestAggregate {
         type IdType = TestMarker;
-        
+
         fn id(&self) -> EntityId<Self::IdType> {
             self.id
         }
     }
-    
+
     #[test]
     fn test_save_options_default() {
         let options = SaveOptions::default();
@@ -216,7 +211,7 @@ mod tests {
         assert!(!options.create_snapshot);
         assert!(options.metadata.is_none());
     }
-    
+
     #[test]
     fn test_aggregate_creation() {
         let id = EntityId::<TestMarker>::new();
@@ -224,17 +219,17 @@ mod tests {
             id,
             name: "Test Aggregate".to_string(),
         };
-        
+
         // Verify DomainEntity implementation
         assert_eq!(aggregate.id(), id);
         assert_eq!(aggregate.name, "Test Aggregate");
-        
+
         // Test serialization
         let serialized = serde_json::to_string(&aggregate).unwrap();
         let deserialized: TestAggregate = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized.name, aggregate.name);
     }
-    
+
     #[test]
     fn test_aggregate_metadata() {
         let metadata = AggregateMetadata {
@@ -245,7 +240,7 @@ mod tests {
             subject: "domain.test.123".to_string(),
             metadata: HashMap::new(),
         };
-        
+
         assert_eq!(metadata.aggregate_id, "test-123");
         assert_eq!(metadata.version, 5);
     }

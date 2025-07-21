@@ -6,7 +6,7 @@
 //! snapshots of aggregates to optimize event replay performance.
 
 use crate::entity::AggregateRoot;
-use crate::infrastructure::snapshot_store::{SnapshotStore, SnapshotError};
+use crate::infrastructure::snapshot_store::{SnapshotError, SnapshotStore};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -93,7 +93,9 @@ impl SnapshotPolicyEngine {
             _ => return false,
         };
 
-        let metrics = self.get_or_create_metrics(aggregate_id, aggregate_type).await;
+        let metrics = self
+            .get_or_create_metrics(aggregate_id, aggregate_type)
+            .await;
 
         if let Some(threshold) = policy.event_count_threshold {
             if metrics.events_since_snapshot >= threshold {
@@ -140,7 +142,8 @@ impl SnapshotPolicyEngine {
         metrics.last_snapshot_at = Some(Utc::now());
         metrics.total_snapshots += 1;
 
-        self.enforce_retention_policy(aggregate_id, aggregate_type).await?;
+        self.enforce_retention_policy(aggregate_id, aggregate_type)
+            .await?;
 
         Ok(())
     }
@@ -161,7 +164,11 @@ impl SnapshotPolicyEngine {
         metrics.events_since_snapshot += 1;
     }
 
-    async fn get_or_create_metrics(&self, aggregate_id: &str, aggregate_type: &str) -> SnapshotMetrics {
+    async fn get_or_create_metrics(
+        &self,
+        aggregate_id: &str,
+        aggregate_type: &str,
+    ) -> SnapshotMetrics {
         let metrics_map = self.metrics.read().await;
         if let Some(metrics) = metrics_map.get(aggregate_id) {
             return metrics.clone();
@@ -195,7 +202,7 @@ impl SnapshotPolicyEngine {
         // Note: Current SnapshotStore trait doesn't support listing or deleting snapshots
         // In production, you would need to extend the trait or use a different approach
         // For now, we rely on JetStream's built-in history retention
-        
+
         Ok(())
     }
 
@@ -238,7 +245,8 @@ impl<A: AggregateRoot + serde::Serialize + Send + Sync> AutoSnapshotService<A> {
         let aggregate_id = uuid::Uuid::new_v4().to_string();
         let aggregate_type = std::any::type_name::<A>();
 
-        if self.policy_engine
+        if self
+            .policy_engine
             .should_snapshot(&aggregate_id, aggregate_type, event_type, event_number)
             .await
         {
@@ -297,7 +305,9 @@ mod tests {
             enabled: true,
         };
 
-        engine.register_policy("TestAggregateRoot".to_string(), policy).await;
+        engine
+            .register_policy("TestAggregateRoot".to_string(), policy)
+            .await;
 
         for i in 1..=4 {
             engine.record_event("agg-1", "TestAggregateRoot").await;
@@ -313,7 +323,10 @@ mod tests {
             .await;
         assert!(should);
 
-        engine.record_snapshot("agg-1", "TestAggregateRoot").await.unwrap();
+        engine
+            .record_snapshot("agg-1", "TestAggregateRoot")
+            .await
+            .unwrap();
 
         let should = engine
             .should_snapshot("agg-1", "TestAggregateRoot", "TestEvent", 6)
@@ -334,7 +347,9 @@ mod tests {
             enabled: true,
         };
 
-        engine.register_policy("TestAggregateRoot".to_string(), policy).await;
+        engine
+            .register_policy("TestAggregateRoot".to_string(), policy)
+            .await;
 
         let should = engine
             .should_snapshot("agg-1", "TestAggregateRoot", "RegularEvent", 1)

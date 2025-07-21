@@ -269,7 +269,8 @@ mod tests {
                 name: "Test".to_string(),
                 domain: "Domain".to_string(),
                 subdomain_type: SubdomainType::Core,
-            }.type_name(),
+            }
+            .type_name(),
             "Bounded Context"
         );
 
@@ -277,7 +278,8 @@ mod tests {
             ContextType::AggregateContext {
                 name: "Test".to_string(),
                 aggregate_type: "Entity".to_string(),
-            }.type_name(),
+            }
+            .type_name(),
             "Aggregate Context"
         );
 
@@ -285,7 +287,8 @@ mod tests {
             ContextType::ModuleContext {
                 name: "Test".to_string(),
                 purpose: "Purpose".to_string(),
-            }.type_name(),
+            }
+            .type_name(),
             "Module Context"
         );
 
@@ -294,7 +297,8 @@ mod tests {
                 name: "Test".to_string(),
                 capability: "Cap".to_string(),
                 service_type: ServiceType::Domain,
-            }.type_name(),
+            }
+            .type_name(),
             "Service Context"
         );
 
@@ -302,7 +306,8 @@ mod tests {
             ContextType::TeamContext {
                 name: "Test".to_string(),
                 responsibility: "Resp".to_string(),
-            }.type_name(),
+            }
+            .type_name(),
             "Team Context"
         );
 
@@ -310,7 +315,8 @@ mod tests {
             ContextType::SystemContext {
                 name: "Test".to_string(),
                 system_type: "Type".to_string(),
-            }.type_name(),
+            }
+            .type_name(),
             "System Context"
         );
 
@@ -318,7 +324,8 @@ mod tests {
             ContextType::DeploymentContext {
                 name: "Test".to_string(),
                 environment: "prod".to_string(),
-            }.type_name(),
+            }
+            .type_name(),
             "Deployment Context"
         );
     }
@@ -336,7 +343,10 @@ mod tests {
     fn test_subdomain_type() {
         // Display names
         assert_eq!(SubdomainType::Core.display_name(), "Core Domain");
-        assert_eq!(SubdomainType::Supporting.display_name(), "Supporting Domain");
+        assert_eq!(
+            SubdomainType::Supporting.display_name(),
+            "Supporting Domain"
+        );
         assert_eq!(SubdomainType::Generic.display_name(), "Generic Domain");
 
         // Importance levels
@@ -345,16 +355,27 @@ mod tests {
         assert_eq!(SubdomainType::Generic.importance_level(), 1);
 
         // Verify ordering
-        assert!(SubdomainType::Core.importance_level() > SubdomainType::Supporting.importance_level());
-        assert!(SubdomainType::Supporting.importance_level() > SubdomainType::Generic.importance_level());
+        assert!(
+            SubdomainType::Core.importance_level() > SubdomainType::Supporting.importance_level()
+        );
+        assert!(
+            SubdomainType::Supporting.importance_level()
+                > SubdomainType::Generic.importance_level()
+        );
     }
 
     /// Test ServiceType display names
     #[test]
     fn test_service_type() {
         assert_eq!(ServiceType::Domain.display_name(), "Domain Service");
-        assert_eq!(ServiceType::Application.display_name(), "Application Service");
-        assert_eq!(ServiceType::Infrastructure.display_name(), "Infrastructure Service");
+        assert_eq!(
+            ServiceType::Application.display_name(),
+            "Application Service"
+        );
+        assert_eq!(
+            ServiceType::Infrastructure.display_name(),
+            "Infrastructure Service"
+        );
     }
 
     /// Test serialization and deserialization

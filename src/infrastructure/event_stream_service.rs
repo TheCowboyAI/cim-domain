@@ -3,16 +3,15 @@
 //! Event stream service implementation
 
 use async_trait::async_trait;
+use futures::stream::StreamExt;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use futures::stream::StreamExt;
 
 use crate::infrastructure::{
-    EventStore, StoredEvent,
-    EventStream, EventStreamId, EventStreamOperations, EventStreamError,
-    EventQuery, EventFilter, EventOrdering,
-    StreamTransformation, StreamComposition, GroupingCriteria,
+    EventFilter, EventOrdering, EventQuery, EventStore, EventStream, EventStreamError,
+    EventStreamId, EventStreamOperations, GroupingCriteria, StoredEvent, StreamComposition,
+    StreamTransformation,
 };
 
 /// Service for managing event streams
@@ -38,9 +37,7 @@ impl EventStreamService {
             EventFilter::AggregateId(agg_id) => &event.aggregate_id == agg_id,
             EventFilter::AggregateType(agg_type) => &event.aggregate_type == agg_type,
             EventFilter::AggregateTypes(types) => types.contains(&event.aggregate_type),
-            EventFilter::CorrelationId(corr_id) => {
-                event.correlation_id() == Some(corr_id)
-            }
+            EventFilter::CorrelationId(corr_id) => event.correlation_id() == Some(corr_id),
             EventFilter::MetadataValue { key, value } => {
                 event.metadata.get(key).map(|v| v == value).unwrap_or(false)
             }
@@ -54,11 +51,10 @@ impl EventStreamService {
         transformation: &StreamTransformation,
     ) -> Result<Vec<StoredEvent>, EventStreamError> {
         match transformation {
-            StreamTransformation::Filter(filter) => {
-                Ok(events.into_iter()
-                    .filter(|e| self.matches_filters(e, &[filter.clone()]))
-                    .collect())
-            }
+            StreamTransformation::Filter(filter) => Ok(events
+                .into_iter()
+                .filter(|e| self.matches_filters(e, std::slice::from_ref(filter)))
+                .collect()),
 
             StreamTransformation::GroupBy(criteria) => {
                 // For now, just return events grouped (not actually transforming structure)
@@ -71,7 +67,11 @@ impl EventStreamService {
                     }
                     GroupingCriteria::CorrelationId => {
                         let mut sorted = events;
-                        sorted.sort_by_key(|e| e.correlation_id().map(|s| s.to_string()).unwrap_or_default());
+                        sorted.sort_by_key(|e| {
+                            e.correlation_id()
+                                .map(|s| s.to_string())
+                                .unwrap_or_default()
+                        });
                         Ok(sorted)
                     }
                     GroupingCriteria::EventType => {
@@ -126,9 +126,10 @@ impl EventStreamService {
                 let mut result = Vec::new();
 
                 for event in first {
-                    if streams[1..].iter().all(|stream| {
-                        stream.iter().any(|e| e.event_id == event.event_id)
-                    }) {
+                    if streams[1..]
+                        .iter()
+                        .all(|stream| stream.iter().any(|e| e.event_id == event.event_id))
+                    {
                         result.push(event.clone());
                     }
                 }
@@ -161,7 +162,8 @@ impl EventStreamService {
                     for event in stream {
                         match resolution {
                             crate::infrastructure::event_stream::ConflictResolution::KeepFirst => {
-                                event_map.entry(event.event_id.clone())
+                                event_map
+                                    .entry(event.event_id.clone())
                                     .or_insert_with(|| event.clone());
                             }
                             crate::infrastructure::event_stream::ConflictResolution::KeepLast => {
@@ -173,7 +175,7 @@ impl EventStreamService {
                             }
                             crate::infrastructure::event_stream::ConflictResolution::Custom(_) => {
                                 return Err(EventStreamError::InvalidOperation(
-                                    "Custom conflict resolution not implemented".to_string()
+                                    "Custom conflict resolution not implemented".to_string(),
                                 ));
                             }
                         }
@@ -197,7 +199,8 @@ impl EventStreamOperations for EventStreamService {
         let events = match &query {
             EventQuery::ByCorrelationId { correlation_id, .. } => {
                 // Get all events and filter by correlation ID
-                let mut all_events = self.event_store
+                let mut all_events = self
+                    .event_store
                     .stream_all_events(None)
                     .await
                     .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
@@ -217,7 +220,8 @@ impl EventStreamOperations for EventStreamService {
             }
             EventQuery::ByTimeRange { start, end } => {
                 // Get all events and filter by time range
-                let mut all_events = self.event_store
+                let mut all_events = self
+                    .event_store
                     .stream_all_events(None)
                     .await
                     .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
@@ -238,7 +242,8 @@ impl EventStreamOperations for EventStreamService {
             }
             EventQuery::ByAggregateType { aggregate_type } => {
                 // Get all events and filter by aggregate type
-                let mut all_events = self.event_store
+                let mut all_events = self
+                    .event_store
                     .stream_all_events(None)
                     .await
                     .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
@@ -256,9 +261,14 @@ impl EventStreamOperations for EventStreamService {
                 }
                 events
             }
-            EventQuery::Complex { filters, ordering, limit } => {
+            EventQuery::Complex {
+                filters,
+                ordering,
+                limit,
+            } => {
                 // Get all events and apply filters
-                let mut all_events = self.event_store
+                let mut all_events = self
+                    .event_store
                     .stream_all_events(None)
                     .await
                     .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
@@ -280,20 +290,19 @@ impl EventStreamOperations for EventStreamService {
                     EventOrdering::Temporal => events.sort_by_key(|e| e.stored_at),
                     EventOrdering::Causal => {
                         // Sort by causation - events without causation first, then by causation chain
-                        events.sort_by(|a, b| {
-                            match (a.causation_id(), b.causation_id()) {
-                                (None, None) => a.stored_at.cmp(&b.stored_at),
-                                (None, Some(_)) => std::cmp::Ordering::Less,
-                                (Some(_), None) => std::cmp::Ordering::Greater,
-                                (Some(a_caus), Some(b_caus)) => {
-                                    a_caus.cmp(b_caus).then_with(|| a.stored_at.cmp(&b.stored_at))
-                                }
-                            }
+                        events.sort_by(|a, b| match (a.causation_id(), b.causation_id()) {
+                            (None, None) => a.stored_at.cmp(&b.stored_at),
+                            (None, Some(_)) => std::cmp::Ordering::Less,
+                            (Some(_), None) => std::cmp::Ordering::Greater,
+                            (Some(a_caus), Some(b_caus)) => a_caus
+                                .cmp(b_caus)
+                                .then_with(|| a.stored_at.cmp(&b.stored_at)),
                         });
                     }
                     EventOrdering::AggregateSequence => {
                         events.sort_by(|a, b| {
-                            a.aggregate_id.cmp(&b.aggregate_id)
+                            a.aggregate_id
+                                .cmp(&b.aggregate_id)
                                 .then_with(|| a.sequence.cmp(&b.sequence))
                         });
                     }
@@ -306,15 +315,20 @@ impl EventStreamOperations for EventStreamService {
 
                 events
             }
-            EventQuery::ByWorkflowExecution { instance_id, correlation_ids } => {
+            EventQuery::ByWorkflowExecution {
+                instance_id,
+                correlation_ids,
+            } => {
                 // Get events for workflow instance
-                let mut events = self.event_store
+                let mut events = self
+                    .event_store
                     .get_events(instance_id, None)
                     .await
                     .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
 
                 // Also get events by correlation IDs
-                let mut all_events = self.event_store
+                let mut all_events = self
+                    .event_store
                     .stream_all_events(None)
                     .await
                     .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
@@ -348,10 +362,8 @@ impl EventStreamOperations for EventStreamService {
         stream: &EventStream,
         transformation: StreamTransformation,
     ) -> Result<EventStream, EventStreamError> {
-        let transformed_events = self.apply_transformation(
-            stream.events.clone(),
-            &transformation,
-        )?;
+        let transformed_events =
+            self.apply_transformation(stream.events.clone(), &transformation)?;
 
         Ok(EventStream::new(
             format!("{} (transformed)", stream.name),
@@ -368,20 +380,18 @@ impl EventStreamOperations for EventStreamService {
     ) -> Result<EventStream, EventStreamError> {
         if streams.is_empty() {
             return Err(EventStreamError::InvalidOperation(
-                "Cannot compose empty stream list".to_string()
+                "Cannot compose empty stream list".to_string(),
             ));
         }
 
-        let event_lists: Vec<Vec<StoredEvent>> = streams
-            .iter()
-            .map(|s| s.events.clone())
-            .collect();
+        let event_lists: Vec<Vec<StoredEvent>> = streams.iter().map(|s| s.events.clone()).collect();
 
         let composed_events = self.compose_event_lists(&event_lists, &composition)?;
 
         let name = format!(
             "Composed: {}",
-            streams.iter()
+            streams
+                .iter()
                 .map(|s| s.name.as_str())
                 .collect::<Vec<_>>()
                 .join(" + ")
@@ -395,10 +405,7 @@ impl EventStreamOperations for EventStreamService {
         ))
     }
 
-    async fn save_stream(
-        &self,
-        stream: &EventStream,
-    ) -> Result<(), EventStreamError> {
+    async fn save_stream(&self, stream: &EventStream) -> Result<(), EventStreamError> {
         let mut saved = self.saved_streams.write().await;
         saved.insert(stream.id.clone(), stream.clone());
         Ok(())
@@ -409,14 +416,13 @@ impl EventStreamOperations for EventStreamService {
         stream_id: &EventStreamId,
     ) -> Result<EventStream, EventStreamError> {
         let saved = self.saved_streams.read().await;
-        saved.get(stream_id)
+        saved
+            .get(stream_id)
             .cloned()
             .ok_or_else(|| EventStreamError::StreamNotFound(stream_id.clone()))
     }
 
-    async fn list_streams(
-        &self,
-    ) -> Result<Vec<EventStream>, EventStreamError> {
+    async fn list_streams(&self) -> Result<Vec<EventStream>, EventStreamError> {
         let saved = self.saved_streams.read().await;
         Ok(saved.values().cloned().collect())
     }

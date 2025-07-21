@@ -5,17 +5,17 @@
 use super::*;
 use crate::domain_events::DomainEventEnum;
 // Domain-specific events have been moved to their respective submodules
-use crate::infrastructure::event_store::{EventStream, EventStore};
+use crate::domain_events::{WorkflowCompleted, WorkflowStarted, WorkflowTransitioned};
+use crate::identifiers::{GraphId, WorkflowId};
+use crate::infrastructure::event_store::{EventStore, EventStream};
 use async_trait::async_trait;
 use chrono::Utc;
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use std::pin::Pin;
-use std::task::{Context, Poll};
 use futures::stream::Stream;
-use crate::identifiers::{GraphId, WorkflowId};
-use crate::domain_events::{WorkflowStarted, WorkflowCompleted, WorkflowTransitioned};
+use std::collections::HashMap;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
+use tokio::sync::RwLock;
 
 /// Mock event store for testing
 #[derive(Debug, Clone)]
@@ -134,7 +134,9 @@ impl EventStore for MockEventStore {
                 DomainEventEnum::WorkflowResumed(_) => event_type == "WorkflowResumed",
                 DomainEventEnum::WorkflowCancelled(_) => event_type == "WorkflowCancelled",
                 DomainEventEnum::WorkflowFailed(_) => event_type == "WorkflowFailed",
-                DomainEventEnum::WorkflowTransitionExecuted(_) => event_type == "WorkflowTransitionExecuted",
+                DomainEventEnum::WorkflowTransitionExecuted(_) => {
+                    event_type == "WorkflowTransitionExecuted"
+                }
             })
             .take(limit)
             .cloned()
@@ -156,7 +158,9 @@ impl EventStore for MockEventStore {
         &self,
         _from_position: Option<u64>,
     ) -> Result<Box<dyn EventStream>, EventStoreError> {
-        Err(EventStoreError::StorageError("Not implemented in mock".to_string()))
+        Err(EventStoreError::StorageError(
+            "Not implemented in mock".to_string(),
+        ))
     }
 
     async fn subscribe_to_aggregate_type(
@@ -164,7 +168,9 @@ impl EventStore for MockEventStore {
         _aggregate_type: &str,
         _from_position: Option<u64>,
     ) -> Result<Box<dyn EventStream>, EventStoreError> {
-        Err(EventStoreError::StorageError("Not implemented in mock".to_string()))
+        Err(EventStoreError::StorageError(
+            "Not implemented in mock".to_string(),
+        ))
     }
 
     async fn stream_events_by_type(
@@ -182,9 +188,7 @@ impl EventStore for MockEventStore {
         from_sequence: Option<u64>,
     ) -> Result<Box<dyn EventStream>, EventStoreError> {
         let events = self.events.read().await;
-        let mut all_events: Vec<StoredEvent> = events.values()
-            .flat_map(|v| v.clone())
-            .collect();
+        let mut all_events: Vec<StoredEvent> = events.values().flat_map(|v| v.clone()).collect();
 
         // Sort by sequence
         all_events.sort_by_key(|e| e.sequence);
@@ -210,10 +214,7 @@ pub struct MockEventStream {
 impl Stream for MockEventStream {
     type Item = Result<StoredEvent, EventStoreError>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.position < self.events.len() {
             let event = self.events[self.position].clone();
             self.position += 1;
@@ -262,8 +263,6 @@ fn create_test_workflow_transitioned_event() -> DomainEventEnum {
     })
 }
 
-
-
 #[cfg(test)]
 mod event_store_tests {
     use super::*;
@@ -295,7 +294,13 @@ mod event_store_tests {
 
         // Append event
         store
-            .append_events(aggregate_id, aggregate_type, vec![event.clone()], None, metadata.clone())
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                vec![event.clone()],
+                None,
+                metadata.clone(),
+            )
             .await
             .unwrap();
 
@@ -331,23 +336,44 @@ mod event_store_tests {
 
         // Append first event
         store
-            .append_events(aggregate_id, aggregate_type, vec![event1.clone()], None, metadata.clone())
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                vec![event1.clone()],
+                None,
+                metadata.clone(),
+            )
             .await
             .unwrap();
 
         // Try to append with wrong expected version
         let result = store
-            .append_events(aggregate_id, aggregate_type, vec![event1.clone()], Some(0), metadata.clone())
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                vec![event1.clone()],
+                Some(0),
+                metadata.clone(),
+            )
             .await;
 
         match result {
-            Err(EventStoreError::ConcurrencyConflict { expected: 0, current: 1 }) => {},
+            Err(EventStoreError::ConcurrencyConflict {
+                expected: 0,
+                current: 1,
+            }) => {}
             _ => panic!("Expected concurrency conflict"),
         }
 
         // Append with correct version
         store
-            .append_events(aggregate_id, aggregate_type, vec![event1], Some(1), metadata)
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                vec![event1],
+                Some(1),
+                metadata,
+            )
             .await
             .unwrap();
 
@@ -421,7 +447,13 @@ mod event_store_tests {
         for i in 0..3 {
             let event = create_test_workflow_started_event();
             store
-                .append_events(&format!("workflow-{i}"), "Workflow", vec![event], None, metadata.clone())
+                .append_events(
+                    &format!("workflow-{i}"),
+                    "Workflow",
+                    vec![event],
+                    None,
+                    metadata.clone(),
+                )
                 .await
                 .unwrap();
         }
@@ -430,7 +462,13 @@ mod event_store_tests {
         for i in 0..2 {
             let event = create_test_workflow_completed_event();
             store
-                .append_events(&format!("workflow-comp-{i}"), "Workflow", vec![event], None, metadata.clone())
+                .append_events(
+                    &format!("workflow-comp-{i}"),
+                    "Workflow",
+                    vec![event],
+                    None,
+                    metadata.clone(),
+                )
                 .await
                 .unwrap();
         }
@@ -479,7 +517,13 @@ mod event_store_tests {
 
         // Store event with metadata
         store
-            .append_events(aggregate_id, aggregate_type, vec![event], None, metadata.clone())
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                vec![event],
+                None,
+                metadata.clone(),
+            )
             .await
             .unwrap();
 
@@ -498,8 +542,8 @@ mod event_store_tests {
 #[cfg(test)]
 mod cid_chain_tests {
     use super::*;
-    use cim_ipld::TypedContent;
     use crate::infrastructure::cid_chain::{create_event_with_cid, verify_event_chain};
+    use cim_ipld::TypedContent;
 
     /// Test CID chain creation and verification
     ///
@@ -571,7 +615,10 @@ mod cid_chain_tests {
 
         // Verify TypedContent implementation
         assert_eq!(cid_chain::EventWrapper::CODEC, 0x0200); // JSON codec
-        assert_eq!(cid_chain::EventWrapper::CONTENT_TYPE, cim_ipld::ContentType::Event);
+        assert_eq!(
+            cid_chain::EventWrapper::CONTENT_TYPE,
+            cim_ipld::ContentType::Event
+        );
     }
 }
 
@@ -655,7 +702,13 @@ mod integration_tests {
 
         // Try to append - should fail
         let result = store
-            .append_events(aggregate_id, aggregate_type, vec![event.clone()], None, metadata.clone())
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                vec![event.clone()],
+                None,
+                metadata.clone(),
+            )
             .await;
 
         match result {

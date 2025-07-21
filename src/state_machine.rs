@@ -68,25 +68,25 @@ pub trait State: Debug + Clone + PartialEq + Eq + Send + Sync {
 /// ```rust
 /// use cim_domain::state_machine::{State, MooreStateTransitions, TransitionOutput};
 /// use cim_domain::DomainEvent;
-/// 
+///
 /// #[derive(Debug, Clone, PartialEq, Eq)]
 /// enum TrafficLight {
 ///     Red,
 ///     Yellow,
 ///     Green,
 /// }
-/// 
+///
 /// #[derive(Debug, Clone)]
 /// struct LightOutput {
 ///     message: String,
 /// }
-/// 
+///
 /// impl TransitionOutput for LightOutput {
 ///     fn to_events(&self) -> Vec<Box<dyn DomainEvent>> {
 ///         vec![] // Example: no events
 ///     }
 /// }
-/// 
+///
 /// impl State for TrafficLight {
 ///     fn name(&self) -> &'static str {
 ///         match self {
@@ -96,7 +96,7 @@ pub trait State: Debug + Clone + PartialEq + Eq + Send + Sync {
 ///         }
 ///     }
 /// }
-/// 
+///
 /// impl MooreStateTransitions for TrafficLight {
 ///     type Output = LightOutput;
 ///     
@@ -123,7 +123,7 @@ pub trait State: Debug + Clone + PartialEq + Eq + Send + Sync {
 ///         }
 ///     }
 /// }
-/// 
+///
 /// let light = TrafficLight::Red;
 /// assert!(light.can_transition_to(&TrafficLight::Green));
 /// assert!(!light.can_transition_to(&TrafficLight::Yellow));
@@ -207,7 +207,10 @@ impl<S: MooreStateTransitions, A: AggregateRoot> MooreMachine<S, A> {
     }
 
     /// Transition to a new state
-    pub fn transition_to(&mut self, new_state: S) -> DomainResult<StateTransition<S, (), S::Output>> {
+    pub fn transition_to(
+        &mut self,
+        new_state: S,
+    ) -> DomainResult<StateTransition<S, (), S::Output>> {
         if self.current_state.is_terminal() {
             return Err(DomainError::InvalidStateTransition {
                 from: self.current_state.name().to_string(),
@@ -286,7 +289,11 @@ impl<S: MealyStateTransitions, A: AggregateRoot> MealyMachine<S, A> {
     }
 
     /// Transition to a new state with input
-    pub fn transition_to(&mut self, new_state: S, input: S::Input) -> DomainResult<StateTransition<S, S::Input, S::Output>> {
+    pub fn transition_to(
+        &mut self,
+        new_state: S,
+        input: S::Input,
+    ) -> DomainResult<StateTransition<S, S::Input, S::Output>> {
         if self.current_state.is_terminal() {
             return Err(DomainError::InvalidStateTransition {
                 from: self.current_state.name().to_string(),
@@ -463,8 +470,6 @@ impl MooreStateTransitions for DocumentState {
     }
 }
 
-
-
 /// Macro to define Moore state transitions more concisely
 #[macro_export]
 macro_rules! define_moore_transitions {
@@ -541,8 +546,12 @@ mod tests {
         struct DocumentAggregate;
         impl AggregateRoot for DocumentAggregate {
             type Id = EntityId<DocumentAggregate>;
-            fn id(&self) -> Self::Id { EntityId::<DocumentAggregate>::new() }
-            fn version(&self) -> u64 { 0 }
+            fn id(&self) -> Self::Id {
+                EntityId::<DocumentAggregate>::new()
+            }
+            fn version(&self) -> u64 {
+                0
+            }
             fn increment_version(&mut self) {}
         }
 
@@ -563,16 +572,18 @@ mod tests {
         assert!(machine.transition_to(DocumentState::Draft).is_err()); // Can't transition from terminal
     }
 
-
-
     #[test]
     fn test_moore_machine() {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         struct DocumentAggregate;
         impl AggregateRoot for DocumentAggregate {
             type Id = EntityId<DocumentAggregate>;
-            fn id(&self) -> Self::Id { EntityId::<DocumentAggregate>::new() }
-            fn version(&self) -> u64 { 0 }
+            fn id(&self) -> Self::Id {
+                EntityId::<DocumentAggregate>::new()
+            }
+            fn version(&self) -> u64 {
+                0
+            }
             fn increment_version(&mut self) {}
         }
 

@@ -6,15 +6,13 @@
 //! architecture defined in cim-component. Components can be synchronized
 //! between DDD and ECS representations via NATS.
 
+use crate::DomainError;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt;
-use crate::DomainError;
 
 // Re-export the Component trait and related types from cim-component
-pub use cim_component::{
-    Component, ComponentExt, EcsComponentData, ComponentEvent,
-};
+pub use cim_component::{Component, ComponentEvent, ComponentExt, EcsComponentData};
 
 /// Storage for components attached to a domain object
 ///
@@ -44,13 +42,13 @@ impl ComponentStorage {
     /// ```rust
     /// use cim_domain::{ComponentStorage, Component};
     /// use std::any::Any;
-    /// 
+    ///
     /// #[derive(Debug, Clone)]
     /// struct HealthComponent {
     ///     current: i32,
     ///     maximum: i32,
     /// }
-    /// 
+    ///
     /// impl Component for HealthComponent {
     ///     fn type_name(&self) -> &'static str {
     ///         "HealthComponent"
@@ -64,20 +62,22 @@ impl ComponentStorage {
     ///         Box::new(self.clone())
     ///     }
     /// }
-    /// 
+    ///
     /// let mut storage = ComponentStorage::new();
     /// let health = HealthComponent { current: 100, maximum: 100 };
-    /// 
+    ///
     /// // First add succeeds
     /// assert!(storage.add(health.clone()).is_ok());
-    /// 
+    ///
     /// // Second add of same type fails
     /// assert!(storage.add(health).is_err());
     /// ```
     pub fn add<T: Component + 'static>(&mut self, component: T) -> Result<(), DomainError> {
         let type_id = TypeId::of::<T>();
         if self.components.contains_key(&type_id) {
-            return Err(DomainError::ComponentAlreadyExists(component.type_name().to_string()));
+            return Err(DomainError::ComponentAlreadyExists(
+                component.type_name().to_string(),
+            ));
         }
         self.components.insert(type_id, Box::new(component));
         Ok(())
@@ -128,10 +128,7 @@ impl Clone for ComponentStorage {
 
 impl fmt::Debug for ComponentStorage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let component_names: Vec<&str> = self.components
-            .values()
-            .map(|c| c.type_name())
-            .collect();
+        let component_names: Vec<&str> = self.components.values().map(|c| c.type_name()).collect();
         f.debug_struct("ComponentStorage")
             .field("components", &component_names)
             .finish()
@@ -148,9 +145,15 @@ mod tests {
     struct TestLabel(String);
 
     impl Component for TestLabel {
-        fn as_any(&self) -> &dyn Any { self }
-        fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
-        fn type_name(&self) -> &'static str { "TestLabel" }
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+        fn clone_box(&self) -> Box<dyn Component> {
+            Box::new(self.clone())
+        }
+        fn type_name(&self) -> &'static str {
+            "TestLabel"
+        }
         fn to_json(&self) -> serde_json::Value {
             serde_json::to_value(self).unwrap_or_default()
         }
@@ -163,9 +166,15 @@ mod tests {
     }
 
     impl Component for TestMetadata {
-        fn as_any(&self) -> &dyn Any { self }
-        fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
-        fn type_name(&self) -> &'static str { "TestMetadata" }
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+        fn clone_box(&self) -> Box<dyn Component> {
+            Box::new(self.clone())
+        }
+        fn type_name(&self) -> &'static str {
+            "TestMetadata"
+        }
         fn to_json(&self) -> serde_json::Value {
             serde_json::to_value(self).unwrap_or_default()
         }
@@ -175,9 +184,15 @@ mod tests {
     struct TestTag;
 
     impl Component for TestTag {
-        fn as_any(&self) -> &dyn Any { self }
-        fn clone_box(&self) -> Box<dyn Component> { Box::new(self.clone()) }
-        fn type_name(&self) -> &'static str { "TestTag" }
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+        fn clone_box(&self) -> Box<dyn Component> {
+            Box::new(self.clone())
+        }
+        fn type_name(&self) -> &'static str {
+            "TestTag"
+        }
         fn to_json(&self) -> serde_json::Value {
             serde_json::to_value(self).unwrap_or_default()
         }
@@ -346,10 +361,12 @@ mod tests {
 
         // Add multiple components
         storage.add(TestLabel("test".to_string())).unwrap();
-        storage.add(TestMetadata {
-            key: "key".to_string(),
-            value: 42,
-        }).unwrap();
+        storage
+            .add(TestMetadata {
+                key: "key".to_string(),
+                value: 42,
+            })
+            .unwrap();
         storage.add(TestTag).unwrap();
 
         // Iterate and count
@@ -373,10 +390,12 @@ mod tests {
 
         // Add components
         storage.add(TestLabel("test".to_string())).unwrap();
-        storage.add(TestMetadata {
-            key: "key".to_string(),
-            value: 42,
-        }).unwrap();
+        storage
+            .add(TestMetadata {
+                key: "key".to_string(),
+                value: 42,
+            })
+            .unwrap();
 
         // Clone storage
         let cloned = storage.clone();
@@ -409,10 +428,12 @@ mod tests {
 
         // Add components
         storage.add(TestLabel("test".to_string())).unwrap();
-        storage.add(TestMetadata {
-            key: "key".to_string(),
-            value: 42,
-        }).unwrap();
+        storage
+            .add(TestMetadata {
+                key: "key".to_string(),
+                value: 42,
+            })
+            .unwrap();
 
         let debug_full = format!("{storage:?}");
         assert!(debug_full.contains("ComponentStorage"));

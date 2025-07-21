@@ -5,29 +5,31 @@
 #[cfg(test)]
 mod tests {
     use crate::{
+        domain_events::{
+            DomainEventEnum, WorkflowCompleted, WorkflowStarted, WorkflowTransitioned,
+        },
+        identifiers::{GraphId, WorkflowId},
+        infrastructure::event_store::EventMetadata,
         infrastructure::{
             event_store::{EventStore, StoredEvent},
             event_stream::{
-                EventStream, EventStreamId, EventStreamOperations,
-                EventQuery, EventOrdering, CausationOrder, StreamComposition,
-                EventStreamError,
+                CausationOrder, EventOrdering, EventQuery, EventStream, EventStreamError,
+                EventStreamId, EventStreamOperations, StreamComposition,
             },
             tests::MockEventStore,
         },
-        domain_events::{DomainEventEnum, WorkflowStarted, WorkflowCompleted, WorkflowTransitioned},
-        infrastructure::event_store::EventMetadata,
-        identifiers::{WorkflowId, GraphId},
     };
     use async_trait::async_trait;
-    use chrono::{Utc, Duration};
+    use chrono::{Duration, Utc};
+    use futures::StreamExt;
     use std::sync::Arc;
     use uuid::Uuid;
-    use futures::StreamExt;
 
     // Mock EventStreamService for testing
     struct EventStreamService {
         event_store: Arc<dyn EventStore>,
-        saved_streams: Arc<tokio::sync::Mutex<std::collections::HashMap<EventStreamId, EventStream>>>,
+        saved_streams:
+            Arc<tokio::sync::Mutex<std::collections::HashMap<EventStreamId, EventStream>>>,
     }
 
     impl EventStreamService {
@@ -51,7 +53,10 @@ mod tests {
             let events = match &query {
                 EventQuery::ByCorrelationId { correlation_id, .. } => {
                     // Get all events and filter by correlation ID
-                    let all_events = self.event_store.stream_all_events(None).await
+                    let all_events = self
+                        .event_store
+                        .stream_all_events(None)
+                        .await
                         .map_err(|e| EventStreamError::EventStoreError(e.to_string()))?;
 
                     let mut filtered_events = vec![];
@@ -64,7 +69,7 @@ mod tests {
                         }
                     }
                     filtered_events
-                },
+                }
                 _ => vec![], // Other query types not implemented for testing
             };
 
@@ -85,7 +90,9 @@ mod tests {
             composition: StreamComposition,
         ) -> Result<EventStream, EventStreamError> {
             if streams.is_empty() {
-                return Err(EventStreamError::InvalidOperation("Cannot compose empty stream list".to_string()));
+                return Err(EventStreamError::InvalidOperation(
+                    "Cannot compose empty stream list".to_string(),
+                ));
             }
 
             // Simple implementation for testing
@@ -100,48 +107,70 @@ mod tests {
                             }
                         }
                     }
-                    Ok(EventStream::new("Union".to_string(), "Union of streams".to_string(),
-                        EventQuery::Complex { filters: vec![], ordering: EventOrdering::Temporal, limit: None },
-                        all_events))
-                },
+                    Ok(EventStream::new(
+                        "Union".to_string(),
+                        "Union of streams".to_string(),
+                        EventQuery::Complex {
+                            filters: vec![],
+                            ordering: EventOrdering::Temporal,
+                            limit: None,
+                        },
+                        all_events,
+                    ))
+                }
                 StreamComposition::Intersection => {
                     if streams.len() < 2 {
                         return Ok(streams.into_iter().next().unwrap());
                     }
-                    let first_ids: std::collections::HashSet<_> = streams[0].events.iter().map(|e| &e.event_id).collect();
+                    let first_ids: std::collections::HashSet<_> =
+                        streams[0].events.iter().map(|e| &e.event_id).collect();
                     let mut result_events = vec![];
                     for event in &streams[1].events {
                         if first_ids.contains(&event.event_id) {
                             result_events.push(event.clone());
                         }
                     }
-                    Ok(EventStream::new("Intersection".to_string(), "Intersection of streams".to_string(),
-                        EventQuery::Complex { filters: vec![], ordering: EventOrdering::Temporal, limit: None },
-                        result_events))
-                },
+                    Ok(EventStream::new(
+                        "Intersection".to_string(),
+                        "Intersection of streams".to_string(),
+                        EventQuery::Complex {
+                            filters: vec![],
+                            ordering: EventOrdering::Temporal,
+                            limit: None,
+                        },
+                        result_events,
+                    ))
+                }
                 StreamComposition::Difference => {
                     if streams.len() < 2 {
                         return Ok(streams.into_iter().next().unwrap());
                     }
-                    let other_ids: std::collections::HashSet<_> = streams[1].events.iter().map(|e| &e.event_id).collect();
+                    let other_ids: std::collections::HashSet<_> =
+                        streams[1].events.iter().map(|e| &e.event_id).collect();
                     let mut result_events = vec![];
                     for event in &streams[0].events {
                         if !other_ids.contains(&event.event_id) {
                             result_events.push(event.clone());
                         }
                     }
-                    Ok(EventStream::new("Difference".to_string(), "Difference of streams".to_string(),
-                        EventQuery::Complex { filters: vec![], ordering: EventOrdering::Temporal, limit: None },
-                        result_events))
-                },
-                _ => Err(EventStreamError::InvalidOperation("Unsupported composition".to_string())),
+                    Ok(EventStream::new(
+                        "Difference".to_string(),
+                        "Difference of streams".to_string(),
+                        EventQuery::Complex {
+                            filters: vec![],
+                            ordering: EventOrdering::Temporal,
+                            limit: None,
+                        },
+                        result_events,
+                    ))
+                }
+                _ => Err(EventStreamError::InvalidOperation(
+                    "Unsupported composition".to_string(),
+                )),
             }
         }
 
-        async fn save_stream(
-            &self,
-            stream: &EventStream,
-        ) -> Result<(), EventStreamError> {
+        async fn save_stream(&self, stream: &EventStream) -> Result<(), EventStreamError> {
             let mut streams = self.saved_streams.lock().await;
             streams.insert(stream.id.clone(), stream.clone());
             Ok(())
@@ -152,14 +181,13 @@ mod tests {
             stream_id: &EventStreamId,
         ) -> Result<EventStream, EventStreamError> {
             let streams = self.saved_streams.lock().await;
-            streams.get(stream_id)
+            streams
+                .get(stream_id)
                 .cloned()
                 .ok_or_else(|| EventStreamError::StreamNotFound(stream_id.clone()))
         }
 
-        async fn list_streams(
-            &self,
-        ) -> Result<Vec<EventStream>, EventStreamError> {
+        async fn list_streams(&self) -> Result<Vec<EventStream>, EventStreamError> {
             let streams = self.saved_streams.lock().await;
             Ok(streams.values().cloned().collect())
         }
@@ -235,41 +263,50 @@ mod tests {
             custom: None,
         };
 
-        event_store.append_events(
-            "workflow-1",
-            "Workflow",
-            vec![DomainEventEnum::WorkflowStarted(WorkflowStarted {
-                workflow_id: WorkflowId::new(),
-                definition_id: GraphId::new(),
-                initial_state: "Start".to_string(),
-                started_at: Utc::now(),
-            })],
-            None,
-            metadata.clone(),
-        ).await.unwrap();
+        event_store
+            .append_events(
+                "workflow-1",
+                "Workflow",
+                vec![DomainEventEnum::WorkflowStarted(WorkflowStarted {
+                    workflow_id: WorkflowId::new(),
+                    definition_id: GraphId::new(),
+                    initial_state: "Start".to_string(),
+                    started_at: Utc::now(),
+                })],
+                None,
+                metadata.clone(),
+            )
+            .await
+            .unwrap();
 
-        event_store.append_events(
-            "workflow-2",
-            "Workflow",
-            vec![DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
-                workflow_id: WorkflowId::new(),
-                final_state: "End".to_string(),
-                total_duration: std::time::Duration::from_secs(60),
-                completed_at: Utc::now(),
-            })],
-            None,
-            metadata,
-        ).await.unwrap();
+        event_store
+            .append_events(
+                "workflow-2",
+                "Workflow",
+                vec![DomainEventEnum::WorkflowCompleted(WorkflowCompleted {
+                    workflow_id: WorkflowId::new(),
+                    final_state: "End".to_string(),
+                    total_duration: std::time::Duration::from_secs(60),
+                    completed_at: Utc::now(),
+                })],
+                None,
+                metadata,
+            )
+            .await
+            .unwrap();
 
         // Create stream by correlation ID
-        let stream = service.create_stream(
-            "Test Correlation Stream".to_string(),
-            "Events with test correlation".to_string(),
-            EventQuery::ByCorrelationId {
-                correlation_id: correlation_id.clone(),
-                order: CausationOrder::Temporal,
-            },
-        ).await.unwrap();
+        let stream = service
+            .create_stream(
+                "Test Correlation Stream".to_string(),
+                "Events with test correlation".to_string(),
+                EventQuery::ByCorrelationId {
+                    correlation_id: correlation_id.clone(),
+                    order: CausationOrder::Temporal,
+                },
+            )
+            .await
+            .unwrap();
 
         // Verify results
         assert_eq!(stream.events.len(), 2);
@@ -363,7 +400,14 @@ mod tests {
     async fn test_stream_filtering() {
         let events = vec![
             create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None),
-            create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, None, None),
+            create_test_stored_event(
+                "WorkflowTransitioned",
+                "workflow-1",
+                "Workflow",
+                2,
+                None,
+                None,
+            ),
             create_test_stored_event("WorkflowStarted", "workflow-2", "Workflow", 1, None, None),
             create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None),
         ];
@@ -407,9 +451,18 @@ mod tests {
         let service = EventStreamService::new(event_store);
 
         // Create test events
-        let event1 = create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None);
-        let event2 = create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, None, None);
-        let event3 = create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None);
+        let event1 =
+            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None);
+        let event2 = create_test_stored_event(
+            "WorkflowTransitioned",
+            "workflow-1",
+            "Workflow",
+            2,
+            None,
+            None,
+        );
+        let event3 =
+            create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None);
 
         let stream1 = EventStream::new(
             "Stream 1".to_string(),
@@ -434,25 +487,31 @@ mod tests {
         );
 
         // Test union
-        let union = service.compose_streams(
-            vec![stream1.clone(), stream2.clone()],
-            StreamComposition::Union,
-        ).await.unwrap();
+        let union = service
+            .compose_streams(
+                vec![stream1.clone(), stream2.clone()],
+                StreamComposition::Union,
+            )
+            .await
+            .unwrap();
         assert_eq!(union.events.len(), 3); // event1, event2, event3 (no duplicates)
 
         // Test intersection
-        let intersection = service.compose_streams(
-            vec![stream1.clone(), stream2.clone()],
-            StreamComposition::Intersection,
-        ).await.unwrap();
+        let intersection = service
+            .compose_streams(
+                vec![stream1.clone(), stream2.clone()],
+                StreamComposition::Intersection,
+            )
+            .await
+            .unwrap();
         assert_eq!(intersection.events.len(), 1); // Only event2 is in both
         assert_eq!(intersection.events[0].event_id, event2.event_id);
 
         // Test difference
-        let difference = service.compose_streams(
-            vec![stream1, stream2],
-            StreamComposition::Difference,
-        ).await.unwrap();
+        let difference = service
+            .compose_streams(vec![stream1, stream2], StreamComposition::Difference)
+            .await
+            .unwrap();
         assert_eq!(difference.events.len(), 1); // Only event1 is unique to stream1
         assert_eq!(difference.events[0].event_id, event1.event_id);
     }
@@ -472,9 +531,14 @@ mod tests {
         let event_store = Arc::new(MockEventStore::new());
         let service = EventStreamService::new(event_store);
 
-        let events = vec![
-            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, None, None),
-        ];
+        let events = vec![create_test_stored_event(
+            "WorkflowStarted",
+            "workflow-1",
+            "Workflow",
+            1,
+            None,
+            None,
+        )];
 
         let stream = EventStream::new(
             "Test Stream".to_string(),
@@ -516,9 +580,30 @@ mod tests {
     #[test]
     fn test_group_by_correlation() {
         let events = vec![
-            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, Some("corr-1".to_string()), None),
-            create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, Some("corr-1".to_string()), None),
-            create_test_stored_event("WorkflowStarted", "workflow-2", "Workflow", 1, Some("corr-2".to_string()), None),
+            create_test_stored_event(
+                "WorkflowStarted",
+                "workflow-1",
+                "Workflow",
+                1,
+                Some("corr-1".to_string()),
+                None,
+            ),
+            create_test_stored_event(
+                "WorkflowTransitioned",
+                "workflow-1",
+                "Workflow",
+                2,
+                Some("corr-1".to_string()),
+                None,
+            ),
+            create_test_stored_event(
+                "WorkflowStarted",
+                "workflow-2",
+                "Workflow",
+                1,
+                Some("corr-2".to_string()),
+                None,
+            ),
             create_test_stored_event("WorkflowCompleted", "workflow-1", "Workflow", 3, None, None),
         ];
 
@@ -553,9 +638,30 @@ mod tests {
     #[test]
     fn test_metadata_calculation() {
         let mut events = vec![
-            create_test_stored_event("WorkflowStarted", "workflow-1", "Workflow", 1, Some("corr-1".to_string()), None),
-            create_test_stored_event("WorkflowTransitioned", "workflow-1", "Workflow", 2, Some("corr-1".to_string()), None),
-            create_test_stored_event("WorkflowStarted", "workflow-2", "Workflow", 1, Some("corr-2".to_string()), None),
+            create_test_stored_event(
+                "WorkflowStarted",
+                "workflow-1",
+                "Workflow",
+                1,
+                Some("corr-1".to_string()),
+                None,
+            ),
+            create_test_stored_event(
+                "WorkflowTransitioned",
+                "workflow-1",
+                "Workflow",
+                2,
+                Some("corr-1".to_string()),
+                None,
+            ),
+            create_test_stored_event(
+                "WorkflowStarted",
+                "workflow-2",
+                "Workflow",
+                1,
+                Some("corr-2".to_string()),
+                None,
+            ),
         ];
 
         // Set different timestamps
@@ -604,14 +710,16 @@ mod tests {
         // Test loading non-existent stream
         let result = service.load_stream(&EventStreamId::new()).await;
         match result {
-            Err(EventStreamError::StreamNotFound(_)) => {},
+            Err(EventStreamError::StreamNotFound(_)) => {}
             _ => panic!("Expected StreamNotFound error"),
         }
 
         // Test composing empty stream list
-        let result = service.compose_streams(vec![], StreamComposition::Union).await;
+        let result = service
+            .compose_streams(vec![], StreamComposition::Union)
+            .await;
         match result {
-            Err(EventStreamError::InvalidOperation(_)) => {},
+            Err(EventStreamError::InvalidOperation(_)) => {}
             _ => panic!("Expected InvalidOperation error"),
         }
     }

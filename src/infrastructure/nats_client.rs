@@ -2,8 +2,8 @@
 
 //! NATS client for event store integration
 
-use async_nats::{Client, ConnectOptions};
 use async_nats::jetstream::{self, Context as JetStreamContext};
+use async_nats::{Client, ConnectOptions};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
@@ -132,12 +132,11 @@ impl NatsClient {
         }
 
         // Connect to NATS
-        let client = options
-            .connect(&config.url)
-            .await
-            .map_err(|e| NatsError::ConnectionFailed(format!("Failed to connect to {}: {e}", config.url)))?;
+        let client = options.connect(&config.url).await.map_err(|e| {
+            NatsError::ConnectionFailed(format!("Failed to connect to {}: {e}", config.url))
+        })?;
 
-                // Create JetStream context
+        // Create JetStream context
         let jetstream = jetstream::new(client.clone());
 
         // Note: domain and prefix configuration would be done at the stream level

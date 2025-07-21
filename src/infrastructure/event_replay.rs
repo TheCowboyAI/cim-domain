@@ -2,17 +2,17 @@
 
 //! Event replay service for rebuilding aggregates and projections
 
-use crate::infrastructure::{EventStore, EventStoreError, StoredEvent};
 use crate::domain_events::DomainEventEnum;
 use crate::events::DomainEvent;
+use crate::infrastructure::{EventStore, EventStoreError, StoredEvent};
 use async_trait::async_trait;
 use futures::stream::StreamExt;
+use serde_json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
 use tokio::sync::RwLock;
-use serde_json;
 
 /// Errors that can occur during event replay
 #[derive(Debug, Error)]
@@ -145,18 +145,19 @@ impl AggregateEventProcessor for GenericAggregateProcessor {
             DomainEventEnum::WorkflowCancelled(e) => e.workflow_id.to_string(),
             DomainEventEnum::WorkflowFailed(e) => e.workflow_id.to_string(),
         };
-        
+
         // Store event for the aggregate
         self.aggregates
             .entry(aggregate_id)
             .or_default()
             .push(event.clone());
-        
+
         Ok(())
     }
 
     async fn get_aggregate(&self, aggregate_id: &str) -> Option<Box<dyn std::any::Any + Send>> {
-        self.aggregates.get(aggregate_id)
+        self.aggregates
+            .get(aggregate_id)
             .map(|events| Box::new(events.clone()) as Box<dyn std::any::Any + Send>)
     }
 }
@@ -222,7 +223,11 @@ pub struct ProjectionBuilder {
 #[async_trait]
 pub trait ProjectionHandler: Send + Sync {
     /// Handle an event for this projection
-    async fn handle_event(&mut self, event: &DomainEventEnum, sequence: u64) -> Result<(), ReplayError>;
+    async fn handle_event(
+        &mut self,
+        event: &DomainEventEnum,
+        sequence: u64,
+    ) -> Result<(), ReplayError>;
 
     /// Get the name of this projection
     fn name(&self) -> &str;
@@ -239,7 +244,9 @@ impl EventHandler for ProjectionBuilder {
 
         // Process event in all projections
         for (name, projection) in self.projections.iter_mut() {
-            projection.handle_event(event, stored_event.sequence).await?;
+            projection
+                .handle_event(event, stored_event.sequence)
+                .await?;
 
             // Update checkpoint
             let mut checkpoints = self.checkpoints.write().await;
@@ -288,7 +295,8 @@ impl EventReplayService {
         handler.on_replay_start().await?;
 
         // Create event stream
-        let mut event_stream = self.event_store
+        let mut event_stream = self
+            .event_store
             .stream_all_events(options.from_sequence)
             .await
             .map_err(ReplayError::EventStoreError)?;
@@ -317,7 +325,13 @@ impl EventReplayService {
 
                     // Process batch when full
                     if batch.len() >= options.batch_size {
-                        self.process_batch(&mut batch, handler, &mut stats, options.continue_on_error).await?;
+                        self.process_batch(
+                            &mut batch,
+                            handler,
+                            &mut stats,
+                            options.continue_on_error,
+                        )
+                        .await?;
                         total_processed += batch.len() as u64;
 
                         // Check max events limit
@@ -339,7 +353,8 @@ impl EventReplayService {
 
         // Process remaining events
         if !batch.is_empty() {
-            self.process_batch(&mut batch, handler, &mut stats, options.continue_on_error).await?;
+            self.process_batch(&mut batch, handler, &mut stats, options.continue_on_error)
+                .await?;
         }
 
         // Calculate final stats
@@ -389,18 +404,51 @@ impl EventReplayService {
         let mut processors: HashMap<String, Box<dyn AggregateEventProcessor>> = HashMap::new();
 
         // Register aggregate processors for each domain
-        processors.insert("Person".to_string(), Box::new(GenericAggregateProcessor::new("Person")));
-        processors.insert("Organization".to_string(), Box::new(GenericAggregateProcessor::new("Organization")));
-        processors.insert("Document".to_string(), Box::new(GenericAggregateProcessor::new("Document")));
-        processors.insert("Graph".to_string(), Box::new(GenericAggregateProcessor::new("Graph")));
-        processors.insert("Workflow".to_string(), Box::new(GenericAggregateProcessor::new("Workflow")));
-        processors.insert("Agent".to_string(), Box::new(GenericAggregateProcessor::new("Agent")));
-        processors.insert("Dialog".to_string(), Box::new(GenericAggregateProcessor::new("Dialog")));
-        processors.insert("Location".to_string(), Box::new(GenericAggregateProcessor::new("Location")));
-        processors.insert("ConceptualSpace".to_string(), Box::new(GenericAggregateProcessor::new("ConceptualSpace")));
-        processors.insert("Policy".to_string(), Box::new(GenericAggregateProcessor::new("Policy")));
-        processors.insert("NixConfiguration".to_string(), Box::new(GenericAggregateProcessor::new("NixConfiguration")));
-        
+        processors.insert(
+            "Person".to_string(),
+            Box::new(GenericAggregateProcessor::new("Person")),
+        );
+        processors.insert(
+            "Organization".to_string(),
+            Box::new(GenericAggregateProcessor::new("Organization")),
+        );
+        processors.insert(
+            "Document".to_string(),
+            Box::new(GenericAggregateProcessor::new("Document")),
+        );
+        processors.insert(
+            "Graph".to_string(),
+            Box::new(GenericAggregateProcessor::new("Graph")),
+        );
+        processors.insert(
+            "Workflow".to_string(),
+            Box::new(GenericAggregateProcessor::new("Workflow")),
+        );
+        processors.insert(
+            "Agent".to_string(),
+            Box::new(GenericAggregateProcessor::new("Agent")),
+        );
+        processors.insert(
+            "Dialog".to_string(),
+            Box::new(GenericAggregateProcessor::new("Dialog")),
+        );
+        processors.insert(
+            "Location".to_string(),
+            Box::new(GenericAggregateProcessor::new("Location")),
+        );
+        processors.insert(
+            "ConceptualSpace".to_string(),
+            Box::new(GenericAggregateProcessor::new("ConceptualSpace")),
+        );
+        processors.insert(
+            "Policy".to_string(),
+            Box::new(GenericAggregateProcessor::new("Policy")),
+        );
+        processors.insert(
+            "NixConfiguration".to_string(),
+            Box::new(GenericAggregateProcessor::new("NixConfiguration")),
+        );
+
         let mut rebuilder = AggregateRebuilder {
             aggregate_versions,
             processors,
@@ -414,7 +462,8 @@ impl EventReplayService {
         &self,
         aggregate_id: &str,
     ) -> Result<Vec<StoredEvent>, ReplayError> {
-        let events = self.event_store
+        let events = self
+            .event_store
             .get_events(aggregate_id, None)
             .await
             .map_err(ReplayError::EventStoreError)?;
@@ -457,7 +506,9 @@ impl EventReplayService {
         // In production, this would save to NATS KV store or similar
         // For now, we just validate the inputs
         if projection_name.is_empty() {
-            return Err(ReplayError::ReplayFailed("Projection name cannot be empty".to_string()));
+            return Err(ReplayError::ReplayFailed(
+                "Projection name cannot be empty".to_string(),
+            ));
         }
 
         Ok(())
@@ -467,10 +518,10 @@ impl EventReplayService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain_events::WorkflowStarted;
+    use crate::identifiers::{GraphId, WorkflowId};
     use crate::infrastructure::tests::MockEventStore;
     use crate::infrastructure::EventMetadata;
-    use crate::domain_events::WorkflowStarted;
-    use crate::identifiers::{WorkflowId, GraphId};
     use std::sync::atomic::{AtomicU64, Ordering};
 
     struct TestHandler {
@@ -499,23 +550,26 @@ mod tests {
             started_at: chrono::Utc::now(),
         });
 
-        event_store.append_events(
-            &workflow_id.to_string(),
-            "Workflow",
-            vec![event],
-            None,
-            EventMetadata::default(),
-        ).await.unwrap();
+        event_store
+            .append_events(
+                &workflow_id.to_string(),
+                "Workflow",
+                vec![event],
+                None,
+                EventMetadata::default(),
+            )
+            .await
+            .unwrap();
 
         // Replay with test handler
         let mut handler = TestHandler {
             events_handled: AtomicU64::new(0),
         };
 
-        let stats = service.replay_with_handler(
-            &mut handler,
-            ReplayOptions::default(),
-        ).await.unwrap();
+        let stats = service
+            .replay_with_handler(&mut handler, ReplayOptions::default())
+            .await
+            .unwrap();
 
         assert_eq!(stats.events_processed, 1);
         assert_eq!(handler.events_handled.load(Ordering::SeqCst), 1);
@@ -535,13 +589,16 @@ mod tests {
             started_at: chrono::Utc::now(),
         });
 
-        event_store.append_events(
-            &workflow_id.to_string(),
-            "Workflow",
-            vec![workflow_event],
-            None,
-            EventMetadata::default(),
-        ).await.unwrap();
+        event_store
+            .append_events(
+                &workflow_id.to_string(),
+                "Workflow",
+                vec![workflow_event],
+                None,
+                EventMetadata::default(),
+            )
+            .await
+            .unwrap();
 
         // Replay with event type filter
         let mut handler = TestHandler {
@@ -553,10 +610,10 @@ mod tests {
             ..Default::default()
         };
 
-        let stats = service.replay_with_handler(
-            &mut handler,
-            options,
-        ).await.unwrap();
+        let stats = service
+            .replay_with_handler(&mut handler, options)
+            .await
+            .unwrap();
 
         assert_eq!(stats.events_processed, 1);
     }
@@ -574,16 +631,22 @@ mod tests {
             started_at: chrono::Utc::now(),
         });
 
-        event_store.append_events(
-            &workflow_id.to_string(),
-            "Workflow",
-            vec![event],
-            None,
-            EventMetadata::default(),
-        ).await.unwrap();
+        event_store
+            .append_events(
+                &workflow_id.to_string(),
+                "Workflow",
+                vec![event],
+                None,
+                EventMetadata::default(),
+            )
+            .await
+            .unwrap();
 
         // Replay specific aggregate
-        let events = service.replay_aggregate(&workflow_id.to_string()).await.unwrap();
+        let events = service
+            .replay_aggregate(&workflow_id.to_string())
+            .await
+            .unwrap();
         assert_eq!(events.len(), 1);
     }
 }

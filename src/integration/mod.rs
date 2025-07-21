@@ -15,30 +15,30 @@
 //! - Aggregate event routing for consistency
 //! - Saga orchestration (via infrastructure::saga)
 
-pub mod dependency_injection;
-pub mod domain_bridge;
-pub mod service_registry;
-pub mod event_bridge;
-pub mod cross_domain_search;
-pub mod semantic_search_bridge;
 /// Aggregate event routing for cross-aggregate communication
 pub mod aggregate_event_router;
+pub mod cross_domain_search;
+pub mod dependency_injection;
+pub mod domain_bridge;
+pub mod event_bridge;
+pub mod semantic_search_bridge;
+pub mod service_registry;
 
 #[cfg(test)]
 mod tests;
 
-pub use dependency_injection::{DependencyContainer, ServiceProvider, ContainerBuilder};
-pub use domain_bridge::{DomainBridge, BridgeAdapter, BridgeRegistry, MessageTranslator, PropertyBasedTranslator, SerializedCommand, TranslationContext};
-pub use service_registry::{ServiceRegistry, ServiceDescriptor, ServiceLifetime};
+pub use aggregate_event_router::{AggregateEventHandler, AggregateEventRouter};
+pub use cross_domain_search::{CrossDomainQuery, CrossDomainResult, CrossDomainSearchEngine};
+pub use dependency_injection::{ContainerBuilder, DependencyContainer, ServiceProvider};
+pub use domain_bridge::{
+    BridgeAdapter, BridgeRegistry, DomainBridge, MessageTranslator, PropertyBasedTranslator,
+    SerializedCommand, TranslationContext,
+};
 pub use event_bridge::{EventBridge, EventRouter, EventTransformer};
-pub use cross_domain_search::{CrossDomainSearchEngine, CrossDomainQuery, CrossDomainResult};
-pub use semantic_search_bridge::{SemanticSearchBridge, CrossDomainQueryBuilder};
-pub use aggregate_event_router::{AggregateEventRouter, AggregateEventHandler};
+pub use semantic_search_bridge::{CrossDomainQueryBuilder, SemanticSearchBridge};
+pub use service_registry::{ServiceDescriptor, ServiceLifetime, ServiceRegistry};
 
 // Re-export saga orchestration from infrastructure
 pub use crate::infrastructure::saga::{
-    SagaCoordinator,
-    SagaDefinition,
-    ProcessManager,
-    ProcessPolicy,
+    ProcessManager, ProcessPolicy, SagaCoordinator, SagaDefinition,
 };

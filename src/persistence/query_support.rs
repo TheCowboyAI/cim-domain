@@ -2,9 +2,9 @@
 
 //! Query support for persistence layer
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 /// Query options for filtering and pagination
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -56,7 +56,7 @@ impl<T> QueryResult<T> {
             execution_time_ms,
         }
     }
-    
+
     /// Map the items to a different type
     pub fn map<U, F>(self, f: F) -> QueryResult<U>
     where
@@ -83,43 +83,43 @@ impl QueryBuilder {
             options: QueryOptions::default(),
         }
     }
-    
+
     /// Add a filter condition
     pub fn filter(mut self, field: impl Into<String>, value: serde_json::Value) -> Self {
         self.options.filters.insert(field.into(), value);
         self
     }
-    
+
     /// Add sorting
     pub fn sort_by(mut self, field: impl Into<String>, direction: SortDirection) -> Self {
         self.options.sort_by = Some((field.into(), direction));
         self
     }
-    
+
     /// Set the limit
     pub fn limit(mut self, limit: usize) -> Self {
         self.options.limit = Some(limit);
         self
     }
-    
+
     /// Set the offset
     pub fn offset(mut self, offset: usize) -> Self {
         self.options.offset = Some(offset);
         self
     }
-    
+
     /// Set the projection fields
     pub fn project(mut self, fields: Vec<String>) -> Self {
         self.options.projection = Some(fields);
         self
     }
-    
+
     /// Set time range filter
     pub fn time_range(mut self, start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
         self.options.time_range = Some((start, end));
         self
     }
-    
+
     /// Build the query options
     pub fn build(self) -> QueryOptions {
         self.options
@@ -151,7 +151,7 @@ impl Pagination {
         let per_page = limit.max(1);
         let page = (offset / per_page) + 1;
         let total_pages = (total_items + per_page - 1) / per_page;
-        
+
         Self {
             page,
             per_page,
@@ -159,19 +159,19 @@ impl Pagination {
             total_items,
         }
     }
-    
+
     /// Convert to limit/offset
     pub fn to_limit_offset(&self) -> (usize, usize) {
         let limit = self.per_page;
         let offset = (self.page - 1) * self.per_page;
         (limit, offset)
     }
-    
+
     /// Check if there's a next page
     pub fn has_next(&self) -> bool {
         self.page < self.total_pages
     }
-    
+
     /// Check if there's a previous page
     pub fn has_prev(&self) -> bool {
         self.page > 1
@@ -181,7 +181,7 @@ impl Pagination {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_query_builder() {
         let options = QueryBuilder::new()
@@ -191,27 +191,23 @@ mod tests {
             .limit(10)
             .offset(20)
             .build();
-        
+
         assert_eq!(options.filters.len(), 2);
         assert_eq!(options.limit, Some(10));
         assert_eq!(options.offset, Some(20));
         assert!(options.sort_by.is_some());
     }
-    
+
     #[test]
     fn test_query_result_map() {
-        let result = QueryResult::new(
-            vec![1, 2, 3],
-            10,
-            50,
-        );
-        
+        let result = QueryResult::new(vec![1, 2, 3], 10, 50);
+
         let mapped = result.map(|x| x * 2);
         assert_eq!(mapped.items, vec![2, 4, 6]);
         assert_eq!(mapped.total_count, 10);
         assert!(mapped.has_more);
     }
-    
+
     #[test]
     fn test_pagination() {
         let pagination = Pagination::from_query(10, 20, 100);
@@ -220,7 +216,7 @@ mod tests {
         assert_eq!(pagination.total_pages, 10);
         assert!(pagination.has_next());
         assert!(pagination.has_prev());
-        
+
         let (limit, offset) = pagination.to_limit_offset();
         assert_eq!(limit, 10);
         assert_eq!(offset, 20);

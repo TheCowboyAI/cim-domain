@@ -2,13 +2,9 @@
 
 //! Simplified repository implementation for NATS persistence
 
-use crate::{
-    entity::EntityId,
-    DomainEntity,
-    DomainError,
-};
+use crate::{entity::EntityId, DomainEntity, DomainError};
+use async_nats::{jetstream, Client};
 use async_trait::async_trait;
-use async_nats::{Client, jetstream};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -29,17 +25,17 @@ pub struct SimpleAggregateMetadata {
 
 /// Simplified repository trait
 #[async_trait]
-pub trait SimpleRepository<T>: Send + Sync 
+pub trait SimpleRepository<T>: Send + Sync
 where
     T: DomainEntity + Serialize + for<'de> Deserialize<'de>,
     T::IdType: Send + Sync,
 {
     /// Save an aggregate
     async fn save(&self, aggregate: &T) -> Result<SimpleAggregateMetadata, DomainError>;
-    
+
     /// Load an aggregate
     async fn load(&self, id: &EntityId<T::IdType>) -> Result<Option<T>, DomainError>;
-    
+
     /// Check if exists
     async fn exists(&self, id: &EntityId<T::IdType>) -> Result<bool, DomainError>;
 }
@@ -61,7 +57,7 @@ impl NatsSimpleRepository {
     ) -> Result<Self, DomainError> {
         // Create KV bucket
         let js = jetstream::new(client.clone());
-        
+
         js.create_key_value(jetstream::kv::Config {
             bucket: bucket_name.clone(),
             history: 10,
@@ -69,16 +65,16 @@ impl NatsSimpleRepository {
         })
         .await
         .map_err(|e| DomainError::InvalidOperation {
-            reason: format!("Failed to create bucket: {}", e),
+            reason: format!("Failed to create bucket: {e}"),
         })?;
-        
+
         Ok(Self {
             client,
             bucket_name,
             aggregate_type,
         })
     }
-    
+
     fn build_key<T: DomainEntity>(&self, id: &EntityId<T::IdType>) -> String {
         format!("{}.{}", self.aggregate_type, id)
     }
@@ -93,33 +89,36 @@ where
     async fn save(&self, aggregate: &T) -> Result<SimpleAggregateMetadata, DomainError> {
         let id = aggregate.id();
         let key = self.build_key::<T>(&id);
-        
+
         // Serialize aggregate
         let data = serde_json::to_vec(aggregate)
             .map_err(|e| DomainError::SerializationError(e.to_string()))?;
-        
+
         // Get KV store
         let js = jetstream::new(self.client.clone());
-        let kv = js.get_key_value(&self.bucket_name)
-            .await
-            .map_err(|e| DomainError::InvalidOperation {
-                reason: format!("Failed to get KV store: {}", e),
-            })?;
-        
+        let kv = js.get_key_value(&self.bucket_name).await.map_err(|e| {
+            DomainError::InvalidOperation {
+                reason: format!("Failed to get KV store: {e}"),
+            }
+        })?;
+
         // Save to KV
-        let revision = kv.put(key.clone(), data.into())
-            .await
-            .map_err(|e| DomainError::InvalidOperation {
-                reason: format!("Failed to save: {}", e),
-            })?;
-        
+        let revision =
+            kv.put(key.clone(), data.into())
+                .await
+                .map_err(|e| DomainError::InvalidOperation {
+                    reason: format!("Failed to save: {e}"),
+                })?;
+
         // Build subject
         let subject_str = format!("domain.{}.state.v1", self.aggregate_type);
-        let subject = cim_subject::Subject::new(&subject_str)
-            .map_err(|e| DomainError::InvalidOperation {
-                reason: format!("Failed to build subject: {}", e),
-            })?;
-        
+        use crate::subject_abstraction::SubjectLike;
+        let subject = crate::subject_abstraction::Subject::parse(&subject_str).map_err(|e| {
+            DomainError::InvalidOperation {
+                reason: format!("Failed to build subject: {e}"),
+            }
+        })?;
+
         Ok(SimpleAggregateMetadata {
             aggregate_id: id.to_string(),
             aggregate_type: self.aggregate_type.clone(),
@@ -128,18 +127,18 @@ where
             subject: subject.to_string(),
         })
     }
-    
+
     async fn load(&self, id: &EntityId<T::IdType>) -> Result<Option<T>, DomainError> {
         let key = self.build_key::<T>(id);
-        
+
         // Get KV store
         let js = jetstream::new(self.client.clone());
-        let kv = js.get_key_value(&self.bucket_name)
-            .await
-            .map_err(|e| DomainError::InvalidOperation {
-                reason: format!("Failed to get KV store: {}", e),
-            })?;
-        
+        let kv = js.get_key_value(&self.bucket_name).await.map_err(|e| {
+            DomainError::InvalidOperation {
+                reason: format!("Failed to get KV store: {e}"),
+            }
+        })?;
+
         // Load from KV
         match kv.get(&key).await {
             Ok(Some(entry)) => {
@@ -149,11 +148,11 @@ where
             }
             Ok(None) => Ok(None),
             Err(e) => Err(DomainError::InvalidOperation {
-                reason: format!("Failed to load: {}", e),
+                reason: format!("Failed to load: {e}"),
             }),
         }
     }
-    
+
     async fn exists(&self, id: &EntityId<T::IdType>) -> Result<bool, DomainError> {
         self.load(id).await.map(|opt: Option<T>| opt.is_some())
     }

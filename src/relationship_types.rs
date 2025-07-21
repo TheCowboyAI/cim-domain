@@ -73,7 +73,7 @@ pub enum RelationshipType {
     /// Conditional flow
     ConditionalFlow {
         /// The condition that must be met for this flow to be taken
-        condition: String
+        condition: String,
     },
     /// Parallel flow
     ParallelFlow,
@@ -110,60 +110,65 @@ pub enum RelationshipType {
 impl RelationshipType {
     /// Check if this is a containment relationship
     pub fn is_containment(&self) -> bool {
-        matches!(self,
-            RelationshipType::Contains |
-            RelationshipType::PartOf |
-            RelationshipType::AggregateContains |
-            RelationshipType::HasValue |
-            RelationshipType::MilestoneContains
+        matches!(
+            self,
+            RelationshipType::Contains
+                | RelationshipType::PartOf
+                | RelationshipType::AggregateContains
+                | RelationshipType::HasValue
+                | RelationshipType::MilestoneContains
         )
     }
 
     /// Check if this is a dependency relationship
     pub fn is_dependency(&self) -> bool {
-        matches!(self,
-            RelationshipType::DependsOn |
-            RelationshipType::Uses |
-            RelationshipType::References |
-            RelationshipType::WaitsFor |
-            RelationshipType::FeatureDependency
+        matches!(
+            self,
+            RelationshipType::DependsOn
+                | RelationshipType::Uses
+                | RelationshipType::References
+                | RelationshipType::WaitsFor
+                | RelationshipType::FeatureDependency
         )
     }
 
     /// Check if this is a behavioral relationship
     pub fn is_behavioral(&self) -> bool {
-        matches!(self,
-            RelationshipType::Calls |
-            RelationshipType::SendsTo |
-            RelationshipType::ReceivesFrom |
-            RelationshipType::Triggers |
-            RelationshipType::Produces |
-            RelationshipType::Consumes |
-            RelationshipType::TransformsTo
+        matches!(
+            self,
+            RelationshipType::Calls
+                | RelationshipType::SendsTo
+                | RelationshipType::ReceivesFrom
+                | RelationshipType::Triggers
+                | RelationshipType::Produces
+                | RelationshipType::Consumes
+                | RelationshipType::TransformsTo
         )
     }
 
     /// Check if this is a temporal relationship
     pub fn is_temporal(&self) -> bool {
-        matches!(self,
-            RelationshipType::Before |
-            RelationshipType::After |
-            RelationshipType::Concurrent |
-            RelationshipType::Blocks |
-            RelationshipType::WaitsFor |
-            RelationshipType::TaskBlocks
+        matches!(
+            self,
+            RelationshipType::Before
+                | RelationshipType::After
+                | RelationshipType::Concurrent
+                | RelationshipType::Blocks
+                | RelationshipType::WaitsFor
+                | RelationshipType::TaskBlocks
         )
     }
 
     /// Check if this is a context boundary relationship
     pub fn is_context_boundary(&self) -> bool {
-        matches!(self,
-            RelationshipType::SharedKernel |
-            RelationshipType::CustomerSupplier |
-            RelationshipType::Conformist |
-            RelationshipType::AntiCorruptionLayer |
-            RelationshipType::OpenHostService |
-            RelationshipType::PublishedLanguage
+        matches!(
+            self,
+            RelationshipType::SharedKernel
+                | RelationshipType::CustomerSupplier
+                | RelationshipType::Conformist
+                | RelationshipType::AntiCorruptionLayer
+                | RelationshipType::OpenHostService
+                | RelationshipType::PublishedLanguage
         )
     }
 
@@ -370,25 +375,46 @@ mod tests {
         // Temporal relationships
         assert_eq!(RelationshipType::Before.display_name(), "before");
         assert_eq!(RelationshipType::After.display_name(), "after");
-        assert_eq!(RelationshipType::Concurrent.display_name(), "concurrent with");
+        assert_eq!(
+            RelationshipType::Concurrent.display_name(),
+            "concurrent with"
+        );
 
         // Domain relationships
-        assert_eq!(RelationshipType::AggregateContains.display_name(), "aggregate contains");
-        assert_eq!(RelationshipType::CommandTargets.display_name(), "command targets");
+        assert_eq!(
+            RelationshipType::AggregateContains.display_name(),
+            "aggregate contains"
+        );
+        assert_eq!(
+            RelationshipType::CommandTargets.display_name(),
+            "command targets"
+        );
 
         // Workflow relationships
         assert_eq!(RelationshipType::FlowsTo.display_name(), "flows to");
         assert_eq!(
-            RelationshipType::ConditionalFlow { condition: "x > 0".to_string() }.display_name(),
+            RelationshipType::ConditionalFlow {
+                condition: "x > 0".to_string()
+            }
+            .display_name(),
             "flows to if x > 0"
         );
 
         // Context relationships
-        assert_eq!(RelationshipType::SharedKernel.display_name(), "shared kernel");
-        assert_eq!(RelationshipType::CustomerSupplier.display_name(), "customer-supplier");
+        assert_eq!(
+            RelationshipType::SharedKernel.display_name(),
+            "shared kernel"
+        );
+        assert_eq!(
+            RelationshipType::CustomerSupplier.display_name(),
+            "customer-supplier"
+        );
 
         // Custom relationship
-        assert_eq!(RelationshipType::Custom("MyRelation".to_string()).display_name(), "MyRelation");
+        assert_eq!(
+            RelationshipType::Custom("MyRelation".to_string()).display_name(),
+            "MyRelation"
+        );
     }
 
     /// Test serialization and deserialization
@@ -400,7 +426,9 @@ mod tests {
             RelationshipType::Calls,
             RelationshipType::Before,
             RelationshipType::SharedKernel,
-            RelationshipType::ConditionalFlow { condition: "test".to_string() },
+            RelationshipType::ConditionalFlow {
+                condition: "test".to_string(),
+            },
             RelationshipType::Custom("TestRelation".to_string()),
         ];
 
@@ -419,9 +447,15 @@ mod tests {
     /// Test conditional flow with different conditions
     #[test]
     fn test_conditional_flow() {
-        let flow1 = RelationshipType::ConditionalFlow { condition: "x > 0".to_string() };
-        let flow2 = RelationshipType::ConditionalFlow { condition: "x > 0".to_string() };
-        let flow3 = RelationshipType::ConditionalFlow { condition: "y < 10".to_string() };
+        let flow1 = RelationshipType::ConditionalFlow {
+            condition: "x > 0".to_string(),
+        };
+        let flow2 = RelationshipType::ConditionalFlow {
+            condition: "x > 0".to_string(),
+        };
+        let flow3 = RelationshipType::ConditionalFlow {
+            condition: "y < 10".to_string(),
+        };
 
         // Equality
         assert_eq!(flow1, flow2);
@@ -498,7 +532,9 @@ mod tests {
             RelationshipType::PolicyAppliesTo,
             // Workflow
             RelationshipType::FlowsTo,
-            RelationshipType::ConditionalFlow { condition: "test".to_string() },
+            RelationshipType::ConditionalFlow {
+                condition: "test".to_string(),
+            },
             RelationshipType::ParallelFlow,
             RelationshipType::LoopBack,
             // Context
@@ -522,11 +558,23 @@ mod tests {
         }
 
         // Count classifications
-        let containment_count = all_relationships.iter().filter(|r| r.is_containment()).count();
-        let dependency_count = all_relationships.iter().filter(|r| r.is_dependency()).count();
-        let behavioral_count = all_relationships.iter().filter(|r| r.is_behavioral()).count();
+        let containment_count = all_relationships
+            .iter()
+            .filter(|r| r.is_containment())
+            .count();
+        let dependency_count = all_relationships
+            .iter()
+            .filter(|r| r.is_dependency())
+            .count();
+        let behavioral_count = all_relationships
+            .iter()
+            .filter(|r| r.is_behavioral())
+            .count();
         let temporal_count = all_relationships.iter().filter(|r| r.is_temporal()).count();
-        let context_count = all_relationships.iter().filter(|r| r.is_context_boundary()).count();
+        let context_count = all_relationships
+            .iter()
+            .filter(|r| r.is_context_boundary())
+            .count();
 
         // Verify expected counts
         assert_eq!(containment_count, 5);

@@ -17,7 +17,9 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use cim_subject::{Subject, SubjectBuilder};
+use crate::subject_abstraction::Subject;
+#[cfg(feature = "subject-routing")]
+use cim_subject::SubjectBuilder;
 use cim_ipld::Cid;
 
 /// Metadata for persisted aggregates
@@ -200,13 +202,25 @@ impl<T: DomainEntity> BaseAggregateRepository<T> {
     
     /// Build subject for aggregate
     fn build_subject(&self, id: &EntityId<T::IdType>) -> Result<Subject, RepositoryError> {
-        let subject = SubjectBuilder::new()
-            .context("domain")
-            .aggregate(&self.aggregate_type)
-            .build()
-            .map_err(|e| RepositoryError::SubjectError(e.to_string()))?;
+        #[cfg(feature = "subject-routing")]
+        {
+            let subject = SubjectBuilder::new()
+                .context("domain")
+                .aggregate(&self.aggregate_type)
+                .build()
+                .map_err(|e| RepositoryError::SubjectError(e.to_string()))?;
+            
+            Ok(subject)
+        }
         
-        Ok(subject)
+        #[cfg(not(feature = "subject-routing"))]
+        {
+            use crate::subject_abstraction::SubjectLike;
+            let subject_str = format!("domain.{}.{}", self.aggregate_type, id);
+            let subject = Subject::parse(&subject_str)
+                .map_err(|e| RepositoryError::SubjectError(e.to_string()))?;
+            Ok(subject)
+        }
     }
     
     /// Rebuild aggregate from events

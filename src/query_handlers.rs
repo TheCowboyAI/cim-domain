@@ -5,9 +5,9 @@
 //! Query handlers process queries and return data from read models/projections.
 //! They implement the read side of CQRS, providing optimized data access.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use serde::{Serialize, Deserialize};
 
 /// Query result type - represents the outcome of a query operation
 pub type QueryResult<T> = Result<T, String>;
@@ -62,7 +62,8 @@ impl QueryCriteria {
 
     /// Add a filter condition
     pub fn with_filter(mut self, key: impl Into<String>, value: impl Serialize) -> Self {
-        self.filters.insert(key.into(), serde_json::to_value(value).unwrap());
+        self.filters
+            .insert(key.into(), serde_json::to_value(value).unwrap());
         self
     }
 

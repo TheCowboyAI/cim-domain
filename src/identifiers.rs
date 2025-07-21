@@ -2,10 +2,10 @@
 
 //! Identifier types for graphs, nodes, and edges
 
+use crate::entity::{EntityId, GraphMarker};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
-use crate::entity::{EntityId, GraphMarker};
 
 /// Node ID - only meaningful within a graph context
 ///

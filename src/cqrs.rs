@@ -8,13 +8,13 @@
 
 use crate::entity::EntityId;
 use crate::markers::{CommandMarker, QueryMarker};
+use cid::Cid;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use cid::Cid;
 
-// Re-export correlation types from cim-subject
-pub use cim_subject::{
-    CorrelationId, CausationId, IdType, MessageIdentity, MessageFactory,
+// Re-export correlation types from abstraction layer
+pub use crate::subject_abstraction::{
+    CausationId, CorrelationId, IdType, MessageFactory, MessageIdentity,
 };
 
 /// Status of command acceptance
@@ -83,21 +83,21 @@ pub struct QueryResponse {
 ///
 /// ```rust
 /// use cim_domain::{Command, EntityId};
-/// 
+///
 /// #[derive(Debug)]
 /// struct CreateOrderCommand {
 ///     customer_id: String,
 ///     items: Vec<OrderItem>,
 /// }
-/// 
+///
 /// #[derive(Debug)]
 /// struct OrderItem {
 ///     product_id: String,
 ///     quantity: u32,
 /// }
-/// 
+///
 /// struct Order;
-/// 
+///
 /// impl Command for CreateOrderCommand {
 ///     type Aggregate = Order;
 ///     
@@ -105,7 +105,7 @@ pub struct QueryResponse {
 ///         None // New order, no ID yet
 ///     }
 /// }
-/// 
+///
 /// let cmd = CreateOrderCommand {
 ///     customer_id: "CUST-123".to_string(),
 ///     items: vec![
@@ -115,7 +115,7 @@ pub struct QueryResponse {
 ///         }
 ///     ],
 /// };
-/// 
+///
 /// // Commands are sent to handlers, which validate and emit events
 /// assert!(cmd.aggregate_id().is_none());
 /// ```
@@ -174,11 +174,7 @@ impl<C: Command> CommandEnvelope<C> {
     }
 
     /// Create a command caused by another command (continues correlation)
-    pub fn from_command(
-        command: C,
-        issued_by: String,
-        parent_identity: &MessageIdentity,
-    ) -> Self {
+    pub fn from_command(command: C, issued_by: String, parent_identity: &MessageIdentity) -> Self {
         let id = CommandId::new();
         let identity = MessageFactory::command_from_command(*id.as_uuid(), parent_identity);
 
@@ -191,11 +187,7 @@ impl<C: Command> CommandEnvelope<C> {
     }
 
     /// Create a command caused by a query (continues correlation)
-    pub fn from_query(
-        command: C,
-        issued_by: String,
-        parent_identity: &MessageIdentity,
-    ) -> Self {
+    pub fn from_query(command: C, issued_by: String, parent_identity: &MessageIdentity) -> Self {
         let id = CommandId::new();
         let identity = MessageFactory::command_from_query(*id.as_uuid(), parent_identity);
 
@@ -208,11 +200,7 @@ impl<C: Command> CommandEnvelope<C> {
     }
 
     /// Create a command caused by an event (continues correlation)
-    pub fn from_event(
-        command: C,
-        issued_by: String,
-        parent_identity: &MessageIdentity,
-    ) -> Self {
+    pub fn from_event(command: C, issued_by: String, parent_identity: &MessageIdentity) -> Self {
         let id = CommandId::new();
         let identity = MessageFactory::command_from_event(*id.as_uuid(), parent_identity);
 
@@ -263,11 +251,7 @@ impl<Q: Query> QueryEnvelope<Q> {
     }
 
     /// Create a query caused by a command (continues correlation)
-    pub fn from_command(
-        query: Q,
-        issued_by: String,
-        parent_identity: &MessageIdentity,
-    ) -> Self {
+    pub fn from_command(query: Q, issued_by: String, parent_identity: &MessageIdentity) -> Self {
         let id = QueryId::new();
         let identity = MessageFactory::query_from_command(*id.as_uuid(), parent_identity);
 
@@ -280,11 +264,7 @@ impl<Q: Query> QueryEnvelope<Q> {
     }
 
     /// Create a query caused by another query (continues correlation)
-    pub fn from_query(
-        query: Q,
-        issued_by: String,
-        parent_identity: &MessageIdentity,
-    ) -> Self {
+    pub fn from_query(query: Q, issued_by: String, parent_identity: &MessageIdentity) -> Self {
         let id = QueryId::new();
         let identity = MessageFactory::query_from_query(*id.as_uuid(), parent_identity);
 
@@ -297,11 +277,7 @@ impl<Q: Query> QueryEnvelope<Q> {
     }
 
     /// Create a query caused by an event (continues correlation)
-    pub fn from_event(
-        query: Q,
-        issued_by: String,
-        parent_identity: &MessageIdentity,
-    ) -> Self {
+    pub fn from_event(query: Q, issued_by: String, parent_identity: &MessageIdentity) -> Self {
         let id = QueryId::new();
         let identity = MessageFactory::query_from_event(*id.as_uuid(), parent_identity);
 
@@ -434,7 +410,7 @@ mod tests {
             IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
             _ => panic!("Expected UUID correlation for command"),
         }
-        
+
         match &envelope.identity.causation_id.0 {
             IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
             _ => panic!("Expected UUID causation for root command"),
@@ -479,7 +455,10 @@ mod tests {
         }
 
         // Verify correlation is preserved from parent
-        assert_eq!(child_envelope.identity.correlation_id, parent_envelope.identity.correlation_id);
+        assert_eq!(
+            child_envelope.identity.correlation_id,
+            parent_envelope.identity.correlation_id
+        );
     }
 
     /// Test query envelope creation
@@ -506,7 +485,7 @@ mod tests {
             IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
             _ => panic!("Expected UUID correlation for query"),
         }
-        
+
         match &envelope.identity.causation_id.0 {
             IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
             _ => panic!("Expected UUID causation for root query"),
@@ -524,8 +503,8 @@ mod tests {
     /// ```
     #[test]
     fn test_query_envelope_from_event() {
-        use cim_subject::SerializableCid;
-        
+        use crate::subject_abstraction::SerializableCid;
+
         // Create a mock event identity
         let event_cid = Cid::default();
         let event_identity = MessageIdentity {
@@ -538,11 +517,8 @@ mod tests {
             _filter: "by-event".to_string(),
         };
 
-        let envelope = QueryEnvelope::from_event(
-            query,
-            "event-handler".to_string(),
-            &event_identity,
-        );
+        let envelope =
+            QueryEnvelope::from_event(query, "event-handler".to_string(), &event_identity);
 
         // Verify causation points to event
         match &envelope.identity.causation_id.0 {
@@ -551,7 +527,10 @@ mod tests {
         }
 
         // Verify correlation is preserved
-        assert_eq!(envelope.identity.correlation_id, event_identity.correlation_id);
+        assert_eq!(
+            envelope.identity.correlation_id,
+            event_identity.correlation_id
+        );
     }
 
     /// Test correlation ID display formats
@@ -624,10 +603,8 @@ mod tests {
         assert!(sub1.causation_filter.is_none());
 
         // Test causation filter
-        let sub2 = EventStreamSubscription::for_causation(
-            "test-stream".to_string(),
-            causation_id.clone(),
-        );
+        let sub2 =
+            EventStreamSubscription::for_causation("test-stream".to_string(), causation_id.clone());
         assert_eq!(sub2.stream_name, "test-stream");
         assert!(sub2.correlation_filter.is_none());
         assert_eq!(sub2.causation_filter, Some(causation_id));

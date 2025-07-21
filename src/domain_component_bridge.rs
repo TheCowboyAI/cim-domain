@@ -6,11 +6,8 @@
 //! corresponding component events are published via NATS for synchronization.
 
 use crate::{
-    DomainResult,
-    DomainEventEnum, DomainEventEnvelope,
-    Component, ComponentEvent, EcsComponentData,
-    component_sync::DomainComponentSync,
-    GraphId,
+    component_sync::DomainComponentSync, Component, ComponentEvent, DomainEventEnum,
+    DomainEventEnvelope, DomainResult, EcsComponentData, GraphId,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -25,7 +22,7 @@ impl DomainComponentBridge {
     pub fn new(component_sync: Arc<DomainComponentSync>) -> Self {
         Self { component_sync }
     }
-    
+
     /// Process a domain event and emit component events if needed
     pub async fn process_domain_event(
         &self,
@@ -42,10 +39,11 @@ impl DomainComponentBridge {
                         definition_id: event.definition_id,
                         started_at: Some(event.started_at),
                         completed_at: None,
-                    }
-                ).await?;
+                    },
+                )
+                .await?;
             }
-            
+
             DomainEventEnum::WorkflowTransitioned(event) => {
                 self.emit_workflow_component_event(
                     event.workflow_id.into(),
@@ -54,10 +52,11 @@ impl DomainComponentBridge {
                         definition_id: GraphId::new(), // Default for now
                         started_at: None,
                         completed_at: None,
-                    }
-                ).await?;
+                    },
+                )
+                .await?;
             }
-            
+
             DomainEventEnum::WorkflowCompleted(event) => {
                 self.emit_workflow_component_event(
                     event.workflow_id.into(),
@@ -66,17 +65,18 @@ impl DomainComponentBridge {
                         definition_id: GraphId::new(), // Default for now
                         started_at: None,
                         completed_at: Some(event.completed_at),
-                    }
-                ).await?;
+                    },
+                )
+                .await?;
             }
-            
+
             // Other events might not have component implications
             _ => {}
         }
-        
+
         Ok(())
     }
-    
+
     /// Emit a component event for a workflow state change
     async fn emit_workflow_component_event<C: Component>(
         &self,
@@ -88,13 +88,13 @@ impl DomainComponentBridge {
             component_type: component.type_name().to_string(),
             data: component.to_json(),
         };
-        
+
         // Create component event
         let event = ComponentEvent::Updated {
             entity_id,
             component_data: ecs_data,
         };
-        
+
         // Publish via NATS
         self.component_sync.publish_component_event(event).await
     }
@@ -110,16 +110,18 @@ struct WorkflowStateComponent {
 }
 
 impl Component for WorkflowStateComponent {
-    fn as_any(&self) -> &dyn std::any::Any { self }
-    
-    fn clone_box(&self) -> Box<dyn Component> { 
-        Box::new(self.clone()) 
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
-    
-    fn type_name(&self) -> &'static str { 
-        "WorkflowStateComponent" 
+
+    fn clone_box(&self) -> Box<dyn Component> {
+        Box::new(self.clone())
     }
-    
+
+    fn type_name(&self) -> &'static str {
+        "WorkflowStateComponent"
+    }
+
     fn to_json(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap_or_default()
     }

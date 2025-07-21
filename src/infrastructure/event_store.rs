@@ -6,10 +6,10 @@ use crate::domain_events::DomainEventEnum;
 use crate::events::DomainEvent;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::pin::Pin;
-use futures::stream::Stream;
 use thiserror::Error;
 
 /// Errors that can occur when working with the event store
@@ -29,7 +29,7 @@ pub enum EventStoreError {
         /// The version that was expected
         expected: u64,
         /// The actual current version
-        current: u64
+        current: u64,
     },
 
     /// Requested event was not found
@@ -97,8 +97,7 @@ impl StoredEvent {
 }
 
 /// Event metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EventMetadata {
     /// Correlation ID for tracking related events
     pub correlation_id: Option<String>,
@@ -119,7 +118,6 @@ impl EventMetadata {
         self.custom.as_ref()?.get(key)
     }
 }
-
 
 /// Event store trait for persisting and retrieving events
 #[async_trait]

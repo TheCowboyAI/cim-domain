@@ -87,41 +87,43 @@ pub enum NodeType {
 impl NodeType {
     /// Check if this is an entity type (has identity)
     pub fn is_entity(&self) -> bool {
-        matches!(self,
-            NodeType::Entity |
-            NodeType::Aggregate |
-            NodeType::Event |
-            NodeType::Command |
-            NodeType::Query
+        matches!(
+            self,
+            NodeType::Entity
+                | NodeType::Aggregate
+                | NodeType::Event
+                | NodeType::Command
+                | NodeType::Query
         )
     }
 
     /// Check if this is a value object type (no identity)
     pub fn is_value_object(&self) -> bool {
-        matches!(self,
-            NodeType::ValueObject |
-            NodeType::DataObject |
-            NodeType::Policy |
-            NodeType::Invariant |
-            NodeType::Constraint
+        matches!(
+            self,
+            NodeType::ValueObject
+                | NodeType::DataObject
+                | NodeType::Policy
+                | NodeType::Invariant
+                | NodeType::Constraint
         )
     }
 
     /// Check if this is a service type
     pub fn is_service(&self) -> bool {
-        matches!(self,
-            NodeType::DomainService |
-            NodeType::ApplicationService |
-            NodeType::InfrastructureService
+        matches!(
+            self,
+            NodeType::DomainService
+                | NodeType::ApplicationService
+                | NodeType::InfrastructureService
         )
     }
 
     /// Check if this is a context boundary type
     pub fn is_context_boundary(&self) -> bool {
-        matches!(self,
-            NodeType::BoundedContext |
-            NodeType::Module |
-            NodeType::Subdomain
+        matches!(
+            self,
+            NodeType::BoundedContext | NodeType::Module | NodeType::Subdomain
         )
     }
 
@@ -313,8 +315,14 @@ mod tests {
 
         // Service types
         assert_eq!(NodeType::DomainService.display_name(), "Domain Service");
-        assert_eq!(NodeType::ApplicationService.display_name(), "Application Service");
-        assert_eq!(NodeType::InfrastructureService.display_name(), "Infrastructure Service");
+        assert_eq!(
+            NodeType::ApplicationService.display_name(),
+            "Application Service"
+        );
+        assert_eq!(
+            NodeType::InfrastructureService.display_name(),
+            "Infrastructure Service"
+        );
 
         // Context types
         assert_eq!(NodeType::BoundedContext.display_name(), "Bounded Context");
@@ -328,7 +336,10 @@ mod tests {
 
         // Generic types
         assert_eq!(NodeType::Unidentified.display_name(), "Unidentified");
-        assert_eq!(NodeType::Custom("MyCustomType".to_string()).display_name(), "MyCustomType");
+        assert_eq!(
+            NodeType::Custom("MyCustomType".to_string()).display_name(),
+            "MyCustomType"
+        );
     }
 
     /// Test serialization and deserialization

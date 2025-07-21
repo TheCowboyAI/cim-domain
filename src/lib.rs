@@ -26,120 +26,108 @@
 
 #![warn(missing_docs)]
 
+mod command_handlers;
+mod commands;
 mod component;
 mod component_sync;
+mod composition_types;
+mod context_types;
+mod cqrs;
 mod domain_component_bridge;
+mod domain_events;
 mod entity;
+mod errors;
+mod event_handler;
+mod events;
 pub mod identifiers;
 mod node_types;
-mod relationship_types;
-mod context_types;
-mod composition_types;
-mod cqrs;
-mod errors;
-pub mod state_machine;
-mod events;
-mod domain_events;
-mod commands;
-mod command_handlers;
 mod query_handlers;
-mod event_handler;
+mod relationship_types;
+pub mod state_machine;
+// Subject abstraction layer
+pub mod subject_abstraction;
 // Location module has been extracted to cim-domain-location
 // Graph modules have been extracted to cim-domain-graph
 // Workflow module has been extracted to cim-domain-workflow
-pub mod infrastructure;
-pub mod projections;
 pub mod category;
 pub mod composition;
 pub mod domain;
+pub mod infrastructure;
 pub mod integration;
 pub mod persistence;
+pub mod projections;
 
 // Re-export core types
-pub use component::{Component, ComponentStorage, ComponentExt, EcsComponentData, ComponentEvent};
+pub use component::{Component, ComponentEvent, ComponentExt, ComponentStorage, EcsComponentData};
 pub use component_sync::DomainComponentSync;
+pub use composition_types::{CompositionType, DomainCompositionType};
+pub use context_types::{ContextType, ServiceType, SubdomainType};
+pub use cqrs::{
+    CausationId, Command, CommandAcknowledgment, CommandEnvelope, CommandHandler, CommandId,
+    CommandStatus, CorrelationId, EventId, EventStreamSubscription, IdType, Query,
+    QueryAcknowledgment, QueryEnvelope, QueryHandler as CqrsQueryHandler, QueryId, QueryResponse,
+    QueryStatus,
+};
 pub use domain_component_bridge::DomainComponentBridge;
-pub use entity::{Entity, EntityId, AggregateRoot, DomainEntity};
-pub use identifiers::{NodeId, EdgeId, GraphId, StateId, TransitionId, WorkflowId, WorkflowIdExt};
+pub use entity::{AggregateRoot, DomainEntity, Entity, EntityId};
+pub use identifiers::{EdgeId, GraphId, NodeId, StateId, TransitionId, WorkflowId, WorkflowIdExt};
 pub use node_types::NodeType;
 pub use relationship_types::RelationshipType;
-pub use context_types::{ContextType, SubdomainType, ServiceType};
-pub use composition_types::{CompositionType, DomainCompositionType};
-pub use cqrs::{
-    Command, Query, CommandId, QueryId, EventId,
-    CommandEnvelope, QueryEnvelope,
-    CommandHandler, QueryHandler as CqrsQueryHandler,
-    CorrelationId, CausationId, IdType,
-    CommandStatus, QueryStatus,
-    CommandAcknowledgment, QueryAcknowledgment, QueryResponse,
-    EventStreamSubscription,
-};
 
 // Export QueryHandler without alias for compatibility
 pub use cqrs::QueryHandler;
 
 pub use errors::{DomainError, DomainResult};
 pub use state_machine::{
-    State, MooreStateTransitions, MealyStateTransitions,
-    MooreMachine, MealyMachine,
-    StateTransition, TransitionInput, TransitionOutput,
-    EventOutput, EmptyInput, CommandInput,
-    DocumentState,
+    CommandInput, DocumentState, EmptyInput, EventOutput, MealyMachine, MealyStateTransitions,
+    MooreMachine, MooreStateTransitions, State, StateTransition, TransitionInput, TransitionOutput,
 };
 
-// Re-export from cim-subject crate
-pub use cim_subject::{
-    Subject as SubjectParts, // Maintain backward compatibility
-    Pattern as SubjectPattern,
-    Permissions as SubjectPermissions,
-    SubjectParser,
+// Re-export subject types from abstraction layer
+pub use subject_abstraction::{
     MessageTranslator,
+    Pattern as SubjectPattern,
+    Subject as SubjectParts, // Maintain backward compatibility
+    SubjectParser,
+    SubjectPermissions,
 };
 
 // Keep these types that are specific to cim-domain
-pub use events::{
-    PropagationScope, EventEnvelope,
-};
+pub use events::{EventEnvelope, PropagationScope};
 
 pub use events::{
-    DomainEvent, EventMetadata, DomainEventEnvelope,
-    DomainEventEnvelopeWithMetadata,
+    DomainEvent, DomainEventEnvelope, DomainEventEnvelopeWithMetadata, EventMetadata,
 };
 // Location commands have been extracted to cim-domain-location
-pub use commands::{DomainCommand, AcknowledgeCommand};
 pub use command_handlers::{
-    EventPublisher, MockEventPublisher,
-    AggregateRepository, InMemoryRepository,
+    AggregateRepository, EventPublisher, InMemoryRepository, MockEventPublisher,
 };
+pub use commands::{AcknowledgeCommand, DomainCommand};
 pub use query_handlers::{
-    DirectQueryHandler, QueryResult, ReadModelStorage, InMemoryReadModel, QueryCriteria,
+    DirectQueryHandler, InMemoryReadModel, QueryCriteria, QueryResult, ReadModelStorage,
 };
 // Location types have been extracted to cim-domain-location
 
 // ConceptGraph types have been extracted to cim-domain-graph
 pub use domain_events::{
-    DomainEventEnum,
-    WorkflowStarted, WorkflowTransitionExecuted, WorkflowCompleted,
-    WorkflowSuspended, WorkflowResumed, WorkflowCancelled, WorkflowFailed,
+    DomainEventEnum, WorkflowCancelled, WorkflowCompleted, WorkflowFailed, WorkflowResumed,
+    WorkflowStarted, WorkflowSuspended, WorkflowTransitionExecuted,
 };
 
 // Re-export common marker types
 pub mod markers {
     //! Marker types for phantom type parameters
     pub use crate::entity::{
-        GraphMarker, AggregateMarker, BoundedContextMarker,
-        EntityMarker, ValueObjectMarker, ServiceMarker,
-        EventMarker, CommandMarker, QueryMarker
+        AggregateMarker, BoundedContextMarker, CommandMarker, EntityMarker, EventMarker,
+        GraphMarker, QueryMarker, ServiceMarker, ValueObjectMarker,
     };
     // LocationMarker has been moved to cim-domain-location
     // ConceptGraphMarker has been moved to cim-domain-graph
 }
 
 // Export infrastructure types that domains need
-pub use infrastructure::event_replay::EventHandler as ReplayEventHandler;
 pub use event_handler::EventHandler;
+pub use infrastructure::event_replay::EventHandler as ReplayEventHandler;
 
 /// Type alias for aggregate identifiers using EntityId with AggregateMarker
 pub type AggregateId = EntityId<markers::AggregateMarker>;
-
-

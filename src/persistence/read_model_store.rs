@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use cim_subject::Subject;
+use crate::subject_abstraction::Subject;
 use cim_ipld::Cid;
 
 /// Read model metadata

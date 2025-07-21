@@ -125,6 +125,9 @@
             # Set up LLVM tools for cargo-llvm-cov
             export RUSTFLAGS="-C instrument-coverage"
             export LLVM_PROFILE_FILE="cim-domain-%p-%m.profraw"
+            
+            # Fix Node.js MaxListenersExceededWarning
+            export NODE_OPTIONS="--max-listeners=50"
           '';
           };
           
@@ -183,6 +186,9 @@
               echo "  cargo criterion                           - Run criterion benchmarks"
               echo "  cargo bench                               - Run standard benchmarks"
               echo ""
+              
+              # Fix Node.js MaxListenersExceededWarning
+              export NODE_OPTIONS="--max-listeners=50"
             '';
           };
         };

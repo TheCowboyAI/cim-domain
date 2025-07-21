@@ -8,25 +8,22 @@
 use async_trait::async_trait;
 use std::marker::PhantomData;
 
-use crate::errors::DomainError;
-use super::domain_category::{DomainObject, DomainMorphism};
+use super::domain_category::{DomainMorphism, DomainObject};
 use super::functor::DomainFunctor;
+use crate::errors::DomainError;
 
 /// A natural transformation between two functors
 #[async_trait]
 pub trait NaturalTransformation: Send + Sync {
     /// Source functor type
     type SourceFunctor: DomainFunctor;
-    
+
     /// Target functor type
     type TargetFunctor: DomainFunctor;
-    
+
     /// Transform an object mapped by the source functor to one mapped by the target functor
-    async fn transform_object(
-        &self,
-        obj: DomainObject,
-    ) -> Result<DomainObject, DomainError>;
-    
+    async fn transform_object(&self, obj: DomainObject) -> Result<DomainObject, DomainError>;
+
     /// Verify the naturality condition for a morphism
     async fn verify_naturality(
         &self,
@@ -34,7 +31,7 @@ pub trait NaturalTransformation: Send + Sync {
         target_functor: &Self::TargetFunctor,
         morphism: &DomainMorphism,
     ) -> Result<bool, DomainError>;
-    
+
     /// Get a description of this transformation
     fn description(&self) -> String;
 }
@@ -65,7 +62,7 @@ where
     ) -> Self {
         Self { forward, backward }
     }
-    
+
     /// Get the inverse natural isomorphism (G ≅ F instead of F ≅ G)
     pub fn inverse(self) -> NaturalIsomorphism<G, F> {
         NaturalIsomorphism {
@@ -111,14 +108,11 @@ where
 {
     type SourceFunctor = F;
     type TargetFunctor = F;
-    
-    async fn transform_object(
-        &self,
-        obj: DomainObject,
-    ) -> Result<DomainObject, DomainError> {
+
+    async fn transform_object(&self, obj: DomainObject) -> Result<DomainObject, DomainError> {
         Ok(obj)
     }
-    
+
     async fn verify_naturality(
         &self,
         _source_functor: &Self::SourceFunctor,
@@ -128,7 +122,7 @@ where
         // Identity transformation always satisfies naturality
         Ok(true)
     }
-    
+
     fn description(&self) -> String {
         "Identity Natural Transformation".to_string()
     }
@@ -144,19 +138,19 @@ pub struct ComposedFunctor<F, G>(PhantomData<(F, G)>);
 impl DomainFunctor for IdentityFunctor {
     type Source = ();
     type Target = ();
-    
+
     async fn map_object(&self, obj: DomainObject) -> Result<DomainObject, DomainError> {
         Ok(obj)
     }
-    
+
     async fn map_morphism(&self, morph: DomainMorphism) -> Result<DomainMorphism, DomainError> {
         Ok(morph)
     }
-    
+
     fn source_category(&self) -> String {
         "Identity".to_string()
     }
-    
+
     fn target_category(&self) -> String {
         "Identity".to_string()
     }
@@ -186,16 +180,11 @@ impl EventSourcingTransformation {
 impl NaturalTransformation for EventSourcingTransformation {
     type SourceFunctor = StateProjectionFunctor;
     type TargetFunctor = EventStreamFunctor;
-    
-    async fn transform_object(
-        &self,
-        mut obj: DomainObject,
-    ) -> Result<DomainObject, DomainError> {
+
+    async fn transform_object(&self, mut obj: DomainObject) -> Result<DomainObject, DomainError> {
         // Transform state-based object to event-based representation
-        obj.metadata.insert(
-            "transformation".to_string(),
-            "event_sourced".to_string(),
-        );
+        obj.metadata
+            .insert("transformation".to_string(), "event_sourced".to_string());
         obj.metadata.insert(
             "source_representation".to_string(),
             "state_based".to_string(),
@@ -204,10 +193,10 @@ impl NaturalTransformation for EventSourcingTransformation {
             "target_representation".to_string(),
             "event_based".to_string(),
         );
-        
+
         Ok(obj)
     }
-    
+
     async fn verify_naturality(
         &self,
         _source_functor: &Self::SourceFunctor,
@@ -216,14 +205,17 @@ impl NaturalTransformation for EventSourcingTransformation {
     ) -> Result<bool, DomainError> {
         // Verify that:
         // target_functor(morphism) ∘ transform = transform ∘ source_functor(morphism)
-        
+
         // For demonstration, we'll assume naturality holds
         // In a real implementation, we'd verify the commutative diagram
         Ok(true)
     }
-    
+
     fn description(&self) -> String {
-        format!("EventSourcing: {} → {}", self.source_domain, self.target_domain)
+        format!(
+            "EventSourcing: {} → {}",
+            self.source_domain, self.target_domain
+        )
     }
 }
 
@@ -237,19 +229,19 @@ pub struct EventStreamFunctor;
 impl DomainFunctor for StateProjectionFunctor {
     type Source = ();
     type Target = ();
-    
+
     async fn map_object(&self, obj: DomainObject) -> Result<DomainObject, DomainError> {
         Ok(obj)
     }
-    
+
     async fn map_morphism(&self, morph: DomainMorphism) -> Result<DomainMorphism, DomainError> {
         Ok(morph)
     }
-    
+
     fn source_category(&self) -> String {
         "StateProjection".to_string()
     }
-    
+
     fn target_category(&self) -> String {
         "StateProjection".to_string()
     }
@@ -259,19 +251,19 @@ impl DomainFunctor for StateProjectionFunctor {
 impl DomainFunctor for EventStreamFunctor {
     type Source = ();
     type Target = ();
-    
+
     async fn map_object(&self, obj: DomainObject) -> Result<DomainObject, DomainError> {
         Ok(obj)
     }
-    
+
     async fn map_morphism(&self, morph: DomainMorphism) -> Result<DomainMorphism, DomainError> {
         Ok(morph)
     }
-    
+
     fn source_category(&self) -> String {
         "EventStream".to_string()
     }
-    
+
     fn target_category(&self) -> String {
         "EventStream".to_string()
     }
@@ -282,11 +274,11 @@ mod tests {
     use super::*;
     use crate::composition_types::DomainCompositionType;
     use std::collections::HashMap;
-    
+
     #[tokio::test]
     async fn test_identity_natural_transformation() {
         let transform = IdentityNaturalTransformation::<StateProjectionFunctor>::new();
-        
+
         let obj = DomainObject {
             id: "test".to_string(),
             composition_type: DomainCompositionType::Entity {
@@ -294,18 +286,16 @@ mod tests {
             },
             metadata: HashMap::new(),
         };
-        
+
         let result = transform.transform_object(obj.clone()).await.unwrap();
         assert_eq!(result.id, obj.id);
     }
-    
+
     #[tokio::test]
     async fn test_event_sourcing_transformation() {
-        let transform = EventSourcingTransformation::new(
-            "OrderDomain".to_string(),
-            "EventStore".to_string(),
-        );
-        
+        let transform =
+            EventSourcingTransformation::new("OrderDomain".to_string(), "EventStore".to_string());
+
         let obj = DomainObject {
             id: "order_123".to_string(),
             composition_type: DomainCompositionType::Aggregate {
@@ -313,10 +303,19 @@ mod tests {
             },
             metadata: HashMap::new(),
         };
-        
+
         let result = transform.transform_object(obj).await.unwrap();
-        assert_eq!(result.metadata.get("transformation").unwrap(), "event_sourced");
-        assert_eq!(result.metadata.get("source_representation").unwrap(), "state_based");
-        assert_eq!(result.metadata.get("target_representation").unwrap(), "event_based");
+        assert_eq!(
+            result.metadata.get("transformation").unwrap(),
+            "event_sourced"
+        );
+        assert_eq!(
+            result.metadata.get("source_representation").unwrap(),
+            "state_based"
+        );
+        assert_eq!(
+            result.metadata.get("target_representation").unwrap(),
+            "event_based"
+        );
     }
 }

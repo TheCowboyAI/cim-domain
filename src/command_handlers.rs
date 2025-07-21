@@ -5,18 +5,18 @@
 //! Command handlers process commands, validate business rules, and emit events.
 //! They return only acknowledgments, not data - use queries for data retrieval.
 
-use crate::{
-    cqrs::CorrelationId,
-    domain_events::DomainEventEnum,
-    AggregateRoot,
-};
+use crate::{cqrs::CorrelationId, domain_events::DomainEventEnum, AggregateRoot};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 /// Event publisher trait for handlers to emit events
 pub trait EventPublisher: Send + Sync {
     /// Publish domain events
-    fn publish_events(&self, events: Vec<DomainEventEnum>, correlation_id: CorrelationId) -> Result<(), String>;
+    fn publish_events(
+        &self,
+        events: Vec<DomainEventEnum>,
+        correlation_id: CorrelationId,
+    ) -> Result<(), String>;
 }
 
 /// Mock event publisher for testing
@@ -51,7 +51,11 @@ impl MockEventPublisher {
 }
 
 impl EventPublisher for MockEventPublisher {
-    fn publish_events(&self, events: Vec<DomainEventEnum>, correlation_id: CorrelationId) -> Result<(), String> {
+    fn publish_events(
+        &self,
+        events: Vec<DomainEventEnum>,
+        correlation_id: CorrelationId,
+    ) -> Result<(), String> {
         let mut published = self.published_events.write().unwrap();
         for event in events {
             published.push((event, correlation_id.clone()));
@@ -77,7 +81,7 @@ pub struct InMemoryRepository<A: AggregateRoot + Clone + Send + Sync> {
 impl<A: AggregateRoot + Clone + Send + Sync> Default for InMemoryRepository<A>
 where
     A::Id: std::hash::Hash + Eq + Clone,
- {
+{
     fn default() -> Self {
         Self::new()
     }
@@ -104,7 +108,10 @@ where
     }
 
     fn save(&self, aggregate: &A) -> Result<(), String> {
-        self.storage.write().unwrap().insert(aggregate.id(), aggregate.clone());
+        self.storage
+            .write()
+            .unwrap()
+            .insert(aggregate.id(), aggregate.clone());
         Ok(())
     }
 }

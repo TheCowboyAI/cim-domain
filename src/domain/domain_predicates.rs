@@ -5,12 +5,12 @@
 //! Predicates that can be evaluated across domain boundaries to
 //! implement business logic and constraints.
 
-use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::errors::DomainError;
 use crate::composition::DomainComposition;
+use crate::errors::DomainError;
 
 /// A predicate that can be evaluated in a domain context
 #[async_trait]
@@ -21,10 +21,10 @@ pub trait DomainPredicate: Send + Sync {
         composition: &DomainComposition,
         context: &PredicateContext,
     ) -> Result<PredicateResult, DomainError>;
-    
+
     /// Get a description of this predicate
     fn description(&self) -> String;
-    
+
     /// Combine with another predicate via AND
     fn and(self: Box<Self>, other: Box<dyn DomainPredicate>) -> Box<dyn DomainPredicate>
     where
@@ -35,7 +35,7 @@ pub trait DomainPredicate: Send + Sync {
             right: other,
         })
     }
-    
+
     /// Combine with another predicate via OR
     fn or(self: Box<Self>, other: Box<dyn DomainPredicate>) -> Box<dyn DomainPredicate>
     where
@@ -46,7 +46,7 @@ pub trait DomainPredicate: Send + Sync {
             right: other,
         })
     }
-    
+
     /// Negate this predicate
     fn not(self: Box<Self>) -> Box<dyn DomainPredicate>
     where
@@ -54,7 +54,7 @@ pub trait DomainPredicate: Send + Sync {
     {
         Box::new(NotPredicate { inner: self })
     }
-    
+
     /// Create an implication
     fn implies(self: Box<Self>, consequent: Box<dyn DomainPredicate>) -> Box<dyn DomainPredicate>
     where
@@ -72,12 +72,18 @@ pub trait DomainPredicate: Send + Sync {
 pub struct PredicateContext {
     /// Target domain
     pub domain: Option<String>,
-    
+
     /// Target object
     pub object_id: Option<String>,
-    
+
     /// Additional parameters
     pub parameters: HashMap<String, serde_json::Value>,
+}
+
+impl Default for PredicateContext {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PredicateContext {
@@ -89,19 +95,19 @@ impl PredicateContext {
             parameters: HashMap::new(),
         }
     }
-    
+
     /// Set the domain for this context
     pub fn with_domain(mut self, domain: String) -> Self {
         self.domain = Some(domain);
         self
     }
-    
+
     /// Set the object ID for this context
     pub fn with_object(mut self, object_id: String) -> Self {
         self.object_id = Some(object_id);
         self
     }
-    
+
     /// Add a parameter to the context
     pub fn with_parameter(mut self, key: String, value: serde_json::Value) -> Self {
         self.parameters.insert(key, value);
@@ -114,13 +120,13 @@ impl PredicateContext {
 pub struct PredicateResult {
     /// The truth value
     pub value: bool,
-    
+
     /// Confidence in the result (0-100)
     pub confidence: u8,
-    
+
     /// Explanation of how the result was derived
     pub explanation: String,
-    
+
     /// Evidence supporting the result
     pub evidence: Vec<Evidence>,
 }
@@ -130,13 +136,13 @@ pub struct PredicateResult {
 pub struct Evidence {
     /// Type of evidence
     pub evidence_type: EvidenceType,
-    
+
     /// Source of the evidence
     pub source: String,
-    
+
     /// The evidence data
     pub data: serde_json::Value,
-    
+
     /// Weight of this evidence (0-100)
     pub weight: u8,
 }
@@ -146,16 +152,16 @@ pub struct Evidence {
 pub enum EvidenceType {
     /// Direct observation
     Observation,
-    
+
     /// Derived from other facts
     Inference,
-    
+
     /// Historical data
     Historical,
-    
+
     /// External source
     External,
-    
+
     /// Default assumption
     Default,
 }
@@ -164,9 +170,15 @@ pub enum EvidenceType {
 pub struct PredicateEvaluator {
     /// Registered predicates
     predicates: HashMap<String, Box<dyn DomainPredicate>>,
-    
+
     /// Evaluation cache
     cache: HashMap<String, PredicateResult>,
+}
+
+impl Default for PredicateEvaluator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PredicateEvaluator {
@@ -177,7 +189,7 @@ impl PredicateEvaluator {
             cache: HashMap::new(),
         }
     }
-    
+
     /// Register a named predicate
     pub fn register(
         &mut self,
@@ -185,14 +197,14 @@ impl PredicateEvaluator {
         predicate: Box<dyn DomainPredicate>,
     ) -> Result<(), DomainError> {
         if self.predicates.contains_key(&name) {
-            return Err(DomainError::AlreadyExists(
-                format!("Predicate {} already registered", name)
-            ));
+            return Err(DomainError::AlreadyExists(format!(
+                "Predicate {name} already registered"
+            )));
         }
         self.predicates.insert(name, predicate);
         Ok(())
     }
-    
+
     /// Evaluate a named predicate
     pub async fn evaluate(
         &mut self,
@@ -205,22 +217,22 @@ impl PredicateEvaluator {
         if let Some(cached) = self.cache.get(&cache_key) {
             return Ok(cached.clone());
         }
-        
+
         // Get predicate
-        let predicate = self.predicates.get(name)
-            .ok_or_else(|| DomainError::NotFound(
-                format!("Predicate {} not found", name)
-            ))?;
-        
+        let predicate = self
+            .predicates
+            .get(name)
+            .ok_or_else(|| DomainError::NotFound(format!("Predicate {name} not found")))?;
+
         // Evaluate
         let result = predicate.evaluate(composition, context).await?;
-        
+
         // Cache result
         self.cache.insert(cache_key, result.clone());
-        
+
         Ok(result)
     }
-    
+
     /// Clear cache
     pub fn clear_cache(&mut self) {
         self.cache.clear();
@@ -250,23 +262,26 @@ impl DomainPredicate for AndPredicate {
                 evidence: left_result.evidence,
             });
         }
-        
+
         let right_result = self.right.evaluate(composition, context).await?;
-        
+
         Ok(PredicateResult {
             value: right_result.value,
             confidence: left_result.confidence.min(right_result.confidence),
             explanation: format!(
                 "AND: {} AND {}",
-                left_result.explanation,
-                right_result.explanation
+                left_result.explanation, right_result.explanation
             ),
             evidence: [left_result.evidence, right_result.evidence].concat(),
         })
     }
-    
+
     fn description(&self) -> String {
-        format!("({} AND {})", self.left.description(), self.right.description())
+        format!(
+            "({} AND {})",
+            self.left.description(),
+            self.right.description()
+        )
     }
 }
 
@@ -291,23 +306,26 @@ impl DomainPredicate for OrPredicate {
                 evidence: left_result.evidence,
             });
         }
-        
+
         let right_result = self.right.evaluate(composition, context).await?;
-        
+
         Ok(PredicateResult {
             value: right_result.value,
             confidence: left_result.confidence.max(right_result.confidence),
             explanation: format!(
                 "OR: {} OR {}",
-                left_result.explanation,
-                right_result.explanation
+                left_result.explanation, right_result.explanation
             ),
             evidence: [left_result.evidence, right_result.evidence].concat(),
         })
     }
-    
+
     fn description(&self) -> String {
-        format!("({} OR {})", self.left.description(), self.right.description())
+        format!(
+            "({} OR {})",
+            self.left.description(),
+            self.right.description()
+        )
     }
 }
 
@@ -323,7 +341,7 @@ impl DomainPredicate for NotPredicate {
         context: &PredicateContext,
     ) -> Result<PredicateResult, DomainError> {
         let inner_result = self.inner.evaluate(composition, context).await?;
-        
+
         Ok(PredicateResult {
             value: !inner_result.value,
             confidence: inner_result.confidence,
@@ -331,7 +349,7 @@ impl DomainPredicate for NotPredicate {
             evidence: inner_result.evidence,
         })
     }
-    
+
     fn description(&self) -> String {
         format!("NOT {}", self.inner.description())
     }
@@ -350,7 +368,7 @@ impl DomainPredicate for ImplicationPredicate {
         context: &PredicateContext,
     ) -> Result<PredicateResult, DomainError> {
         let antecedent_result = self.antecedent.evaluate(composition, context).await?;
-        
+
         // If antecedent is false, implication is true
         if !antecedent_result.value {
             return Ok(PredicateResult {
@@ -363,24 +381,29 @@ impl DomainPredicate for ImplicationPredicate {
                 evidence: antecedent_result.evidence,
             });
         }
-        
+
         // Antecedent is true, so check consequent
         let consequent_result = self.consequent.evaluate(composition, context).await?;
-        
+
         Ok(PredicateResult {
             value: consequent_result.value,
-            confidence: antecedent_result.confidence.min(consequent_result.confidence),
+            confidence: antecedent_result
+                .confidence
+                .min(consequent_result.confidence),
             explanation: format!(
                 "IMPLIES: {} => {}",
-                antecedent_result.explanation,
-                consequent_result.explanation
+                antecedent_result.explanation, consequent_result.explanation
             ),
             evidence: [antecedent_result.evidence, consequent_result.evidence].concat(),
         })
     }
-    
+
     fn description(&self) -> String {
-        format!("({} => {})", self.antecedent.description(), self.consequent.description())
+        format!(
+            "({} => {})",
+            self.antecedent.description(),
+            self.consequent.description()
+        )
     }
 }
 
@@ -411,26 +434,24 @@ impl DomainPredicate for ExistsPredicate {
         composition: &DomainComposition,
         context: &PredicateContext,
     ) -> Result<PredicateResult, DomainError> {
-        let domain = composition.domains.get(&self.domain_name)
-            .ok_or_else(|| DomainError::NotFound(
-                format!("Domain {} not found", self.domain_name)
-            ))?;
-        
-        let exists = domain.objects.values()
-            .any(|obj| {
-                if let Some(obj_id) = &context.object_id {
-                    obj.id == *obj_id
-                } else {
-                    // Check type
-                    match &obj.composition_type {
-                        crate::composition_types::DomainCompositionType::Entity { entity_type } => {
-                            entity_type == &self.object_type
-                        }
-                        _ => false,
+        let domain = composition.domains.get(&self.domain_name).ok_or_else(|| {
+            DomainError::NotFound(format!("Domain {} not found", self.domain_name))
+        })?;
+
+        let exists = domain.objects.values().any(|obj| {
+            if let Some(obj_id) = &context.object_id {
+                obj.id == *obj_id
+            } else {
+                // Check type
+                match &obj.composition_type {
+                    crate::composition_types::DomainCompositionType::Entity { entity_type } => {
+                        entity_type == &self.object_type
                     }
+                    _ => false,
                 }
-            });
-        
+            }
+        });
+
         Ok(PredicateResult {
             value: exists,
             confidence: 100,
@@ -451,7 +472,7 @@ impl DomainPredicate for ExistsPredicate {
             }],
         })
     }
-    
+
     fn description(&self) -> String {
         format!("EXISTS {} IN {}", self.object_type, self.domain_name)
     }
@@ -486,23 +507,26 @@ impl DomainPredicate for RelationshipPredicate {
         _context: &PredicateContext,
     ) -> Result<PredicateResult, DomainError> {
         // Check if there are morphisms between the domains
-        let source = composition.domains.get(&self.source_domain)
-            .ok_or_else(|| DomainError::NotFound(
-                format!("Source domain {} not found", self.source_domain)
-            ))?;
-        
-        let target = composition.domains.get(&self.target_domain)
-            .ok_or_else(|| DomainError::NotFound(
-                format!("Target domain {} not found", self.target_domain)
-            ))?;
-        
+        let source = composition
+            .domains
+            .get(&self.source_domain)
+            .ok_or_else(|| {
+                DomainError::NotFound(format!("Source domain {} not found", self.source_domain))
+            })?;
+
+        let target = composition
+            .domains
+            .get(&self.target_domain)
+            .ok_or_else(|| {
+                DomainError::NotFound(format!("Target domain {} not found", self.target_domain))
+            })?;
+
         // Look for cross-domain morphisms
-        let has_relationship = source.morphisms.values()
-            .any(|morph| {
-                // Check if morphism targets something in the target domain
-                target.objects.contains_key(&morph.target)
-            });
-        
+        let has_relationship = source.morphisms.values().any(|morph| {
+            // Check if morphism targets something in the target domain
+            target.objects.contains_key(&morph.target)
+        });
+
         Ok(PredicateResult {
             value: has_relationship,
             confidence: 95,
@@ -524,13 +548,11 @@ impl DomainPredicate for RelationshipPredicate {
             }],
         })
     }
-    
+
     fn description(&self) -> String {
         format!(
             "RELATIONSHIP {} FROM {} TO {}",
-            self.relationship_type,
-            self.source_domain,
-            self.target_domain
+            self.relationship_type, self.source_domain, self.target_domain
         )
     }
 }
@@ -539,39 +561,41 @@ impl DomainPredicate for RelationshipPredicate {
 mod tests {
     use super::*;
     use crate::category::DomainCategory;
-    
+
     #[tokio::test]
     async fn test_exists_predicate() {
         let mut composition = DomainComposition::new("Test".to_string());
         let mut domain = DomainCategory::new("TestDomain".to_string());
-        
-        domain.add_object(crate::category::DomainObject {
-            id: "order_123".to_string(),
-            composition_type: crate::composition_types::DomainCompositionType::Entity {
-                entity_type: "Order".to_string(),
-            },
-            metadata: HashMap::new(),
-        }).unwrap();
-        
+
+        domain
+            .add_object(crate::category::DomainObject {
+                id: "order_123".to_string(),
+                composition_type: crate::composition_types::DomainCompositionType::Entity {
+                    entity_type: "Order".to_string(),
+                },
+                metadata: HashMap::new(),
+            })
+            .unwrap();
+
         composition.add_domain(domain).unwrap();
-        
+
         let predicate = ExistsPredicate::new("TestDomain".to_string(), "Order".to_string());
         let context = PredicateContext::new();
-        
+
         let result = predicate.evaluate(&composition, &context).await.unwrap();
         assert!(result.value);
         assert_eq!(result.confidence, 100);
     }
-    
+
     #[tokio::test]
     async fn test_logical_connectives() {
         let composition = DomainComposition::new("Test".to_string());
         let context = PredicateContext::new();
-        
+
         // Create test predicates that always return specific values
         struct TruePredicate;
         struct FalsePredicate;
-        
+
         #[async_trait]
         impl DomainPredicate for TruePredicate {
             async fn evaluate(
@@ -586,12 +610,12 @@ mod tests {
                     evidence: vec![],
                 })
             }
-            
+
             fn description(&self) -> String {
                 "TRUE".to_string()
             }
         }
-        
+
         #[async_trait]
         impl DomainPredicate for FalsePredicate {
             async fn evaluate(
@@ -606,36 +630,36 @@ mod tests {
                     evidence: vec![],
                 })
             }
-            
+
             fn description(&self) -> String {
                 "FALSE".to_string()
             }
         }
-        
+
         // Test AND
         let and_pred = Box::new(TruePredicate).and(Box::new(TruePredicate));
         let result = and_pred.evaluate(&composition, &context).await.unwrap();
         assert!(result.value);
-        
+
         let and_pred = Box::new(TruePredicate).and(Box::new(FalsePredicate));
         let result = and_pred.evaluate(&composition, &context).await.unwrap();
         assert!(!result.value);
-        
+
         // Test OR
         let or_pred = Box::new(TruePredicate).or(Box::new(FalsePredicate));
         let result = or_pred.evaluate(&composition, &context).await.unwrap();
         assert!(result.value);
-        
+
         // Test NOT
         let not_pred = Box::new(FalsePredicate).not();
         let result = not_pred.evaluate(&composition, &context).await.unwrap();
         assert!(result.value);
-        
+
         // Test IMPLIES
         let implies_pred = Box::new(TruePredicate).implies(Box::new(TruePredicate));
         let result = implies_pred.evaluate(&composition, &context).await.unwrap();
         assert!(result.value);
-        
+
         let implies_pred = Box::new(FalsePredicate).implies(Box::new(FalsePredicate));
         let result = implies_pred.evaluate(&composition, &context).await.unwrap();
         assert!(result.value); // False => anything is true

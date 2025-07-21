@@ -10,54 +10,55 @@
 //! - Event replay services
 //! - Event streams as first-class objects
 
-pub mod nats_client;
-pub mod event_store;
 pub mod cid_chain;
-pub mod jetstream_event_store;
 pub mod event_replay;
-pub mod snapshot_store;
+pub mod event_store;
 pub mod event_stream;
 pub mod event_stream_service;
 /// Event versioning and schema evolution support
 pub mod event_versioning;
+pub mod jetstream_event_store;
+pub mod nats_client;
 /// Projection checkpoint storage for fault-tolerant event processing
 pub mod projection_checkpoint;
-/// Automatic snapshot policies for performance optimization
-pub mod snapshot_policy;
 /// Saga pattern implementation for distributed transactions
 pub mod saga;
+/// Automatic snapshot policies for performance optimization
+pub mod snapshot_policy;
+pub mod snapshot_store;
 
-pub use nats_client::{NatsClient, NatsConfig, NatsError};
-pub use event_store::{EventStore, EventStoreError, StoredEvent, EventMetadata};
-pub use cid_chain::{EventWithCid, calculate_event_cid, verify_event_chain, CidError, ChainVerificationError};
-pub use jetstream_event_store::JetStreamEventStore;
-pub use event_replay::{
-    EventReplayService, ReplayError, ReplayStats, ReplayOptions,
-    EventHandler, AggregateRebuilder, AggregateEventProcessor,
-    ProjectionBuilder, ProjectionHandler,
+pub use cid_chain::{
+    calculate_event_cid, verify_event_chain, ChainVerificationError, CidError, EventWithCid,
 };
-pub use snapshot_store::{SnapshotStore, SnapshotError, AggregateSnapshot};
+pub use event_replay::{
+    AggregateEventProcessor, AggregateRebuilder, EventHandler, EventReplayService,
+    ProjectionBuilder, ProjectionHandler, ReplayError, ReplayOptions, ReplayStats,
+};
+pub use event_store::{EventMetadata, EventStore, EventStoreError, StoredEvent};
 pub use event_stream::{
-    EventStream, EventStreamId, EventStreamMetadata, EventQuery, EventStreamOperations,
-    EventStreamError, CausationOrder, EventFilter, EventOrdering, StreamTransformation,
-    StreamComposition, GroupingCriteria, WindowSpec,
+    CausationOrder, EventFilter, EventOrdering, EventQuery, EventStream, EventStreamError,
+    EventStreamId, EventStreamMetadata, EventStreamOperations, GroupingCriteria, StreamComposition,
+    StreamTransformation, WindowSpec,
 };
 pub use event_stream_service::EventStreamService;
 pub use event_versioning::{
-    EventVersioningService, EventVersioningError, EventUpcaster, 
-    SimpleUpcaster, VersionedEvent, EventTypeMetadata
+    EventTypeMetadata, EventUpcaster, EventVersioningError, EventVersioningService, SimpleUpcaster,
+    VersionedEvent,
 };
+pub use jetstream_event_store::JetStreamEventStore;
+pub use nats_client::{NatsClient, NatsConfig, NatsError};
 pub use projection_checkpoint::{
-    CheckpointStore, JetStreamCheckpointStore, InMemoryCheckpointStore,
-    ProjectionCheckpoint, EventPosition, CheckpointError, CheckpointManager
-};
-pub use snapshot_policy::{
-    SnapshotPolicy, SnapshotPolicyEngine, SnapshotMetrics, AutoSnapshotService
+    CheckpointError, CheckpointManager, CheckpointStore, EventPosition, InMemoryCheckpointStore,
+    JetStreamCheckpointStore, ProjectionCheckpoint,
 };
 pub use saga::{
-    SagaError, SagaInstance, SagaCoordinator, CommandBus, ProcessManager, 
-    ProcessPolicy, SagaCommand, SagaDefinition, SagaMarker
+    CommandBus, ProcessManager, ProcessPolicy, SagaCommand, SagaCoordinator, SagaDefinition,
+    SagaError, SagaInstance, SagaMarker,
 };
+pub use snapshot_policy::{
+    AutoSnapshotService, SnapshotMetrics, SnapshotPolicy, SnapshotPolicyEngine,
+};
+pub use snapshot_store::{AggregateSnapshot, SnapshotError, SnapshotStore};
 
 #[cfg(test)]
 mod tests;

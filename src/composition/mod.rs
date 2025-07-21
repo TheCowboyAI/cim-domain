@@ -6,12 +6,12 @@
 //! into larger structures while preserving their individual properties
 //! and maintaining consistency across boundaries.
 
+pub mod comprehension_engine;
 pub mod domain_composition;
 pub mod saga_orchestration;
 pub mod topos_structure;
-pub mod comprehension_engine;
 
-pub use domain_composition::{DomainComposition, CompositionStrategy};
-pub use saga_orchestration::{Saga, SagaStep, SagaState, SagaOrchestrator, RetryPolicy};
-pub use topos_structure::{DomainTopos, SubobjectClassifier, InternalLogic};
 pub use comprehension_engine::{ComprehensionEngine, Predicate, SubAggregate};
+pub use domain_composition::{CompositionStrategy, DomainComposition};
+pub use saga_orchestration::{RetryPolicy, Saga, SagaOrchestrator, SagaState, SagaStep};
+pub use topos_structure::{DomainTopos, InternalLogic, SubobjectClassifier};

@@ -4,24 +4,27 @@
 
 use crate::domain_events::DomainEventEnum;
 use crate::infrastructure::{
-    event_store::{EventStore, EventStoreError, StoredEvent, EventMetadata, EventStream},
     cid_chain::{EventChain, EventWithCid},
+    event_store::{EventMetadata, EventStore, EventStoreError, EventStream, StoredEvent},
 };
-use async_nats::jetstream::{self, consumer::{DeliverPolicy, pull::Config as ConsumerConfig}};
+use async_nats::jetstream::{
+    self,
+    consumer::{pull::Config as ConsumerConfig, DeliverPolicy},
+};
 use async_nats::Client;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::stream::{Stream, StreamExt};
 use lru::LruCache;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::num::NonZeroUsize;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
+use tokio::sync::mpsc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use std::collections::HashMap;
-use tokio::sync::mpsc;
-use std::pin::Pin;
-use std::task::{Context, Poll};
 
 /// Configuration for JetStream event store
 pub struct JetStreamConfig {
@@ -65,10 +68,7 @@ pub struct JetStreamEventStore {
 
 impl JetStreamEventStore {
     /// Create a new JetStream event store
-    pub async fn new(
-        client: Client,
-        config: JetStreamConfig,
-    ) -> Result<Self, EventStoreError> {
+    pub async fn new(client: Client, config: JetStreamConfig) -> Result<Self, EventStoreError> {
         // Create or get the stream
         let js = jetstream::new(client.clone());
 
@@ -81,10 +81,9 @@ impl JetStreamEventStore {
         };
 
         // Create or update stream
-        let _stream = js
-            .create_stream(stream_config)
-            .await
-            .map_err(|e| EventStoreError::ConnectionError(format!("Failed to create stream: {e}")))?;
+        let _stream = js.create_stream(stream_config).await.map_err(|e| {
+            EventStoreError::ConnectionError(format!("Failed to create stream: {e}"))
+        })?;
 
         Ok(Self {
             client,
@@ -115,13 +114,15 @@ impl JetStreamEventStore {
         // Get or create event chain for this aggregate
         let event_with_cid = {
             let mut chains = self.event_chains.write().await;
-            let mut chain = chains.get(&aggregate_id.to_string())
+            let mut chain = chains
+                .get(&aggregate_id.to_string())
                 .cloned()
                 .unwrap_or_else(EventChain::new);
 
             // Add event to chain
-            let event_with_cid = chain.add(event.clone())
-                .map_err(|e| EventStoreError::InvalidEventData(format!("Failed to add to chain: {e}")))?;
+            let event_with_cid = chain.add(event.clone()).map_err(|e| {
+                EventStoreError::InvalidEventData(format!("Failed to add to chain: {e}"))
+            })?;
 
             // Update the chain in cache
             chains.insert(aggregate_id.to_string(), chain);
@@ -201,13 +202,15 @@ impl EventStore for JetStreamEventStore {
         let mut stored_events = Vec::new();
         for event in events {
             current_version += 1;
-            let (stored_event, _) = self.store_event_with_cid(
-                event,
-                aggregate_id,
-                aggregate_type,
-                current_version,
-                metadata.clone(),
-            ).await?;
+            let (stored_event, _) = self
+                .store_event_with_cid(
+                    event,
+                    aggregate_id,
+                    aggregate_type,
+                    current_version,
+                    metadata.clone(),
+                )
+                .await?;
             stored_events.push(stored_event);
         }
 
@@ -221,7 +224,8 @@ impl EventStore for JetStreamEventStore {
         {
             let mut cache = self.cache.write().await;
             // Get existing cached events or empty vec
-            let mut all_events = cache.get(&aggregate_id.to_string())
+            let mut all_events = cache
+                .get(&aggregate_id.to_string())
                 .cloned()
                 .unwrap_or_default();
 
@@ -264,7 +268,9 @@ impl EventStore for JetStreamEventStore {
             // Only return cached events if we have the complete set
             // This is a simplified check - in production you'd want to verify
             // that the cache has all events from from_version to current
-            if !filtered.is_empty() && events.last().map(|e| e.sequence).unwrap_or(0) >= from_version.unwrap() {
+            if !filtered.is_empty()
+                && events.last().map(|e| e.sequence).unwrap_or(0) >= from_version.unwrap()
+            {
                 return Ok(filtered);
             }
         }
@@ -279,18 +285,19 @@ impl EventStore for JetStreamEventStore {
             deliver_policy: DeliverPolicy::All,
             filter_subject: "".to_string(), // Empty string means no filtering
             ack_policy: async_nats::jetstream::consumer::AckPolicy::None, // Don't auto-ack for reads
-            name: Some(consumer_name), // Use the consumer name
+            name: Some(consumer_name),                                    // Use the consumer name
             ..Default::default()
         };
 
         let js = jetstream::new(self.client.clone());
-        let stream = js.get_stream(&self.stream_name).await
+        let stream = js
+            .get_stream(&self.stream_name)
+            .await
             .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
-        let consumer = stream
-            .create_consumer(consumer_config)
-            .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
+        let consumer = stream.create_consumer(consumer_config).await.map_err(|e| {
+            EventStoreError::StorageError(format!("Failed to create consumer: {e}"))
+        })?;
 
         // Fetch messages
         let mut messages = consumer
@@ -324,7 +331,9 @@ impl EventStore for JetStreamEventStore {
                     // Try to verify CID chain, but don't fail for demo
                     // In production, you would want strict verification
                     if let Err(e) = event_chain.verify_and_add(envelope.event_with_cid.clone()) {
-                        eprintln!("Warning: CID verification failed for aggregate {aggregate_id}: {e}");
+                        eprintln!(
+                            "Warning: CID verification failed for aggregate {aggregate_id}: {e}"
+                        );
                     }
 
                     events.push(envelope.stored_event);
@@ -367,7 +376,7 @@ impl EventStore for JetStreamEventStore {
         // This would require a different indexing strategy
         // For now, return an error indicating it's not implemented
         Err(EventStoreError::StorageError(
-            "get_events_by_type not yet implemented for JetStream store".to_string()
+            "get_events_by_type not yet implemented for JetStream store".to_string(),
         ))
     }
 
@@ -418,13 +427,14 @@ impl EventStore for JetStreamEventStore {
         };
 
         let js = jetstream::new(self.client.clone());
-        let stream = js.get_stream(&self.stream_name).await
+        let stream = js
+            .get_stream(&self.stream_name)
+            .await
             .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
-        let consumer = stream
-            .create_consumer(consumer_config)
-            .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
+        let consumer = stream.create_consumer(consumer_config).await.map_err(|e| {
+            EventStoreError::StorageError(format!("Failed to create consumer: {e}"))
+        })?;
 
         // Create stream wrapper
         let messages = consumer
@@ -441,7 +451,10 @@ impl EventStore for JetStreamEventStore {
         from_position: Option<u64>,
     ) -> Result<Box<dyn EventStream>, EventStoreError> {
         // Create consumer for specific aggregate type
-        let consumer_name = format!("aggregate-type-subscriber-{aggregate_type}-{}", uuid::Uuid::new_v4());
+        let consumer_name = format!(
+            "aggregate-type-subscriber-{aggregate_type}-{}",
+            uuid::Uuid::new_v4()
+        );
         let filter_subject = format!("{}.{aggregate_type}.>", self.subject_prefix);
 
         let consumer_config = ConsumerConfig {
@@ -460,13 +473,14 @@ impl EventStore for JetStreamEventStore {
         };
 
         let js = jetstream::new(self.client.clone());
-        let stream = js.get_stream(&self.stream_name).await
+        let stream = js
+            .get_stream(&self.stream_name)
+            .await
             .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
-        let consumer = stream
-            .create_consumer(consumer_config)
-            .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
+        let consumer = stream.create_consumer(consumer_config).await.map_err(|e| {
+            EventStoreError::StorageError(format!("Failed to create consumer: {e}"))
+        })?;
 
         // Create stream wrapper
         let messages = consumer
@@ -501,13 +515,14 @@ impl EventStore for JetStreamEventStore {
         };
 
         let js = jetstream::new(self.client.clone());
-        let stream = js.get_stream(&self.stream_name).await
+        let stream = js
+            .get_stream(&self.stream_name)
+            .await
             .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
-        let consumer = stream
-            .create_consumer(consumer_config)
-            .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
+        let consumer = stream.create_consumer(consumer_config).await.map_err(|e| {
+            EventStoreError::StorageError(format!("Failed to create consumer: {e}"))
+        })?;
 
         // Create stream wrapper with event type filter
         let messages = consumer
@@ -542,13 +557,14 @@ impl EventStore for JetStreamEventStore {
         };
 
         let js = jetstream::new(self.client.clone());
-        let stream = js.get_stream(&self.stream_name).await
+        let stream = js
+            .get_stream(&self.stream_name)
+            .await
             .map_err(|e| EventStoreError::StorageError(format!("Failed to get stream: {e}")))?;
 
-        let consumer = stream
-            .create_consumer(consumer_config)
-            .await
-            .map_err(|e| EventStoreError::StorageError(format!("Failed to create consumer: {e}")))?;
+        let consumer = stream.create_consumer(consumer_config).await.map_err(|e| {
+            EventStoreError::StorageError(format!("Failed to create consumer: {e}"))
+        })?;
 
         // Create stream wrapper
         let messages = consumer
@@ -568,7 +584,10 @@ pub struct JetStreamEventStream {
 impl JetStreamEventStream {
     /// Create a new stream from a NATS message stream
     fn new<E>(
-        mut messages: impl Stream<Item = Result<async_nats::jetstream::Message, E>> + Send + Unpin + 'static,
+        mut messages: impl Stream<Item = Result<async_nats::jetstream::Message, E>>
+            + Send
+            + Unpin
+            + 'static,
     ) -> Self
     where
         E: std::error::Error + Send + Sync + 'static,
@@ -593,13 +612,16 @@ impl JetStreamEventStream {
                             Ok(envelope) => {
                                 // Try to verify CID chain, but don't fail on errors for demo
                                 // In production, you would want strict verification
-                                if let Err(e) = event_chain.verify_and_add(envelope.event_with_cid) {
+                                if let Err(e) = event_chain.verify_and_add(envelope.event_with_cid)
+                                {
                                     // Log the error but continue
                                     eprintln!("Warning: CID verification failed: {e}");
                                 }
                                 Ok(envelope.stored_event)
                             }
-                            Err(e) => Err(EventStoreError::InvalidEventData(format!("Failed to deserialize: {e}"))),
+                            Err(e) => Err(EventStoreError::InvalidEventData(format!(
+                                "Failed to deserialize: {e}"
+                            ))),
                         }
                     }
                     Err(e) => Err(EventStoreError::StorageError(format!("Stream error: {e}"))),
@@ -619,10 +641,7 @@ impl JetStreamEventStream {
 impl Stream for JetStreamEventStream {
     type Item = Result<StoredEvent, EventStoreError>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.receiver.poll_recv(cx)
     }
 }

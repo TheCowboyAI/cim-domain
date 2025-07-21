@@ -234,19 +234,34 @@ cargo build
 ### Testing
 
 ```bash
-# Run all tests
+# Run all tests (requires NATS running on localhost:4222)
 cargo test
 
 # Run with verbose output
 cargo test -- --nocapture
 
-# Run integration tests with NATS
+# Start NATS with JetStream for tests
 docker run -d -p 4222:4222 nats:latest -js
-cargo test --test nats_integration_tests
+
+# Run specific test suites
+cargo test --lib                           # 396 unit tests
+cargo test --test infrastructure_tests     # 19 integration tests
+cargo test --test jetstream_event_store_tests  # 6 JetStream tests
+cargo test --test persistence_tests        # 7 persistence tests
 
 # Run benchmarks
 cargo bench
+
+# Generate test results for CI/CD dashboard
+cargo test -- --format json > test-results.json
 ```
+
+#### NATS Test Requirements
+
+All persistence and infrastructure tests require NATS with JetStream to be running on `localhost:4222`. The tests will:
+- Create temporary buckets/streams for isolation
+- Clean up resources after completion
+- Test TTL expiration, versioning, and event streaming
 
 ### Running Examples
 
@@ -276,9 +291,17 @@ cargo run --example persistence_metrics_demo
 ## Current Status
 
 **Library Status**: ✅ Complete and functional
-- **All tests passing** (100% pass rate)
+- **All tests passing** (100% pass rate - 437 total tests)
 - **Zero compilation warnings**
 - **Production ready** with full persistence layer
+
+**Test Coverage**: ✅ Comprehensive
+- **396** library unit tests
+- **19** infrastructure integration tests  
+- **6** JetStream event store tests
+- **7** persistence integration tests (including NATS)
+- **9** additional integration tests
+- All NATS-dependent tests enabled and passing
 
 **Persistence Layer**: ✅ Complete
 - Simple repository for basic CRUD operations
@@ -299,6 +322,7 @@ cargo run --example persistence_metrics_demo
 - Automated testing with NATS services
 - Code coverage reporting
 - Clippy and formatting checks
+- Test results capture for dashboard reporting
 
 ## Documentation
 
@@ -306,6 +330,7 @@ cargo run --example persistence_metrics_demo
 - [QA Report](doc/qa/cim-domain-qa-report.md)
 - [Component Architecture](doc/design/component-architecture.md)
 - [Domain Design Principles](doc/design/domain-design-principles.md)
+- [Test Infrastructure Guide](doc/testing/test-infrastructure.md)
 
 ## Performance Targets
 

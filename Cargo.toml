@@ -35,7 +35,7 @@ futures = "0.3"
 
 # Domain dependencies
 cim-ipld = { git = "https://github.com/thecowboyai/cim-ipld", version = "0.5" }
-cim-subject = { git = "https://github.com/TheCowboyAI/cim-subject", rev = "4632d7eb68f43adf319b3488e6c4191c54da7868" }
+cim-subject = { git = "https://github.com/TheCowboyAI/cim-subject", rev = "4632d7eb68f43adf319b3488e6c4191c54da7868", optional = true }
 cim-component = { git = "https://github.com/TheCowboyAI/cim-component", version = "0.3" }
 
 # Content addressing
@@ -158,5 +158,9 @@ name = "persistence_benchmarks"
 harness = false
 
 [features]
-default = []
+default = ["subject-routing"]
+# Enable subject-based routing and permissions (requires cim-subject)
+subject-routing = ["dep:cim-subject"]
+# Enable full feature set including all optional dependencies
+full = ["subject-routing"]
 test-utils = []

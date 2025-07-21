@@ -10,13 +10,13 @@ pub enum CompositionType {
     /// Single node, no edges - represents a value
     Atomic {
         /// Type of the atomic value
-        value_type: String
+        value_type: String,
     },
 
     /// Multiple nodes/edges - represents a structure
     Composite {
         /// Type of the composite structure
-        structure_type: String
+        structure_type: String,
     },
 
     /// Maps one graph to another - represents transformation
@@ -30,7 +30,7 @@ pub enum CompositionType {
     /// Wraps a graph-returning computation - represents context
     Monad {
         /// Type of monadic context
-        context_type: String
+        context_type: String,
     },
 
     /// Represents a DDD concept
@@ -43,63 +43,63 @@ pub enum DomainCompositionType {
     /// Entity composition
     Entity {
         /// Type of entity
-        entity_type: String
+        entity_type: String,
     },
 
     /// Value object composition
     ValueObject {
         /// Type of value object
-        value_type: String
+        value_type: String,
     },
 
     /// Aggregate composition
     Aggregate {
         /// Type of aggregate
-        aggregate_type: String
+        aggregate_type: String,
     },
 
     /// Service composition
     Service {
         /// Type of service
-        service_type: String
+        service_type: String,
     },
 
     /// Event composition
     Event {
         /// Type of event
-        event_type: String
+        event_type: String,
     },
 
     /// Command composition
     Command {
         /// Type of command
-        command_type: String
+        command_type: String,
     },
 
     /// Query composition
     Query {
         /// Type of query
-        query_type: String
+        query_type: String,
     },
 
     /// Bounded context composition
     BoundedContext {
         /// Domain name
-        domain: String
+        domain: String,
     },
 
     /// Policy composition
     Policy {
         /// Type of policy
-        policy_type: String
+        policy_type: String,
     },
 
     /// Workflow composition
     Workflow {
         /// Type of workflow
-        workflow_type: String
+        workflow_type: String,
     },
-    
+
     /// Composite structure (for limits/colimits)
     Composite {
         /// Type of composite
@@ -130,7 +130,10 @@ impl CompositionType {
         match self {
             CompositionType::Atomic { value_type } => format!("Atomic {value_type}"),
             CompositionType::Composite { structure_type } => format!("Composite {structure_type}"),
-            CompositionType::Functor { source_type, target_type } => {
+            CompositionType::Functor {
+                source_type,
+                target_type,
+            } => {
                 format!("Functor {source_type} → {target_type}")
             }
             CompositionType::Monad { context_type } => format!("Monad {context_type}"),
@@ -142,20 +145,21 @@ impl CompositionType {
 impl DomainCompositionType {
     /// Check if this represents an entity type
     pub fn is_entity_type(&self) -> bool {
-        matches!(self,
-            DomainCompositionType::Entity { .. } |
-            DomainCompositionType::Aggregate { .. } |
-            DomainCompositionType::Event { .. } |
-            DomainCompositionType::Command { .. } |
-            DomainCompositionType::Query { .. }
+        matches!(
+            self,
+            DomainCompositionType::Entity { .. }
+                | DomainCompositionType::Aggregate { .. }
+                | DomainCompositionType::Event { .. }
+                | DomainCompositionType::Command { .. }
+                | DomainCompositionType::Query { .. }
         )
     }
 
     /// Check if this represents a value object type
     pub fn is_value_object_type(&self) -> bool {
-        matches!(self,
-            DomainCompositionType::ValueObject { .. } |
-            DomainCompositionType::Policy { .. }
+        matches!(
+            self,
+            DomainCompositionType::ValueObject { .. } | DomainCompositionType::Policy { .. }
         )
     }
 
@@ -166,9 +170,9 @@ impl DomainCompositionType {
 
     /// Check if this represents a boundary type
     pub fn is_boundary_type(&self) -> bool {
-        matches!(self,
-            DomainCompositionType::BoundedContext { .. } |
-            DomainCompositionType::Aggregate { .. }
+        matches!(
+            self,
+            DomainCompositionType::BoundedContext { .. } | DomainCompositionType::Aggregate { .. }
         )
     }
 
@@ -176,16 +180,27 @@ impl DomainCompositionType {
     pub fn display_name(&self) -> String {
         match self {
             DomainCompositionType::Entity { entity_type } => format!("Entity: {entity_type}"),
-            DomainCompositionType::ValueObject { value_type } => format!("Value Object: {value_type}"),
-            DomainCompositionType::Aggregate { aggregate_type } => format!("Aggregate: {aggregate_type}"),
+            DomainCompositionType::ValueObject { value_type } => {
+                format!("Value Object: {value_type}")
+            }
+            DomainCompositionType::Aggregate { aggregate_type } => {
+                format!("Aggregate: {aggregate_type}")
+            }
             DomainCompositionType::Service { service_type } => format!("Service: {service_type}"),
             DomainCompositionType::Event { event_type } => format!("Event: {event_type}"),
             DomainCompositionType::Command { command_type } => format!("Command: {command_type}"),
             DomainCompositionType::Query { query_type } => format!("Query: {query_type}"),
-            DomainCompositionType::BoundedContext { domain } => format!("Bounded Context: {domain}"),
+            DomainCompositionType::BoundedContext { domain } => {
+                format!("Bounded Context: {domain}")
+            }
             DomainCompositionType::Policy { policy_type } => format!("Policy: {policy_type}"),
-            DomainCompositionType::Workflow { workflow_type } => format!("Workflow: {workflow_type}"),
-            DomainCompositionType::Composite { composite_type, components } => format!("Composite: {} ({})", composite_type, components.join(", ")),
+            DomainCompositionType::Workflow { workflow_type } => {
+                format!("Workflow: {workflow_type}")
+            }
+            DomainCompositionType::Composite {
+                composite_type,
+                components,
+            } => format!("Composite: {} ({})", composite_type, components.join(", ")),
         }
     }
 
@@ -252,14 +267,16 @@ mod tests {
         assert_eq!(
             CompositionType::Atomic {
                 value_type: "String".to_string(),
-            }.display_name(),
+            }
+            .display_name(),
             "Atomic String"
         );
 
         assert_eq!(
             CompositionType::Composite {
                 structure_type: "Graph".to_string(),
-            }.display_name(),
+            }
+            .display_name(),
             "Composite Graph"
         );
 
@@ -267,21 +284,24 @@ mod tests {
             CompositionType::Functor {
                 source_type: "List".to_string(),
                 target_type: "Tree".to_string(),
-            }.display_name(),
+            }
+            .display_name(),
             "Functor List → Tree"
         );
 
         assert_eq!(
             CompositionType::Monad {
                 context_type: "Maybe".to_string(),
-            }.display_name(),
+            }
+            .display_name(),
             "Monad Maybe"
         );
 
         assert_eq!(
             CompositionType::Domain(DomainCompositionType::Entity {
                 entity_type: "Customer".to_string(),
-            }).display_name(),
+            })
+            .display_name(),
             "Entity: Customer"
         );
     }
@@ -302,43 +322,100 @@ mod tests {
     #[test]
     fn test_domain_composition_entity_classification() {
         // Entity types
-        assert!(DomainCompositionType::Entity { entity_type: "Order".to_string() }.is_entity_type());
-        assert!(DomainCompositionType::Aggregate { aggregate_type: "Cart".to_string() }.is_entity_type());
-        assert!(DomainCompositionType::Event { event_type: "OrderPlaced".to_string() }.is_entity_type());
-        assert!(DomainCompositionType::Command { command_type: "PlaceOrder".to_string() }.is_entity_type());
-        assert!(DomainCompositionType::Query { query_type: "GetOrder".to_string() }.is_entity_type());
+        assert!(DomainCompositionType::Entity {
+            entity_type: "Order".to_string()
+        }
+        .is_entity_type());
+        assert!(DomainCompositionType::Aggregate {
+            aggregate_type: "Cart".to_string()
+        }
+        .is_entity_type());
+        assert!(DomainCompositionType::Event {
+            event_type: "OrderPlaced".to_string()
+        }
+        .is_entity_type());
+        assert!(DomainCompositionType::Command {
+            command_type: "PlaceOrder".to_string()
+        }
+        .is_entity_type());
+        assert!(DomainCompositionType::Query {
+            query_type: "GetOrder".to_string()
+        }
+        .is_entity_type());
 
         // Non-entity types
-        assert!(!DomainCompositionType::ValueObject { value_type: "Money".to_string() }.is_entity_type());
-        assert!(!DomainCompositionType::Service { service_type: "PaymentService".to_string() }.is_entity_type());
-        assert!(!DomainCompositionType::Policy { policy_type: "RefundPolicy".to_string() }.is_entity_type());
-        assert!(!DomainCompositionType::BoundedContext { domain: "Sales".to_string() }.is_entity_type());
-        assert!(!DomainCompositionType::Workflow { workflow_type: "OrderFlow".to_string() }.is_entity_type());
+        assert!(!DomainCompositionType::ValueObject {
+            value_type: "Money".to_string()
+        }
+        .is_entity_type());
+        assert!(!DomainCompositionType::Service {
+            service_type: "PaymentService".to_string()
+        }
+        .is_entity_type());
+        assert!(!DomainCompositionType::Policy {
+            policy_type: "RefundPolicy".to_string()
+        }
+        .is_entity_type());
+        assert!(!DomainCompositionType::BoundedContext {
+            domain: "Sales".to_string()
+        }
+        .is_entity_type());
+        assert!(!DomainCompositionType::Workflow {
+            workflow_type: "OrderFlow".to_string()
+        }
+        .is_entity_type());
     }
 
     /// Test DomainCompositionType value object classification
     #[test]
     fn test_domain_composition_value_object_classification() {
         // Value object types
-        assert!(DomainCompositionType::ValueObject { value_type: "Address".to_string() }.is_value_object_type());
-        assert!(DomainCompositionType::Policy { policy_type: "DiscountPolicy".to_string() }.is_value_object_type());
+        assert!(DomainCompositionType::ValueObject {
+            value_type: "Address".to_string()
+        }
+        .is_value_object_type());
+        assert!(DomainCompositionType::Policy {
+            policy_type: "DiscountPolicy".to_string()
+        }
+        .is_value_object_type());
 
         // Non-value object types
-        assert!(!DomainCompositionType::Entity { entity_type: "Customer".to_string() }.is_value_object_type());
-        assert!(!DomainCompositionType::Service { service_type: "EmailService".to_string() }.is_value_object_type());
-        assert!(!DomainCompositionType::Event { event_type: "CustomerCreated".to_string() }.is_value_object_type());
+        assert!(!DomainCompositionType::Entity {
+            entity_type: "Customer".to_string()
+        }
+        .is_value_object_type());
+        assert!(!DomainCompositionType::Service {
+            service_type: "EmailService".to_string()
+        }
+        .is_value_object_type());
+        assert!(!DomainCompositionType::Event {
+            event_type: "CustomerCreated".to_string()
+        }
+        .is_value_object_type());
     }
 
     /// Test DomainCompositionType service classification
     #[test]
     fn test_domain_composition_service_classification() {
         // Service types
-        assert!(DomainCompositionType::Service { service_type: "PaymentService".to_string() }.is_service_type());
+        assert!(DomainCompositionType::Service {
+            service_type: "PaymentService".to_string()
+        }
+        .is_service_type());
 
         // Non-service types
-        assert!(!DomainCompositionType::Entity { entity_type: "Order".to_string() }.is_service_type());
-        assert!(!DomainCompositionType::ValueObject { value_type: "Money".to_string() }.is_service_type());
-        assert!(!DomainCompositionType::Event { event_type: "OrderShipped".to_string() }.is_service_type());
+        assert!(!DomainCompositionType::Entity {
+            entity_type: "Order".to_string()
+        }
+        .is_service_type());
+        assert!(!DomainCompositionType::ValueObject {
+            value_type: "Money".to_string()
+        }
+        .is_service_type());
+        assert!(!DomainCompositionType::Event {
+            event_type: "OrderShipped".to_string()
+        }
+        .is_service_type());
     }
 
     /// Test DomainCompositionType boundary classification
@@ -354,65 +431,110 @@ mod tests {
     #[test]
     fn test_domain_composition_boundary_classification() {
         // Boundary types
-        assert!(DomainCompositionType::BoundedContext { domain: "Inventory".to_string() }.is_boundary_type());
-        assert!(DomainCompositionType::Aggregate { aggregate_type: "ShoppingCart".to_string() }.is_boundary_type());
+        assert!(DomainCompositionType::BoundedContext {
+            domain: "Inventory".to_string()
+        }
+        .is_boundary_type());
+        assert!(DomainCompositionType::Aggregate {
+            aggregate_type: "ShoppingCart".to_string()
+        }
+        .is_boundary_type());
 
         // Non-boundary types
-        assert!(!DomainCompositionType::Entity { entity_type: "Product".to_string() }.is_boundary_type());
-        assert!(!DomainCompositionType::Service { service_type: "PricingService".to_string() }.is_boundary_type());
-        assert!(!DomainCompositionType::ValueObject { value_type: "Price".to_string() }.is_boundary_type());
+        assert!(!DomainCompositionType::Entity {
+            entity_type: "Product".to_string()
+        }
+        .is_boundary_type());
+        assert!(!DomainCompositionType::Service {
+            service_type: "PricingService".to_string()
+        }
+        .is_boundary_type());
+        assert!(!DomainCompositionType::ValueObject {
+            value_type: "Price".to_string()
+        }
+        .is_boundary_type());
     }
 
     /// Test DomainCompositionType display names
     #[test]
     fn test_domain_composition_display_names() {
         assert_eq!(
-            DomainCompositionType::Entity { entity_type: "Customer".to_string() }.display_name(),
+            DomainCompositionType::Entity {
+                entity_type: "Customer".to_string()
+            }
+            .display_name(),
             "Entity: Customer"
         );
 
         assert_eq!(
-            DomainCompositionType::ValueObject { value_type: "Email".to_string() }.display_name(),
+            DomainCompositionType::ValueObject {
+                value_type: "Email".to_string()
+            }
+            .display_name(),
             "Value Object: Email"
         );
 
         assert_eq!(
-            DomainCompositionType::Aggregate { aggregate_type: "Order".to_string() }.display_name(),
+            DomainCompositionType::Aggregate {
+                aggregate_type: "Order".to_string()
+            }
+            .display_name(),
             "Aggregate: Order"
         );
 
         assert_eq!(
-            DomainCompositionType::Service { service_type: "NotificationService".to_string() }.display_name(),
+            DomainCompositionType::Service {
+                service_type: "NotificationService".to_string()
+            }
+            .display_name(),
             "Service: NotificationService"
         );
 
         assert_eq!(
-            DomainCompositionType::Event { event_type: "PaymentReceived".to_string() }.display_name(),
+            DomainCompositionType::Event {
+                event_type: "PaymentReceived".to_string()
+            }
+            .display_name(),
             "Event: PaymentReceived"
         );
 
         assert_eq!(
-            DomainCompositionType::Command { command_type: "CancelOrder".to_string() }.display_name(),
+            DomainCompositionType::Command {
+                command_type: "CancelOrder".to_string()
+            }
+            .display_name(),
             "Command: CancelOrder"
         );
 
         assert_eq!(
-            DomainCompositionType::Query { query_type: "FindOrdersByCustomer".to_string() }.display_name(),
+            DomainCompositionType::Query {
+                query_type: "FindOrdersByCustomer".to_string()
+            }
+            .display_name(),
             "Query: FindOrdersByCustomer"
         );
 
         assert_eq!(
-            DomainCompositionType::BoundedContext { domain: "Shipping".to_string() }.display_name(),
+            DomainCompositionType::BoundedContext {
+                domain: "Shipping".to_string()
+            }
+            .display_name(),
             "Bounded Context: Shipping"
         );
 
         assert_eq!(
-            DomainCompositionType::Policy { policy_type: "ReturnPolicy".to_string() }.display_name(),
+            DomainCompositionType::Policy {
+                policy_type: "ReturnPolicy".to_string()
+            }
+            .display_name(),
             "Policy: ReturnPolicy"
         );
 
         assert_eq!(
-            DomainCompositionType::Workflow { workflow_type: "FulfillmentFlow".to_string() }.display_name(),
+            DomainCompositionType::Workflow {
+                workflow_type: "FulfillmentFlow".to_string()
+            }
+            .display_name(),
             "Workflow: FulfillmentFlow"
         );
     }
@@ -421,43 +543,73 @@ mod tests {
     #[test]
     fn test_domain_composition_base_type_names() {
         assert_eq!(
-            DomainCompositionType::Entity { entity_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Entity {
+                entity_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Entity"
         );
         assert_eq!(
-            DomainCompositionType::ValueObject { value_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::ValueObject {
+                value_type: "Any".to_string()
+            }
+            .base_type_name(),
             "ValueObject"
         );
         assert_eq!(
-            DomainCompositionType::Aggregate { aggregate_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Aggregate {
+                aggregate_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Aggregate"
         );
         assert_eq!(
-            DomainCompositionType::Service { service_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Service {
+                service_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Service"
         );
         assert_eq!(
-            DomainCompositionType::Event { event_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Event {
+                event_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Event"
         );
         assert_eq!(
-            DomainCompositionType::Command { command_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Command {
+                command_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Command"
         );
         assert_eq!(
-            DomainCompositionType::Query { query_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Query {
+                query_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Query"
         );
         assert_eq!(
-            DomainCompositionType::BoundedContext { domain: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::BoundedContext {
+                domain: "Any".to_string()
+            }
+            .base_type_name(),
             "BoundedContext"
         );
         assert_eq!(
-            DomainCompositionType::Policy { policy_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Policy {
+                policy_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Policy"
         );
         assert_eq!(
-            DomainCompositionType::Workflow { workflow_type: "Any".to_string() }.base_type_name(),
+            DomainCompositionType::Workflow {
+                workflow_type: "Any".to_string()
+            }
+            .base_type_name(),
             "Workflow"
         );
     }
@@ -467,13 +619,19 @@ mod tests {
     fn test_serde() {
         // Test CompositionType variants
         let compositions = vec![
-            CompositionType::Atomic { value_type: "Boolean".to_string() },
-            CompositionType::Composite { structure_type: "List".to_string() },
+            CompositionType::Atomic {
+                value_type: "Boolean".to_string(),
+            },
+            CompositionType::Composite {
+                structure_type: "List".to_string(),
+            },
             CompositionType::Functor {
                 source_type: "Option".to_string(),
                 target_type: "Result".to_string(),
             },
-            CompositionType::Monad { context_type: "IO".to_string() },
+            CompositionType::Monad {
+                context_type: "IO".to_string(),
+            },
             CompositionType::Domain(DomainCompositionType::Entity {
                 entity_type: "User".to_string(),
             }),
@@ -487,16 +645,36 @@ mod tests {
 
         // Test DomainCompositionType variants
         let domain_types = vec![
-            DomainCompositionType::Entity { entity_type: "Product".to_string() },
-            DomainCompositionType::ValueObject { value_type: "SKU".to_string() },
-            DomainCompositionType::Aggregate { aggregate_type: "Inventory".to_string() },
-            DomainCompositionType::Service { service_type: "StockService".to_string() },
-            DomainCompositionType::Event { event_type: "StockDepleted".to_string() },
-            DomainCompositionType::Command { command_type: "RestockItem".to_string() },
-            DomainCompositionType::Query { query_type: "GetStockLevel".to_string() },
-            DomainCompositionType::BoundedContext { domain: "Warehouse".to_string() },
-            DomainCompositionType::Policy { policy_type: "RestockingPolicy".to_string() },
-            DomainCompositionType::Workflow { workflow_type: "RestockingFlow".to_string() },
+            DomainCompositionType::Entity {
+                entity_type: "Product".to_string(),
+            },
+            DomainCompositionType::ValueObject {
+                value_type: "SKU".to_string(),
+            },
+            DomainCompositionType::Aggregate {
+                aggregate_type: "Inventory".to_string(),
+            },
+            DomainCompositionType::Service {
+                service_type: "StockService".to_string(),
+            },
+            DomainCompositionType::Event {
+                event_type: "StockDepleted".to_string(),
+            },
+            DomainCompositionType::Command {
+                command_type: "RestockItem".to_string(),
+            },
+            DomainCompositionType::Query {
+                query_type: "GetStockLevel".to_string(),
+            },
+            DomainCompositionType::BoundedContext {
+                domain: "Warehouse".to_string(),
+            },
+            DomainCompositionType::Policy {
+                policy_type: "RestockingPolicy".to_string(),
+            },
+            DomainCompositionType::Workflow {
+                workflow_type: "RestockingFlow".to_string(),
+            },
         ];
 
         for domain_type in domain_types {
@@ -514,8 +692,12 @@ mod tests {
         let mut set = HashSet::new();
 
         // Add different composition types
-        set.insert(CompositionType::Atomic { value_type: "Int".to_string() });
-        set.insert(CompositionType::Composite { structure_type: "Map".to_string() });
+        set.insert(CompositionType::Atomic {
+            value_type: "Int".to_string(),
+        });
+        set.insert(CompositionType::Composite {
+            structure_type: "Map".to_string(),
+        });
         set.insert(CompositionType::Domain(DomainCompositionType::Entity {
             entity_type: "Order".to_string(),
         }));
@@ -523,11 +705,15 @@ mod tests {
         assert_eq!(set.len(), 3);
 
         // Same composition should not increase size
-        set.insert(CompositionType::Atomic { value_type: "Int".to_string() });
+        set.insert(CompositionType::Atomic {
+            value_type: "Int".to_string(),
+        });
         assert_eq!(set.len(), 3);
 
         // Different value type should increase size
-        set.insert(CompositionType::Atomic { value_type: "Float".to_string() });
+        set.insert(CompositionType::Atomic {
+            value_type: "Float".to_string(),
+        });
         assert_eq!(set.len(), 4);
     }
 

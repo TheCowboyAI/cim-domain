@@ -37,7 +37,6 @@ impl TestEntity {
 }
 
 #[tokio::test]
-#[ignore] // Requires NATS server to be running
 async fn test_simple_repository_crud() {
     // Connect to NATS
     let client = async_nats::connect("nats://localhost:4222").await.unwrap();
@@ -82,7 +81,6 @@ async fn test_simple_repository_crud() {
 }
 
 #[tokio::test]
-#[ignore] // Requires NATS server
 async fn test_nats_kv_repository_with_ttl() {
     use std::time::Duration;
     use tokio::time::sleep;
@@ -119,7 +117,6 @@ async fn test_nats_kv_repository_with_ttl() {
 }
 
 #[tokio::test]
-#[ignore] // Requires NATS server
 async fn test_read_model_store() {
     use chrono::Utc;
 
@@ -198,7 +195,6 @@ async fn test_read_model_store() {
 }
 
 #[tokio::test]
-#[ignore] // Requires NATS server
 async fn test_query_support() {
     let client = async_nats::connect("nats://localhost:4222").await.unwrap();
 

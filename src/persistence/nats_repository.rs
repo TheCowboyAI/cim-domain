@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use cim_subject::{Subject, Pattern};
+use crate::subject_abstraction::{Subject, Pattern};
 use cim_ipld::Cid;
 
 /// Configuration for NATS repository
@@ -77,7 +77,7 @@ pub enum NatsRepositoryError {
     
     /// Subject error
     #[error("Subject error: {0}")]
-    SubjectError(#[from] cim_subject::SubjectError),
+    SubjectError(String),
     
     /// IPLD error
     #[error("IPLD error: {0}")]
@@ -165,7 +165,9 @@ impl<T: DomainEntity> NatsRepository<T> {
             operation
         );
         
-        let subject = Subject::new(subject_str)?;
+        use crate::subject_abstraction::SubjectLike;
+        let subject = Subject::parse(&subject_str)
+            .map_err(|e| NatsRepositoryError::SubjectError(e.to_string()))?;
         Ok(subject)
     }
     
@@ -178,7 +180,9 @@ impl<T: DomainEntity> NatsRepository<T> {
             event_type
         );
         
-        let subject = Subject::new(subject_str)?;
+        use crate::subject_abstraction::SubjectLike;
+        let subject = Subject::parse(&subject_str)
+            .map_err(|e| NatsRepositoryError::SubjectError(e.to_string()))?;
         Ok(subject)
     }
     
@@ -239,7 +243,7 @@ impl<T: DomainEntity> NatsRepository<T> {
     ) -> Result<Option<(Vec<u8>, AggregateMetadata)>, NatsRepositoryError> {
         // Query for aggregate state
         let subject = self.build_aggregate_subject(id, "state")?;
-        let pattern = Pattern::new(&subject.to_string())?;
+        let pattern = Pattern::parse(&subject.to_string())?;
         
         // Get latest state from JetStream
         let js = jetstream::new(self.client.clone());
@@ -414,7 +418,7 @@ impl<T: DomainEntity + Send + Sync + Serialize + for<'de> Deserialize<'de>> Aggr
     ) -> Result<Vec<AggregateMetadata>, RepositoryError> {
         // Build query pattern
         let pattern = if let Some(ref pattern_str) = options.subject_pattern {
-            Pattern::new(pattern_str)
+            Pattern::parse(pattern_str)
                 .map_err(|e| RepositoryError::SubjectError(e.to_string()))?
         } else {
             // Default pattern for aggregate type
@@ -422,7 +426,7 @@ impl<T: DomainEntity + Send + Sync + Serialize + for<'de> Deserialize<'de>> Aggr
                 self.config.aggregate_subject_prefix,
                 options.aggregate_type.as_ref().unwrap_or(&self.aggregate_type)
             );
-            Pattern::new(&pattern_str)
+            Pattern::parse(&pattern_str)
                 .map_err(|e| RepositoryError::SubjectError(e.to_string()))?
         };
         

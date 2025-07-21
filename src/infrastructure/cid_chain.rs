@@ -3,7 +3,7 @@
 //! CID chain implementation for event integrity using cim-ipld
 
 use crate::domain_events::DomainEventEnum;
-use cim_ipld::{ChainedContent, ContentChain, TypedContent, ContentType, Error as IpldError, Cid};
+use cim_ipld::{ChainedContent, Cid, ContentChain, ContentType, Error as IpldError, TypedContent};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -45,7 +45,7 @@ pub enum ChainVerificationError {
         /// The sequence number with the invalid CID
         sequence: u64,
         /// Description of why the CID is invalid
-        reason: String
+        reason: String,
     },
 
     /// CID doesn't match expected value at a specific sequence
@@ -107,7 +107,10 @@ impl EventChain {
         let content = self.chain.append(wrapper)?;
         Ok(EventWithCid {
             event: content.content.event.clone(),
-            cid: content.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
+            cid: content
+                .cid
+                .parse()
+                .map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
             previous_cid: content.previous_cid.clone().and_then(|s| s.parse().ok()),
         })
     }
@@ -116,26 +119,36 @@ impl EventChain {
     pub fn verify_and_add(&mut self, event_with_cid: EventWithCid) -> Result<(), CidError> {
         // Verify the chain
         if let Some(head) = self.chain.head() {
-            if event_with_cid.previous_cid != Some(head.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?) {
+            if event_with_cid.previous_cid
+                != Some(
+                    head.cid
+                        .parse()
+                        .map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
+                )
+            {
                 return Err(CidError::ChainError(format!(
                     "Previous CID mismatch: expected {:?}, got {:?}",
-                    head.cid,
-                    event_with_cid.previous_cid
+                    head.cid, event_with_cid.previous_cid
                 )));
             }
         } else if event_with_cid.previous_cid.is_some() {
             return Err(CidError::ChainError(
-                "Chain is empty but event has previous CID".to_string()
+                "Chain is empty but event has previous CID".to_string(),
             ));
         }
 
         // Create wrapper from the event and add to chain
-        let wrapper = EventWrapper { event: event_with_cid.event };
+        let wrapper = EventWrapper {
+            event: event_with_cid.event,
+        };
         let chained = self.chain.append(wrapper)?;
 
         // Verify the CID matches
         let expected_cid = event_with_cid.cid;
-        let actual_cid = chained.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?;
+        let actual_cid = chained
+            .cid
+            .parse()
+            .map_err(|e| CidError::InvalidCid(format!("{e:?}")))?;
         if expected_cid != actual_cid {
             return Err(CidError::ChainError(format!(
                 "CID mismatch: expected {expected_cid:?}, got {actual_cid:?}"
@@ -161,9 +174,13 @@ pub fn create_event_with_cid(
     event: DomainEventEnum,
     previous: Option<&EventWithCid>,
 ) -> Result<EventWithCid, CidError> {
-    let wrapper = EventWrapper { event: event.clone() };
+    let wrapper = EventWrapper {
+        event: event.clone(),
+    };
     let previous_chained = previous.map(|p| ChainedContent {
-        content: EventWrapper { event: p.event.clone() },
+        content: EventWrapper {
+            event: p.event.clone(),
+        },
         cid: p.cid.to_string(),
         previous_cid: p.previous_cid.map(|c| c.to_string()),
         sequence: 0, // Not used for this purpose
@@ -174,7 +191,10 @@ pub fn create_event_with_cid(
 
     Ok(EventWithCid {
         event,
-        cid: chained.cid.parse().map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
+        cid: chained
+            .cid
+            .parse()
+            .map_err(|e| CidError::InvalidCid(format!("{e:?}")))?,
         previous_cid: chained.previous_cid.and_then(|s| s.parse().ok()),
     })
 }
@@ -186,12 +206,16 @@ pub fn calculate_event_cid(
     sequence: u64,
 ) -> Result<cim_ipld::Cid, CidError> {
     // Create a temporary wrapper
-    let wrapper = EventWrapper { event: event.clone() };
+    let wrapper = EventWrapper {
+        event: event.clone(),
+    };
 
     // Create a temporary chained content to calculate CID
     let temp_previous = previous_cid.map(|cid| {
         ChainedContent {
-            content: EventWrapper { event: event.clone() }, // Dummy content
+            content: EventWrapper {
+                event: event.clone(),
+            }, // Dummy content
             cid: cid.to_string(),
             previous_cid: None,
             sequence: sequence.saturating_sub(1),
@@ -202,8 +226,7 @@ pub fn calculate_event_cid(
     let chained = ChainedContent::new(wrapper, temp_previous.as_ref())?;
 
     // Parse the CID string back to Cid
-    cim_ipld::Cid::try_from(chained.cid.as_str())
-        .map_err(|e| CidError::InvalidCid(e.to_string()))
+    cim_ipld::Cid::try_from(chained.cid.as_str()).map_err(|e| CidError::InvalidCid(e.to_string()))
 }
 
 /// Verify a chain of events
@@ -221,7 +244,10 @@ pub fn verify_event_chain(events: &[EventWithCid]) -> Result<(), CidError> {
             }
             (Some(prev), Some(prev_cid)) => {
                 if prev.cid != *prev_cid {
-                    return Err(CidError::ChainError(format!("CID chain broken at index {i}: expected {:?}, got {:?}", prev.cid, prev_cid)));
+                    return Err(CidError::ChainError(format!(
+                        "CID chain broken at index {i}: expected {:?}, got {:?}",
+                        prev.cid, prev_cid
+                    )));
                 }
             }
             _ => {
@@ -241,7 +267,7 @@ pub fn verify_event_chain(events: &[EventWithCid]) -> Result<(), CidError> {
 mod tests {
     use super::*;
     use crate::domain_events::WorkflowStarted;
-    use crate::identifiers::{WorkflowId, GraphId};
+    use crate::identifiers::{GraphId, WorkflowId};
 
     fn create_test_event() -> DomainEventEnum {
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
@@ -263,22 +289,12 @@ mod tests {
 
     #[test]
     fn test_event_chain_verification() {
-
         // Create a chain of events
-        let event1 = create_event_with_cid(
-            create_test_event(),
-            None,
-        ).unwrap();
+        let event1 = create_event_with_cid(create_test_event(), None).unwrap();
 
-        let event2 = create_event_with_cid(
-            create_test_event(),
-            Some(&event1),
-        ).unwrap();
+        let event2 = create_event_with_cid(create_test_event(), Some(&event1)).unwrap();
 
-        let event3 = create_event_with_cid(
-            create_test_event(),
-            Some(&event2),
-        ).unwrap();
+        let event3 = create_event_with_cid(create_test_event(), Some(&event2)).unwrap();
 
         let chain = vec![event1, event2, event3];
 
@@ -288,20 +304,16 @@ mod tests {
 
     #[test]
     fn test_broken_chain_detection() {
-
         // Create events with broken chain
-        let event1 = create_event_with_cid(
-            create_test_event(),
-            None,
-        ).unwrap();
+        let event1 = create_event_with_cid(create_test_event(), None).unwrap();
 
         // Create a fake event with wrong previous CID
-        let mut event3 = create_event_with_cid(
-            create_test_event(),
-            None,
-        ).unwrap();
+        let mut event3 = create_event_with_cid(create_test_event(), None).unwrap();
         // This event should have event1 as previous, but it doesn't
-        event3.previous_cid = Some(cim_ipld::Cid::try_from("bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi").unwrap());
+        event3.previous_cid = Some(
+            cim_ipld::Cid::try_from("bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi")
+                .unwrap(),
+        );
 
         let chain = vec![event1, event3];
 

@@ -2,12 +2,12 @@
 
 //! Snapshot store for aggregate state persistence
 
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use async_nats::jetstream::{self, Context};
+use async_trait::async_trait;
 use bytes::Bytes;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use thiserror::Error;
 use tracing::{debug, error, info};
 
 /// Errors that can occur during snapshot operations
@@ -24,7 +24,7 @@ pub enum SnapshotError {
     /// Requested snapshot was not found
     #[error("Snapshot not found")]
     NotFound,
-    
+
     /// Error from JetStream
     #[error("JetStream error: {0}")]
     JetStreamError(String),
@@ -70,33 +70,33 @@ pub struct JetStreamSnapshotStore {
 
 impl JetStreamSnapshotStore {
     /// Create a new JetStream snapshot store
-    pub async fn new(
-        jetstream: Arc<Context>,
-        bucket_name: String,
-    ) -> Result<Self, SnapshotError> {
+    pub async fn new(jetstream: Arc<Context>, bucket_name: String) -> Result<Self, SnapshotError> {
         // Create or get the key-value bucket for snapshots
         let bucket_config = jetstream::kv::Config {
             bucket: bucket_name.clone(),
             description: "Aggregate snapshots".to_string(),
             max_value_size: 10 * 1024 * 1024, // 10MB max snapshot size
-            history: 5, // Keep last 5 snapshots per aggregate
+            history: 5,                       // Keep last 5 snapshots per aggregate
             storage: jetstream::stream::StorageType::File,
             ..Default::default()
         };
-        
+
         jetstream
             .create_key_value(bucket_config)
             .await
             .map_err(|e| SnapshotError::JetStreamError(e.to_string()))?;
-        
-        info!("JetStream snapshot store initialized with bucket: {}", bucket_name);
-        
+
+        info!(
+            "JetStream snapshot store initialized with bucket: {}",
+            bucket_name
+        );
+
         Ok(Self {
             jetstream,
             bucket_name,
         })
     }
-    
+
     /// Get a snapshot key for an aggregate
     fn get_snapshot_key(aggregate_type: &str, aggregate_id: &str) -> String {
         format!("{aggregate_type}.{aggregate_id}")
@@ -114,30 +114,30 @@ impl SnapshotStore for JetStreamSnapshotStore {
             "Saving snapshot for aggregate {} type {} version {}",
             aggregate_id, snapshot.aggregate_type, snapshot.version
         );
-        
+
         // Get the KV bucket
         let bucket = self
             .jetstream
             .get_key_value(&self.bucket_name)
             .await
             .map_err(|e| SnapshotError::JetStreamError(e.to_string()))?;
-        
+
         // Serialize the snapshot
         let snapshot_bytes = serde_json::to_vec(&snapshot)
             .map_err(|e| SnapshotError::SerializationError(e.to_string()))?;
-        
+
         // Store in JetStream KV
         let key = Self::get_snapshot_key(&snapshot.aggregate_type, aggregate_id);
         bucket
             .put(key, Bytes::from(snapshot_bytes))
             .await
             .map_err(|e| SnapshotError::JetStreamError(e.to_string()))?;
-        
+
         info!(
             "Saved snapshot for aggregate {} at version {}",
             aggregate_id, snapshot.version
         );
-        
+
         Ok(())
     }
 
@@ -146,31 +146,31 @@ impl SnapshotStore for JetStreamSnapshotStore {
         aggregate_id: &str,
     ) -> Result<Option<AggregateSnapshot>, SnapshotError> {
         debug!("Getting latest snapshot for aggregate {}", aggregate_id);
-        
+
         // Get the KV bucket
         let bucket = self
             .jetstream
             .get_key_value(&self.bucket_name)
             .await
             .map_err(|e| SnapshotError::JetStreamError(e.to_string()))?;
-        
+
         // Try to get snapshots for different aggregate types
         // In a real implementation, we might want to track which type an aggregate is
         let aggregate_types = ["Person", "Organization", "Workflow", "Graph", "Document"];
-        
+
         for aggregate_type in &aggregate_types {
             let key = Self::get_snapshot_key(aggregate_type, aggregate_id);
-            
+
             match bucket.get(&key).await {
                 Ok(Some(entry)) => {
                     let snapshot: AggregateSnapshot = serde_json::from_slice(&entry)
                         .map_err(|e| SnapshotError::SerializationError(e.to_string()))?;
-                    
+
                     debug!(
                         "Found snapshot for aggregate {} type {} version {}",
                         aggregate_id, aggregate_type, snapshot.version
                     );
-                    
+
                     return Ok(Some(snapshot));
                 }
                 Ok(None) => continue,
@@ -180,7 +180,7 @@ impl SnapshotStore for JetStreamSnapshotStore {
                 }
             }
         }
-        
+
         debug!("No snapshot found for aggregate {}", aggregate_id);
         Ok(None)
     }
@@ -230,11 +230,11 @@ impl SnapshotStore for InMemorySnapshotStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_in_memory_snapshot_store() {
         let store = InMemorySnapshotStore::new();
-        
+
         let snapshot = AggregateSnapshot {
             aggregate_id: "test-123".to_string(),
             aggregate_type: "TestAggregate".to_string(),
@@ -242,19 +242,22 @@ mod tests {
             data: vec![1, 2, 3, 4, 5],
             created_at: chrono::Utc::now(),
         };
-        
+
         // Save snapshot
-        store.save_snapshot("test-123", snapshot.clone()).await.unwrap();
-        
+        store
+            .save_snapshot("test-123", snapshot.clone())
+            .await
+            .unwrap();
+
         // Retrieve snapshot
         let retrieved = store.get_latest_snapshot("test-123").await.unwrap();
         assert!(retrieved.is_some());
-        
+
         let retrieved = retrieved.unwrap();
         assert_eq!(retrieved.aggregate_id, snapshot.aggregate_id);
         assert_eq!(retrieved.version, snapshot.version);
         assert_eq!(retrieved.data, snapshot.data);
-        
+
         // Non-existent aggregate
         let not_found = store.get_latest_snapshot("non-existent").await.unwrap();
         assert!(not_found.is_none());

@@ -2,13 +2,14 @@
 
 //! Subject-based routing for persistence layer
 
-use crate::DomainError;
+use crate::{DomainError, subject_abstraction::{Subject, Pattern, SubjectPermissions as Permissions}};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use cim_subject::{Subject, Pattern, Permissions, PermissionRule};
+#[cfg(feature = "subject-routing")]
+use cim_subject::PermissionRule;
 
 /// Route pattern for subject-based routing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,8 +114,15 @@ impl SubjectRouter {
     }
     
     /// Add permission rule
+    #[cfg(feature = "subject-routing")]
     pub fn add_permission(&mut self, rule: PermissionRule) {
         self.permissions.add_rule(rule);
+    }
+    
+    /// Add permission rule (no-op when subject-routing is disabled)
+    #[cfg(not(feature = "subject-routing"))]
+    pub fn add_permission(&mut self, _rule: ()) {
+        // No-op when subject routing is disabled
     }
     
     /// Route a subject to appropriate handlers
@@ -125,10 +133,13 @@ impl SubjectRouter {
         metadata: HashMap<String, String>,
     ) -> Result<Vec<Vec<u8>>, DomainError> {
         // Check permissions
-        if !self.permissions.is_allowed(subject, cim_subject::permissions::Operation::Subscribe) {
-            return Err(DomainError::ValidationError(
-                "Permission denied for subject".to_string()
-            ));
+        #[cfg(feature = "subject-routing")]
+        {
+            if !self.permissions.is_allowed(subject, cim_subject::permissions::Operation::Subscribe) {
+                return Err(DomainError::ValidationError(
+                    "Permission denied for subject".to_string()
+                ));
+            }
         }
         
         // Find matching routes
@@ -136,9 +147,12 @@ impl SubjectRouter {
         let matching_routes: Vec<&RoutePattern> = routes
             .iter()
             .filter(|route| {
-                Pattern::new(&route.pattern)
-                    .map(|p| p.matches(subject))
-                    .unwrap_or(false)
+                if let Ok(pattern) = Pattern::parse(&route.pattern) {
+                    use crate::subject_abstraction::PatternLike;
+                    pattern.matches_subject(&subject.to_string())
+                } else {
+                    false
+                }
             })
             .collect();
         

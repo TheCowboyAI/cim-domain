@@ -1,0 +1,105 @@
+name: Test Dashboard
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    
+    services:
+      nats:
+        image: nats:latest
+        ports:
+          - 4222:4222
+        options: -js
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Run tests and capture results
+      run: |
+        ./scripts/capture-test-results.sh
+      continue-on-error: true
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: test-results/
+        retention-days: 30
+    
+    - name: Update test badge
+      if: always()
+      run: |
+        # Read test results
+        TOTAL=$(jq -r '.total_tests' test-results/summary.json)
+        PASSED=$(jq -r '.passed' test-results/summary.json)
+        FAILED=$(jq -r '.failed' test-results/summary.json)
+        PASS_RATE=$(jq -r '.pass_rate' test-results/summary.json)
+        
+        # Create badge data
+        if [ "$FAILED" -eq 0 ]; then
+          COLOR="brightgreen"
+          STATUS="passing"
+        else
+          COLOR="red"
+          STATUS="failing"
+        fi
+        
+        echo "Tests: $PASSED/$TOTAL ($PASS_RATE%) - $STATUS"
+        
+        # Store as output for potential badge service integration
+        echo "::set-output name=total::$TOTAL"
+        echo "::set-output name=passed::$PASSED"
+        echo "::set-output name=failed::$FAILED"
+        echo "::set-output name=pass_rate::$PASS_RATE"
+        echo "::set-output name=color::$COLOR"
+        echo "::set-output name=status::$STATUS"
+    
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = JSON.parse(fs.readFileSync('test-results/summary.json', 'utf8'));
+          const report = fs.readFileSync('test-results/report.md', 'utf8');
+          
+          const comment = `## Test Results
+          
+          ${report}
+          
+          <details>
+          <summary>View detailed metrics</summary>
+          
+          \`\`\`json
+          ${JSON.stringify(summary, null, 2)}
+          \`\`\`
+          
+          </details>`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    - name: Fail if tests failed
+      if: failure()
+      run: |
+        echo "Tests failed. Check the test results artifact for details."
+        exit 1

@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use cim_subject::{Subject, Pattern, SubjectAlgebra};
+use crate::subject_abstraction::{Subject, Pattern};
+#[cfg(feature = "subject-routing")]
+use cim_subject::SubjectAlgebra;
 
 /// Query performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,6 +235,7 @@ pub trait QueryOptimizer: Send + Sync {
 /// NATS-based query optimizer implementation
 pub struct NatsQueryOptimizer {
     /// Subject algebra for query optimization
+    #[cfg(feature = "subject-routing")]
     algebra: SubjectAlgebra,
     /// Available indexes
     indexes: Arc<RwLock<HashMap<String, SubjectIndex>>>,
@@ -262,6 +265,7 @@ impl NatsQueryOptimizer {
     /// Create a new query optimizer
     pub fn new() -> Self {
         Self {
+            #[cfg(feature = "subject-routing")]
             algebra: SubjectAlgebra::new(),
             indexes: Arc::new(RwLock::new(HashMap::new())),
             query_stats: Arc::new(RwLock::new(HashMap::new())),

@@ -1,13 +1,13 @@
 // Copyright 2025 Cowboy AI, LLC.
 
-use crate::{
-    DomainError,
-    events::DomainEvent,
-};
+use crate::{events::DomainEvent, DomainError};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+// Type alias for event transformation function
+type EventTransformation = Arc<dyn Fn(&Box<dyn DomainEvent>) -> Option<Box<dyn DomainEvent>> + Send + Sync>;
 
 /// Event handler trait for aggregate events
 #[async_trait]
@@ -28,7 +28,13 @@ struct AggregateRoute {
     source_aggregate: String,
     target_aggregate: String,
     event_pattern: String,
-    transformation: Arc<dyn Fn(&Box<dyn DomainEvent>) -> Option<Box<dyn DomainEvent>> + Send + Sync>,
+    transformation: EventTransformation,
+}
+
+impl Default for AggregateEventRouter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AggregateEventRouter {
@@ -92,8 +98,14 @@ impl AggregateEventRouter {
                 if Self::matches_pattern(&route.event_pattern, event) {
                     if let Some(transformed_event) = (route.transformation)(event) {
                         // Apply the event to the target aggregate
-                        if let Err(e) = self.apply_to_aggregate(&route.target_aggregate, &transformed_event).await {
-                            eprintln!("Failed to apply event to {}: {:?}", route.target_aggregate, e);
+                        if let Err(e) = self
+                            .apply_to_aggregate(&route.target_aggregate, &transformed_event)
+                            .await
+                        {
+                            eprintln!(
+                                "Failed to apply event to {}: {e:?}",
+                                route.target_aggregate
+                            );
                         }
                         routed_events.push(transformed_event);
                     }
@@ -111,7 +123,7 @@ impl AggregateEventRouter {
         event: &Box<dyn DomainEvent>,
     ) -> Result<(), DomainError> {
         let handlers = self.handlers.read().await;
-        
+
         if let Some(handler) = handlers.get(aggregate_type) {
             handler.handle_event(event).await?;
         }
@@ -123,49 +135,52 @@ impl AggregateEventRouter {
     fn matches_pattern(pattern: &str, event: &Box<dyn DomainEvent>) -> bool {
         let event_type = event.event_type();
         let subject = event.subject();
-        
+
         // Support patterns like:
         // "*" - matches all events
         // "Person.*" - matches all Person events
         // "Person.Created" - matches specific event type
         // "*.Created" - matches all Created events
-        
+
         if pattern == "*" {
             return true;
         }
-        
+
         if pattern.contains('*') {
             let parts: Vec<&str> = pattern.split('.').collect();
             let subject_parts: Vec<&str> = subject.split('.').collect();
-            
+
             // Handle patterns like "Person.*" that should match any Person event
             if parts.last() == Some(&"*") && parts.len() > 1 {
                 // Check if the prefix matches
                 let prefix_parts = &parts[..parts.len() - 1];
                 if subject_parts.len() >= prefix_parts.len() {
-                    return prefix_parts.iter().zip(subject_parts.iter())
-                        .all(|(pattern_part, subject_part)| {
+                    return prefix_parts.iter().zip(subject_parts.iter()).all(
+                        |(pattern_part, subject_part)| {
                             *pattern_part == "*" || *pattern_part == *subject_part
-                        });
+                        },
+                    );
                 }
                 return false;
             }
-            
+
             // Exact segment matching for patterns with wildcards in specific positions
             if parts.len() != subject_parts.len() {
                 return false;
             }
-            
+
             for (pattern_part, subject_part) in parts.iter().zip(subject_parts.iter()) {
                 if *pattern_part != "*" && *pattern_part != *subject_part {
                     return false;
                 }
             }
-            
+
             true
         } else {
             // Check if pattern matches the subject or any prefix of it
-            subject == pattern || subject.starts_with(&format!("{}.", pattern)) || pattern == event_type
+            subject == pattern
+                || subject.starts_with(&format!("{pattern}."))
+                || pattern == event_type
         }
     }
 }
@@ -175,22 +190,18 @@ impl AggregateEventRouter {
     /// Configure routes for workflow state transitions
     pub async fn configure_workflow_routes(&self) -> Result<(), DomainError> {
         // Example: When a workflow completes, notify dependent workflows
-        self.register_route(
-            "Workflow",
-            "Workflow",
-            "workflow.completed.*",
-            |event| {
-                // Check if this workflow completion should trigger dependent workflows
-                if event.subject().contains("workflow.completed") {
-                    // Extract workflow ID and check for dependencies
-                    // For now, return None as we don't have the dependency graph
-                    // TODO: Implement workflow dependency checking
-                    None
-                } else {
-                    None
-                }
-            },
-        ).await?;
+        self.register_route("Workflow", "Workflow", "workflow.completed.*", |event| {
+            // Check if this workflow completion should trigger dependent workflows
+            if event.subject().contains("workflow.completed") {
+                // Extract workflow ID and check for dependencies
+                // For now, return None as we don't have the dependency graph
+                // TODO: Implement workflow dependency checking
+                None
+            } else {
+                None
+            }
+        })
+        .await?;
 
         Ok(())
     }
@@ -218,11 +229,11 @@ mod tests {
         fn subject(&self) -> String {
             format!("{}.{}.v1", self.aggregate_type, self.event_type)
         }
-        
+
         fn aggregate_id(&self) -> Uuid {
             self.id
         }
-        
+
         fn event_type(&self) -> &'static str {
             Box::leak(self.event_type.clone().into_boxed_str())
         }
@@ -234,22 +245,17 @@ mod tests {
 
         // Register a simple route
         router
-            .register_route(
-                "Person",
-                "Organization",
-                "Person.Created",
-                |event| {
-                    if event.subject().starts_with("Person.Created") {
-                        Some(Box::new(TestEvent {
-                            id: Uuid::new_v4(),
-                            event_type: "MemberAdded".to_string(),
-                            aggregate_type: "Organization".to_string(),
-                        }) as Box<dyn DomainEvent>)
-                    } else {
-                        None
-                    }
-                },
-            )
+            .register_route("Person", "Organization", "Person.Created", |event| {
+                if event.subject().starts_with("Person.Created") {
+                    Some(Box::new(TestEvent {
+                        id: Uuid::new_v4(),
+                        event_type: "MemberAdded".to_string(),
+                        aggregate_type: "Organization".to_string(),
+                    }) as Box<dyn DomainEvent>)
+                } else {
+                    None
+                }
+            })
             .await
             .unwrap();
 
@@ -278,8 +284,14 @@ mod tests {
 
         assert!(AggregateEventRouter::matches_pattern("*", &event));
         assert!(AggregateEventRouter::matches_pattern("Person.*", &event));
-        assert!(AggregateEventRouter::matches_pattern("Person.Created.v1", &event));
+        assert!(AggregateEventRouter::matches_pattern(
+            "Person.Created.v1",
+            &event
+        ));
         assert!(AggregateEventRouter::matches_pattern("*.Created.*", &event));
-        assert!(!AggregateEventRouter::matches_pattern("Organization.*", &event));
+        assert!(!AggregateEventRouter::matches_pattern(
+            "Organization.*",
+            &event
+        ));
     }
 }

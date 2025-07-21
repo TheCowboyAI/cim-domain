@@ -8,13 +8,13 @@
 //! while preserving their internal structures and invariants.
 
 pub mod domain_category;
-pub mod morphism;
 pub mod functor;
-pub mod natural_transformation;
 pub mod limits;
+pub mod morphism;
+pub mod natural_transformation;
 
-pub use domain_category::{DomainCategory, DomainObject, DomainMorphism};
-pub use morphism::{Morphism, MorphismComposition, MorphismIdentity};
+pub use domain_category::{DomainCategory, DomainMorphism, DomainObject};
 pub use functor::{DomainFunctor, FunctorComposition, FunctorIdentity};
-pub use natural_transformation::{NaturalTransformation, NaturalIsomorphism};
-pub use limits::{Limit, Colimit, Pullback, Pushout};
+pub use limits::{Colimit, Limit, Pullback, Pushout};
+pub use morphism::{Morphism, MorphismComposition, MorphismIdentity};
+pub use natural_transformation::{NaturalIsomorphism, NaturalTransformation};

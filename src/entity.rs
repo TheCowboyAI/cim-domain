@@ -17,15 +17,15 @@ use uuid::Uuid;
 ///
 /// ```rust
 /// use cim_domain::{Entity, EntityId};
-/// 
+///
 /// // Define a domain entity type
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// struct Customer;
-/// 
+///
 /// // Create a new customer entity
 /// let customer = Entity::<Customer>::new();
 /// assert_eq!(customer.created_at, customer.updated_at);
-/// 
+///
 /// // Create with a specific ID
 /// let id = EntityId::<Customer>::new();
 /// let customer = Entity::with_id(id);
@@ -70,15 +70,15 @@ impl<T> Entity<T> {
     /// use cim_domain::Entity;
     /// use std::thread;
     /// use std::time::Duration;
-    /// 
+    ///
     /// struct Task;
-    /// 
+    ///
     /// let mut task = Entity::<Task>::new();
     /// let original_updated = task.updated_at;
-    /// 
+    ///
     /// // Wait a bit to ensure time difference
     /// thread::sleep(Duration::from_millis(10));
-    /// 
+    ///
     /// task.touch();
     /// assert!(task.updated_at > original_updated);
     /// ```
@@ -103,16 +103,16 @@ impl<T> Default for Entity<T> {
 ///
 /// ```rust
 /// use cim_domain::EntityId;
-/// 
+///
 /// struct User;
 /// struct Product;
-/// 
+///
 /// let user_id = EntityId::<User>::new();
 /// let product_id = EntityId::<Product>::new();
-/// 
+///
 /// // These are different types - won't compile if mixed up:
 /// // let _: EntityId<User> = product_id; // ERROR!
-/// 
+///
 /// // But you can explicitly cast if needed (use carefully):
 /// let casted: EntityId<Product> = user_id.cast();
 /// ```
@@ -187,21 +187,21 @@ impl<T> From<&EntityId<T>> for Uuid {
 ///
 /// ```rust
 /// use cim_domain::{AggregateRoot, EntityId};
-/// 
+///
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// struct Order;
-/// 
+///
 /// struct OrderAggregate {
 ///     id: EntityId<Order>,
 ///     version: u64,
 ///     items: Vec<OrderItem>,
 /// }
-/// 
+///
 /// struct OrderItem {
 ///     product_id: String,
 ///     quantity: u32,
 /// }
-/// 
+///
 /// impl AggregateRoot for OrderAggregate {
 ///     type Id = EntityId<Order>;
 ///     
@@ -217,13 +217,13 @@ impl<T> From<&EntityId<T>> for Uuid {
 ///         self.version += 1;
 ///     }
 /// }
-/// 
+///
 /// let mut order = OrderAggregate {
 ///     id: EntityId::new(),
 ///     version: 0,
 ///     items: vec![],
 /// };
-/// 
+///
 /// // All modifications go through the aggregate root
 /// order.items.push(OrderItem {
 ///     product_id: "PROD-123".to_string(),
@@ -250,7 +250,7 @@ pub trait AggregateRoot: Sized {
 pub trait DomainEntity: Sized + Send + Sync {
     /// The marker type for this entity
     type IdType;
-    
+
     /// Get the entity's ID
     fn id(&self) -> EntityId<Self::IdType>;
 }
