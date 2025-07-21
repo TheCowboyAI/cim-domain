@@ -166,7 +166,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !structs.is_empty() {
             markdown.push_str("**Structs**:\n");
             for s in structs {
-                let generic = s.generic.as_ref().map(|g| format!("<{g}>")).unwrap_or_default();
+                let generic = s
+                    .generic
+                    .as_ref()
+                    .map(|g| format!("<{g}>"))
+                    .unwrap_or_default();
                 markdown.push_str(&format!("- `{}{}` - {}\n", s.name, generic, s.description));
             }
             markdown.push_str("\n");
@@ -187,8 +191,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if !type_aliases.is_empty() {
             markdown.push_str("**Type Aliases**:\n");
             for ta in type_aliases {
-                let generic = ta.generic.as_ref().map(|g| format!("<{g}>")).unwrap_or_default();
-                markdown.push_str(&format!("- `{}{}` - {}\n", ta.name, generic, ta.description));
+                let generic = ta
+                    .generic
+                    .as_ref()
+                    .map(|g| format!("<{g}>"))
+                    .unwrap_or_default();
+                markdown.push_str(&format!(
+                    "- `{}{}` - {}\n",
+                    ta.name, generic, ta.description
+                ));
             }
             markdown.push_str("\n");
         }
@@ -200,12 +211,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     markdown.push_str("|------|-------|\n");
     markdown.push_str(&format!("| Traits | {} |\n", components.statistics.traits));
     markdown.push_str(&format!("| Enums | {} |\n", components.statistics.enums));
-    markdown.push_str(&format!("| Structs | {} |\n", components.statistics.structs));
-    markdown.push_str(&format!("| Type Aliases | {} |\n", components.statistics.type_aliases));
-    markdown.push_str(&format!("| Core Entities | {} |\n", components.statistics.core_entities));
-    markdown.push_str(&format!("| Event Types | {} |\n", components.statistics.event_types));
-    markdown.push_str(&format!("| Command Types | {} |\n", components.statistics.command_types));
-    markdown.push_str(&format!("| **Total Public Types** | **{}** |\n\n", components.statistics.total_public_types));
+    markdown.push_str(&format!(
+        "| Structs | {} |\n",
+        components.statistics.structs
+    ));
+    markdown.push_str(&format!(
+        "| Type Aliases | {} |\n",
+        components.statistics.type_aliases
+    ));
+    markdown.push_str(&format!(
+        "| Core Entities | {} |\n",
+        components.statistics.core_entities
+    ));
+    markdown.push_str(&format!(
+        "| Event Types | {} |\n",
+        components.statistics.event_types
+    ));
+    markdown.push_str(&format!(
+        "| Command Types | {} |\n",
+        components.statistics.command_types
+    ));
+    markdown.push_str(&format!(
+        "| **Total Public Types** | **{}** |\n\n",
+        components.statistics.total_public_types
+    ));
 
     // Type Index
     markdown.push_str("## Type Index\n\n");
@@ -215,20 +244,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut all_types = Vec::new();
     for (module_name, module_info) in &components.components {
         for export in &module_info.exports {
-            all_types.push((export.name.clone(), export.type_kind.clone(), module_name.clone()));
+            all_types.push((
+                export.name.clone(),
+                export.type_kind.clone(),
+                module_name.clone(),
+            ));
         }
     }
     all_types.sort_by(|a, b| a.0.cmp(&b.0));
 
     for (name, type_kind, module) in all_types {
-        markdown.push_str(&format!("- `{name}` ({type_kind}) - [{module}](#{module})\n"));
+        markdown.push_str(&format!(
+            "- `{name}` ({type_kind}) - [{module}](#{module})\n"
+        ));
     }
 
     // Write the markdown file
     let output_path = Path::new("doc/design/components-generated.md");
     fs::write(output_path, markdown)?;
 
-    println!("Generated markdown documentation at: {}", output_path.display());
+    println!(
+        "Generated markdown documentation at: {}",
+        output_path.display()
+    );
 
     Ok(())
 }

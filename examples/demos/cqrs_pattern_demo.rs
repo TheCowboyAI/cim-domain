@@ -13,21 +13,25 @@
 //! - Command/Query return only acknowledgments
 
 use cim_domain::{
-    // Core types
-    EntityId, CommandId,
-    Command, DomainEvent,
-    
+    Command,
+    CommandAcknowledgment,
     // CQRS types
     CommandEnvelope,
-    CommandAcknowledgment, CommandStatus,
+    CommandId,
+    CommandStatus,
+    CorrelationId,
+    DomainEvent,
+
+    // Core types
+    EntityId,
     EventStreamSubscription,
-    CorrelationId, IdType,
+    IdType,
 };
 
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use serde::{Serialize, Deserialize};
-use chrono::Utc;
 
 // Define a custom aggregate marker
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,7 +54,7 @@ struct OrderItem {
 
 impl Command for CreateOrder {
     type Aggregate = OrderMarker;
-    
+
     fn aggregate_id(&self) -> Option<EntityId<Self::Aggregate>> {
         Some(self.order_id.clone())
     }
@@ -70,18 +74,19 @@ impl DomainEvent for OrderCreated {
     fn subject(&self) -> String {
         "orders.order.created.v1".to_string()
     }
-    
+
     fn aggregate_id(&self) -> uuid::Uuid {
         *self.order_id.as_uuid()
     }
-    
+
     fn event_type(&self) -> &'static str {
         "OrderCreated"
     }
 }
 
 // Event store for demonstration
-type EventStore = Arc<Mutex<HashMap<EntityId<OrderMarker>, Vec<Box<dyn DomainEvent + Send + Sync>>>>>;
+type EventStore =
+    Arc<Mutex<HashMap<EntityId<OrderMarker>, Vec<Box<dyn DomainEvent + Send + Sync>>>>>;
 
 // Write Model - Command processing
 struct OrderWriteModel {
@@ -94,10 +99,10 @@ impl OrderWriteModel {
             event_store: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-    
+
     fn handle_create_order(&self, command: CreateOrder) -> CommandAcknowledgment {
         println!("📝 Write Model: Processing CreateOrder command");
-        
+
         // Business logic validation
         if command.items.is_empty() {
             let command_id = CommandId::new();
@@ -108,12 +113,14 @@ impl OrderWriteModel {
                 reason: Some("Order must have at least one item".to_string()),
             };
         }
-        
+
         // Calculate total
-        let total_amount: f64 = command.items.iter()
+        let total_amount: f64 = command
+            .items
+            .iter()
             .map(|item| item.quantity as f64 * item.price)
             .sum();
-        
+
         // Create event
         let event = OrderCreated {
             order_id: command.order_id.clone(),
@@ -122,15 +129,16 @@ impl OrderWriteModel {
             total_amount,
             created_at: Utc::now(),
         };
-        
+
         // Store event
         let mut store = self.event_store.lock().unwrap();
-        store.entry(command.order_id)
+        store
+            .entry(command.order_id)
             .or_insert_with(Vec::new)
             .push(Box::new(event));
-        
+
         println!("   ✅ Generated OrderCreated event");
-        
+
         let command_id = CommandId::new();
         CommandAcknowledgment {
             command_id,
@@ -160,21 +168,21 @@ impl OrderReadModel {
             projections: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-    
+
     fn handle_order_created(&self, event: &OrderCreated) {
         println!("📖 Read Model: Updating projection from OrderCreated event");
-        
+
         let view = OrderView {
             order_id: event.order_id.clone(),
             customer_id: event.customer_id.clone(),
             items: event.items.clone(),
             total_amount: event.total_amount,
         };
-        
+
         let mut projections = self.projections.lock().unwrap();
         projections.insert(event.order_id.clone(), view);
     }
-    
+
     fn get_order(&self, order_id: &EntityId<OrderMarker>) -> Option<OrderView> {
         let projections = self.projections.lock().unwrap();
         projections.get(order_id).cloned()
@@ -183,11 +191,11 @@ impl OrderReadModel {
 
 fn main() {
     println!("=== CQRS Pattern Demo ===\n");
-    
+
     // Initialize write and read models
     let write_model = OrderWriteModel::new();
     let read_model = OrderReadModel::new();
-    
+
     // 1. Process a command
     let order_id = EntityId::new();
     let create_cmd = CreateOrder {
@@ -206,16 +214,16 @@ fn main() {
             },
         ],
     };
-    
+
     println!("1️⃣ Processing CreateOrder command...");
     let envelope = CommandEnvelope::new(create_cmd.clone(), "user-123".to_string());
     let ack = write_model.handle_create_order(create_cmd);
-    
+
     match &ack.status {
         CommandStatus::Accepted => {
             println!("   ✅ Command accepted: {}", ack.command_id);
             println!("   📧 Correlation ID: {}", envelope.correlation_id());
-            
+
             // In a real system, event handlers would update the read model
             // For demo purposes, we'll simulate this
             if let Some(events) = write_model.event_store.lock().unwrap().get(&order_id) {
@@ -248,10 +256,13 @@ fn main() {
             }
         }
         CommandStatus::Rejected => {
-            println!("   ❌ Command rejected: {} - {:?}", ack.command_id, ack.reason);
+            println!(
+                "   ❌ Command rejected: {} - {:?}",
+                ack.command_id, ack.reason
+            );
         }
     }
-    
+
     // 2. Query the read model
     println!("\n2️⃣ Querying from read model...");
     if let Some(order) = read_model.get_order(&order_id) {
@@ -260,7 +271,7 @@ fn main() {
         println!("   Total: ${:.2}", order.total_amount);
         println!("   Items: {} items", order.items.len());
     }
-    
+
     // 3. Demonstrate CQRS principles
     println!("\n3️⃣ CQRS Architecture Key Points:");
     println!("   📝 Commands:");
@@ -268,19 +279,19 @@ fn main() {
     println!("      - Never return domain data");
     println!("      - Trigger event generation");
     println!("      - Include correlation IDs for tracking");
-    
+
     println!("\n   📖 Queries:");
     println!("      - Return acknowledgments with subscription info");
     println!("      - Results delivered via event streams");
     println!("      - Read from optimized projections");
     println!("      - Eventually consistent with write model");
-    
+
     println!("\n   🔄 Event Flow:");
     println!("      - Commands → Events → Projections → Queries");
     println!("      - Asynchronous propagation");
     println!("      - Multiple projections from same events");
     println!("      - Event replay capability");
-    
+
     // 4. Show event stream subscription pattern
     println!("\n4️⃣ Event Stream Subscription Pattern:");
     let subscription = EventStreamSubscription {
@@ -289,9 +300,12 @@ fn main() {
         causation_filter: None,
     };
     println!("   Stream: {}", subscription.stream_name);
-    println!("   Correlation filter: {:?}", subscription.correlation_filter);
+    println!(
+        "   Correlation filter: {:?}",
+        subscription.correlation_filter
+    );
     println!("   Would receive all events for this command");
-    
+
     // 5. Show event store contents
     println!("\n5️⃣ Event Store Contents:");
     let store = write_model.event_store.lock().unwrap();
@@ -301,7 +315,7 @@ fn main() {
             println!("      {}: {}", i + 1, event.event_type());
         }
     }
-    
+
     println!("\n✅ CQRS demo completed!");
     println!("\n💡 Remember: In CIM's event-driven architecture:");
     println!("   - Commands and queries return acknowledgments only");

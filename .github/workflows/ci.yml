@@ -48,9 +48,9 @@ jobs:
     - name: Install NATS Server
       run: |
         if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          wget https://github.com/nats-io/nats-server/releases/download/v2.10.7/nats-server-v2.10.7-linux-amd64.tar.gz
-          tar -xzf nats-server-v2.10.7-linux-amd64.tar.gz
-          sudo mv nats-server-v2.10.7-linux-amd64/nats-server /usr/local/bin/
+          wget https://github.com/nats-io/nats-server/releases/download/v2.10.14/nats-server-v2.10.14-linux-amd64.tar.gz
+          tar -xzf nats-server-v2.10.14-linux-amd64.tar.gz
+          sudo mv nats-server-v2.10.14-linux-amd64/nats-server /usr/local/bin/
         elif [ "${{ matrix.os }}" == "macos-latest" ]; then
           brew install nats-server
         fi
@@ -92,20 +92,21 @@ jobs:
     
     - name: Install NATS Server
       run: |
-        wget https://github.com/nats-io/nats-server/releases/download/v2.10.7/nats-server-v2.10.7-linux-amd64.tar.gz
-        tar -xzf nats-server-v2.10.7-linux-amd64.tar.gz
-        sudo mv nats-server-v2.10.7-linux-amd64/nats-server /usr/local/bin/
+        wget https://github.com/nats-io/nats-server/releases/download/v2.10.14/nats-server-v2.10.14-linux-amd64.tar.gz
+        tar -xzf nats-server-v2.10.14-linux-amd64.tar.gz
+        sudo mv nats-server-v2.10.14-linux-amd64/nats-server /usr/local/bin/
     
     - name: Start NATS Server
       run: nats-server -js &
     
     - name: Generate coverage
-      run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out Xml
+      run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out Xml --jobs 1
     
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./cobertura.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   security_audit:
     name: Security Audit

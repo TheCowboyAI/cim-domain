@@ -8,29 +8,30 @@
 //! - Event handlers for replay
 //! - Snapshot and replay optimization
 
-use cim_domain::{
-    // Core types
-    EntityId,
-    markers::AggregateMarker,
-    AggregateRoot,
-    
-    // Events
-    DomainEventEnum,
-    WorkflowStarted, WorkflowTransitionExecuted,
-    
-    // Infrastructure
-    infrastructure::{
-        EventStore,
-        event_store::{StoredEvent, EventMetadata},
-        event_replay::{EventHandler, ReplayError, ReplayStats},
-        jetstream_event_store::{JetStreamEventStore, JetStreamConfig},
-    },
-    
-    // IDs
-    WorkflowId, GraphId,
-};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use cim_domain::{
+    // Infrastructure
+    infrastructure::{
+        event_replay::{EventHandler, ReplayError, ReplayStats},
+        event_store::{EventMetadata, StoredEvent},
+        jetstream_event_store::{JetStreamConfig, JetStreamEventStore},
+        EventStore,
+    },
+
+    markers::AggregateMarker,
+    AggregateRoot,
+
+    // Events
+    DomainEventEnum,
+    // Core types
+    EntityId,
+    GraphId,
+    // IDs
+    WorkflowId,
+    WorkflowStarted,
+    WorkflowTransitionExecuted,
+};
 use serde_json::json;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -71,15 +72,15 @@ enum AccountStatus {
 
 impl AggregateRoot for Account {
     type Id = EntityId<AggregateMarker>;
-    
+
     fn id(&self) -> Self::Id {
         self.id
     }
-    
+
     fn version(&self) -> u64 {
         self.version
     }
-    
+
     fn increment_version(&mut self) {
         self.version += 1;
     }
@@ -100,12 +101,16 @@ impl AccountEventHandler {
             last_event_time: None,
         }
     }
-    
+
     fn get_account(&self, id: &str) -> Option<&Account> {
         self.accounts.get(id)
     }
-    
-    fn process_workflow_event(&mut self, event: &DomainEventEnum, aggregate_id: &str) -> Result<(), ReplayError> {
+
+    fn process_workflow_event(
+        &mut self,
+        event: &DomainEventEnum,
+        aggregate_id: &str,
+    ) -> Result<(), ReplayError> {
         match event {
             DomainEventEnum::WorkflowStarted(e) => {
                 // Interpret as account creation
@@ -120,7 +125,7 @@ impl AccountEventHandler {
                 self.accounts.insert(aggregate_id.to_string(), account);
                 println!("      Created account: {}", aggregate_id);
             }
-            
+
             DomainEventEnum::WorkflowTransitionExecuted(e) => {
                 // Interpret as transaction
                 if let Some(account) = self.accounts.get_mut(aggregate_id) {
@@ -131,45 +136,48 @@ impl AccountEventHandler {
                             "withdrawn" => TransactionType::Withdrawal,
                             _ => TransactionType::Transfer,
                         };
-                        
+
                         let transaction = Transaction {
                             id: Uuid::new_v4(),
                             amount,
                             transaction_type: transaction_type.clone(),
                             timestamp: e.executed_at,
-                            description: e.input.get("description")
+                            description: e
+                                .input
+                                .get("description")
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("Transaction")
                                 .to_string(),
                         };
-                        
+
                         // Update balance
                         match transaction_type {
                             TransactionType::Deposit => account.balance += amount,
                             TransactionType::Withdrawal => account.balance -= amount,
                             TransactionType::Transfer => {} // Handled separately
                         }
-                        
+
                         // Check if account is frozen
                         if account.status == AccountStatus::Frozen {
                             println!("      Warning: Transaction on frozen account!");
                         }
-                        
+
                         println!("      Transaction ID: {}", transaction.id);
                         println!("      Timestamp: {}", transaction.timestamp);
                         println!("      Description: {}", transaction.description);
-                        
+
                         account.transactions.push(transaction);
                         account.increment_version();
-                        
-                        println!("      Processed transaction: {} {}", 
-                            if amount >= 0.0 { "+" } else { "" }, 
+
+                        println!(
+                            "      Processed transaction: {} {}",
+                            if amount >= 0.0 { "+" } else { "" },
                             amount
                         );
                     }
                 }
             }
-            
+
             DomainEventEnum::WorkflowCompleted(_) => {
                 // Interpret as account closure
                 if let Some(account) = self.accounts.get_mut(aggregate_id) {
@@ -178,7 +186,7 @@ impl AccountEventHandler {
                     println!("      Closed account");
                 }
             }
-            
+
             DomainEventEnum::WorkflowSuspended(_) => {
                 // Interpret as account freeze
                 if let Some(account) = self.accounts.get_mut(aggregate_id) {
@@ -187,10 +195,10 @@ impl AccountEventHandler {
                     println!("      Froze account");
                 }
             }
-            
+
             _ => {} // Ignore other events
         }
-        
+
         Ok(())
     }
 }
@@ -200,20 +208,20 @@ impl EventHandler for AccountEventHandler {
     async fn handle_event(&mut self, event: &StoredEvent) -> Result<(), ReplayError> {
         self.event_count += 1;
         self.last_event_time = Some(event.stored_at);
-        
+
         // Process the domain event
         self.process_workflow_event(&event.event, &event.aggregate_id)?;
-        
+
         Ok(())
     }
-    
+
     async fn on_replay_start(&mut self) -> Result<(), ReplayError> {
         println!("   Starting event replay...");
         self.event_count = 0;
         self.last_event_time = None;
         Ok(())
     }
-    
+
     async fn on_replay_complete(&mut self, stats: &ReplayStats) -> Result<(), ReplayError> {
         println!("   Replay complete!");
         println!("   Total events processed: {}", stats.events_processed);
@@ -230,7 +238,7 @@ impl EventHandler for AccountEventHandler {
 fn create_test_events(_account_id: &str) -> Vec<DomainEventEnum> {
     let workflow_id = WorkflowId::new();
     let definition_id = GraphId::new();
-    
+
     vec![
         // Account creation
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
@@ -239,7 +247,6 @@ fn create_test_events(_account_id: &str) -> Vec<DomainEventEnum> {
             initial_state: "John Doe".to_string(), // Owner name
             started_at: Utc::now(),
         }),
-        
         // Deposit
         DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
             workflow_id: workflow_id.clone(),
@@ -252,7 +259,6 @@ fn create_test_events(_account_id: &str) -> Vec<DomainEventEnum> {
             output: json!({"success": true}),
             executed_at: Utc::now(),
         }),
-        
         // Withdrawal
         DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
             workflow_id: workflow_id.clone(),
@@ -265,7 +271,6 @@ fn create_test_events(_account_id: &str) -> Vec<DomainEventEnum> {
             output: json!({"success": true}),
             executed_at: Utc::now(),
         }),
-        
         // Another deposit
         DomainEventEnum::WorkflowTransitionExecuted(WorkflowTransitionExecuted {
             workflow_id: workflow_id.clone(),
@@ -285,64 +290,64 @@ fn create_test_events(_account_id: &str) -> Vec<DomainEventEnum> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Event Replay Example");
     println!("===================\n");
-    
+
     // Note: This example requires a running NATS server with JetStream enabled
     // Run: docker run -p 4222:4222 nats:latest -js
-    
+
     // Connect to NATS
     println!("1. Setting up event store...");
     let client = async_nats::connect("nats://localhost:4222").await?;
-    
+
     let config = JetStreamConfig {
         stream_name: "replay-demo".to_string(),
         stream_subjects: vec!["events.>".to_string()],
         cache_size: 100,
         subject_prefix: "events".to_string(),
     };
-    
+
     let event_store = JetStreamEventStore::new(client, config).await?;
     println!("   ✓ Event store ready\n");
-    
+
     // Create test account ID
     let account_id = format!("account-{}", Uuid::new_v4());
-    
+
     // Store some events
     println!("2. Storing events...");
     let events = create_test_events(&account_id);
-    
+
     let metadata = EventMetadata {
         correlation_id: Some(Uuid::new_v4().to_string()),
         causation_id: None,
         triggered_by: Some("system".to_string()),
         custom: None,
     };
-    
-    event_store.append_events(
-        &account_id,
-        "Account",
-        events.clone(),
-        None,
-        metadata,
-    ).await?;
-    
+
+    event_store
+        .append_events(&account_id, "Account", events.clone(), None, metadata)
+        .await?;
+
     println!("   ✓ Stored {} events\n", events.len());
-    
+
     // Create event handler for replay
     println!("3. Replaying events...");
     let mut handler = AccountEventHandler::new();
-    
+
     // Get all events for the account
     let stored_events = event_store.get_events(&account_id, None).await?;
-    
+
     // Manually replay events (simulating what a replay service would do)
     handler.on_replay_start().await?;
-    
+
     let start_time = std::time::Instant::now();
     for event in &stored_events {
-        println!("   Processing event {} (v{})", event.event_type(), event.sequence);
+        println!(
+            "   Processing event {} (v{})",
+            event.event_type(),
+            event.sequence
+        );
         handler.handle_event(event).await?;
     }
-    
+
     // Create stats for completion
     let duration = start_time.elapsed();
     let stats = ReplayStats {
@@ -356,10 +361,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             stored_events.len() as f64 * 1000.0
         },
     };
-    
+
     handler.on_replay_complete(&stats).await?;
     println!();
-    
+
     // Show rebuilt state
     println!("4. Rebuilt account state:");
     if let Some(account) = handler.get_account(&account_id) {
@@ -369,30 +374,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   Status: {:?}", account.status);
         println!("   Version: {}", account.version);
         println!("   Transactions: {}", account.transactions.len());
-        
+
         println!("\n   Transaction history:");
         for (i, tx) in account.transactions.iter().enumerate() {
-            println!("     {}. {:?} ${:.2} - {}", 
-                i + 1, 
-                tx.transaction_type, 
+            println!(
+                "     {}. {:?} ${:.2} - {}",
+                i + 1,
+                tx.transaction_type,
                 tx.amount,
                 tx.description
             );
         }
     }
-    
+
     // Demonstrate partial replay
     println!("\n5. Partial replay (from version 2)...");
     let mut partial_handler = AccountEventHandler::new();
-    
+
     // Only replay events after version 2
     let partial_events: Vec<_> = stored_events
         .into_iter()
         .filter(|e| e.sequence > 2)
         .collect();
-    
-    println!("   Replaying {} events (out of {})", partial_events.len(), events.len());
-    
+
+    println!(
+        "   Replaying {} events (out of {})",
+        partial_events.len(),
+        events.len()
+    );
+
     // First, we need to restore state up to version 2 (in real system, from snapshot)
     // For demo, we'll just create the initial state
     let initial_account = Account {
@@ -409,15 +419,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         status: AccountStatus::Active,
         version: 2,
     };
-    partial_handler.accounts.insert(account_id.clone(), initial_account);
-    
+    partial_handler
+        .accounts
+        .insert(account_id.clone(), initial_account);
+
     // Now replay remaining events
     for event in partial_events {
         handler.handle_event(&event).await?;
     }
-    
+
     println!("   ✓ Partial replay complete");
-    
+
     println!("\n✅ Example completed successfully!");
     println!("\nThis demonstrates:");
     println!("  • Replaying events to rebuild aggregate state");
@@ -425,6 +437,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  • Processing events in sequence");
     println!("  • Partial replay from a specific version");
     println!("  • Building domain objects from event history");
-    
+
     Ok(())
 }

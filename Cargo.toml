@@ -13,7 +13,7 @@ edition = "2021"
 authors = ["The Cowboy AI"]
 description = "Core DDD components and traits for CIM - Domain-Driven Design building blocks"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/thecowboyai/alchemist"
+repository = "https://github.com/thecowboyai/cim-domain"
 keywords = ["ddd", "domain", "component", "entity", "aggregate"]
 categories = ["data-structures", "rust-patterns"]
 

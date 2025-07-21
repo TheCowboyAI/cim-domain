@@ -83,7 +83,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cim-domain = "0.3.0"
+cim-domain = "0.5.0"
 ```
 
 ## Usage
@@ -349,12 +349,9 @@ This is a foundational crate for CIM implementations. All changes must:
 
 ## License
 
-This project is licensed under either of:
+This project is licensed under the MIT License:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
-
-at your option.
 
 ## Working with this Module
 

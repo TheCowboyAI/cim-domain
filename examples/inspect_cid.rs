@@ -17,7 +17,9 @@ fn main() {
             println!("Hash digest length: {} bytes", cid.hash().size());
 
             // Convert hash to hex string
-            let hash_hex: String = cid.hash().to_bytes()
+            let hash_hex: String = cid
+                .hash()
+                .to_bytes()
                 .iter()
                 .map(|b| format!("{:02x}", b))
                 .collect();

@@ -5,21 +5,17 @@
 //! These tests require a running NATS server with JetStream enabled.
 //! Run with: `nats-server -js`
 
+use chrono::{self, Utc};
 use cim_domain::infrastructure::{
-    EventStore, EventStoreError, EventMetadata,
-    JetStreamEventStore,
-    NatsClient, NatsConfig,
-    jetstream_event_store::JetStreamConfig,
+    jetstream_event_store::JetStreamConfig, EventMetadata, EventStore, EventStoreError,
+    JetStreamEventStore, NatsClient, NatsConfig,
 };
 use cim_domain::{
-    DomainEventEnum,
-    WorkflowStarted, WorkflowTransitionExecuted, WorkflowCompleted,
-    WorkflowSuspended, WorkflowResumed,
-    WorkflowId, GraphId,
+    DomainEventEnum, GraphId, WorkflowCompleted, WorkflowId, WorkflowResumed, WorkflowStarted,
+    WorkflowSuspended, WorkflowTransitionExecuted,
 };
-use std::time::Duration;
-use chrono::{self, Utc};
 use serde_json::json;
+use std::time::Duration;
 
 /// Helper to check if NATS is available
 async fn nats_available() -> bool {
@@ -79,7 +75,7 @@ async fn test_jetstream_append_and_retrieve() {
     // Create test events
     let workflow_id = WorkflowId::new();
     let definition_id = GraphId::new();
-    
+
     let events = vec![
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
             workflow_id: workflow_id.clone(),
@@ -109,7 +105,13 @@ async fn test_jetstream_append_and_retrieve() {
 
     // Append events
     store
-        .append_events(aggregate_id, aggregate_type, events.clone(), None, metadata.clone())
+        .append_events(
+            aggregate_id,
+            aggregate_type,
+            events.clone(),
+            None,
+            metadata.clone(),
+        )
         .await
         .unwrap();
 
@@ -127,7 +129,10 @@ async fn test_jetstream_append_and_retrieve() {
     assert_eq!(retrieved[1].sequence, 2);
 
     // Verify metadata preserved
-    assert_eq!(retrieved[0].metadata.correlation_id, metadata.correlation_id);
+    assert_eq!(
+        retrieved[0].metadata.correlation_id,
+        metadata.correlation_id
+    );
     assert_eq!(retrieved[0].metadata.triggered_by, metadata.triggered_by);
 }
 
@@ -154,7 +159,7 @@ async fn test_jetstream_concurrency_control() {
 
     let workflow_id = WorkflowId::new();
     let definition_id = GraphId::new();
-    
+
     let event1 = DomainEventEnum::WorkflowStarted(WorkflowStarted {
         workflow_id: workflow_id.clone(),
         definition_id: definition_id.clone(),
@@ -173,7 +178,13 @@ async fn test_jetstream_concurrency_control() {
 
     // Append first event
     store
-        .append_events(aggregate_id, aggregate_type, vec![event1], None, metadata.clone())
+        .append_events(
+            aggregate_id,
+            aggregate_type,
+            vec![event1],
+            None,
+            metadata.clone(),
+        )
         .await
         .unwrap();
 
@@ -183,17 +194,32 @@ async fn test_jetstream_concurrency_control() {
 
     // Try to append with wrong version
     let result = store
-        .append_events(aggregate_id, aggregate_type, vec![event2.clone()], Some(0), metadata.clone())
+        .append_events(
+            aggregate_id,
+            aggregate_type,
+            vec![event2.clone()],
+            Some(0),
+            metadata.clone(),
+        )
         .await;
 
     match result {
-        Err(EventStoreError::ConcurrencyConflict { expected: 0, current: 1 }) => {},
+        Err(EventStoreError::ConcurrencyConflict {
+            expected: 0,
+            current: 1,
+        }) => {}
         _ => panic!("Expected concurrency conflict"),
     }
 
     // Append with correct version
     store
-        .append_events(aggregate_id, aggregate_type, vec![event2], Some(1), metadata)
+        .append_events(
+            aggregate_id,
+            aggregate_type,
+            vec![event2],
+            Some(1),
+            metadata,
+        )
         .await
         .unwrap();
 
@@ -224,7 +250,7 @@ async fn test_jetstream_cid_chain_verification() {
 
     let workflow_id = WorkflowId::new();
     let definition_id = GraphId::new();
-    
+
     // Create a series of events
     let events: Vec<DomainEventEnum> = vec![
         DomainEventEnum::WorkflowStarted(WorkflowStarted {
@@ -307,7 +333,7 @@ async fn test_jetstream_event_filtering() {
     let aggregate_type = "Workflow";
 
     let workflow_id = WorkflowId::new();
-    
+
     // Create many events
     let events: Vec<DomainEventEnum> = (0..10)
         .map(|i| {
@@ -327,7 +353,13 @@ async fn test_jetstream_event_filtering() {
     // Append in batches to test multiple appends
     for chunk in events.chunks(3) {
         store
-            .append_events(aggregate_id, aggregate_type, chunk.to_vec(), None, metadata.clone())
+            .append_events(
+                aggregate_id,
+                aggregate_type,
+                chunk.to_vec(),
+                None,
+                metadata.clone(),
+            )
             .await
             .unwrap();
     }
@@ -337,9 +369,16 @@ async fn test_jetstream_event_filtering() {
 
     // Get all events
     let all_events = store.get_events(aggregate_id, None).await.unwrap();
-    println!("DEBUG: Retrieved {} events for aggregate {}", all_events.len(), aggregate_id);
+    println!(
+        "DEBUG: Retrieved {} events for aggregate {}",
+        all_events.len(),
+        aggregate_id
+    );
     for (i, event) in all_events.iter().enumerate() {
-        println!("  Event {}: aggregate_id={}, sequence={}", i, event.aggregate_id, event.sequence);
+        println!(
+            "  Event {}: aggregate_id={}, sequence={}",
+            i, event.aggregate_id, event.sequence
+        );
     }
     assert_eq!(all_events.len(), 10);
 
@@ -384,15 +423,13 @@ async fn test_jetstream_multiple_aggregates() {
     for (agg_id, agg_type) in &aggregates {
         let workflow_id = WorkflowId::new();
         let definition_id = GraphId::new();
-        
-        let events = vec![
-            DomainEventEnum::WorkflowStarted(WorkflowStarted {
-                workflow_id: workflow_id.clone(),
-                definition_id: definition_id.clone(),
-                initial_state: format!("initial-{agg_id}"),
-                started_at: Utc::now(),
-            }),
-        ];
+
+        let events = vec![DomainEventEnum::WorkflowStarted(WorkflowStarted {
+            workflow_id: workflow_id.clone(),
+            definition_id: definition_id.clone(),
+            initial_state: format!("initial-{agg_id}"),
+            started_at: Utc::now(),
+        })];
 
         store
             .append_events(agg_id, agg_type, events, None, metadata.clone())
@@ -436,7 +473,7 @@ async fn test_jetstream_cache_behavior() {
 
     let workflow_id = WorkflowId::new();
     let definition_id = GraphId::new();
-    
+
     // Initial events
     let event1 = DomainEventEnum::WorkflowStarted(WorkflowStarted {
         workflow_id: workflow_id.clone(),
@@ -446,7 +483,13 @@ async fn test_jetstream_cache_behavior() {
     });
 
     store
-        .append_events(aggregate_id, aggregate_type, vec![event1], None, metadata.clone())
+        .append_events(
+            aggregate_id,
+            aggregate_type,
+            vec![event1],
+            None,
+            metadata.clone(),
+        )
         .await
         .unwrap();
 
@@ -469,7 +512,13 @@ async fn test_jetstream_cache_behavior() {
     });
 
     store
-        .append_events(aggregate_id, aggregate_type, vec![event2], Some(1), metadata)
+        .append_events(
+            aggregate_id,
+            aggregate_type,
+            vec![event2],
+            Some(1),
+            metadata,
+        )
         .await
         .unwrap();
 

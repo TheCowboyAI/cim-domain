@@ -1,7 +1,7 @@
 // Copyright 2025 Cowboy AI, LLC.
 
 //! Infrastructure Layer 1.1: NATS JetStream Connection Tests for cim-domain
-//! 
+//!
 //! User Story: As a domain core, I need to connect to NATS JetStream for event persistence
 //!
 //! Test Requirements:
@@ -31,18 +31,33 @@
 //!     K --> L[Test Success]
 //! ```
 
-use std::time::Duration;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::Duration;
 
 /// Domain-specific event types for testing
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DomainInfrastructureEvent {
-    DomainConnectionEstablished { client_name: String },
-    DomainStreamCreated { name: String, subjects: Vec<String> },
-    DomainEventPublished { aggregate_id: String, event_type: String, sequence: u64 },
-    DomainEventConsumed { aggregate_id: String, event_type: String, sequence: u64 },
-    DomainConnectionFailed { error: String },
+    DomainConnectionEstablished {
+        client_name: String,
+    },
+    DomainStreamCreated {
+        name: String,
+        subjects: Vec<String>,
+    },
+    DomainEventPublished {
+        aggregate_id: String,
+        event_type: String,
+        sequence: u64,
+    },
+    DomainEventConsumed {
+        aggregate_id: String,
+        event_type: String,
+        sequence: u64,
+    },
+    DomainConnectionFailed {
+        error: String,
+    },
 }
 
 /// Event stream validator for domain infrastructure testing
@@ -70,18 +85,24 @@ impl DomainEventStreamValidator {
 
     pub fn validate(&self) -> Result<(), String> {
         if self.captured_events.len() != self.expected_events.len() {
-            return Err(format!("Event count mismatch: expected {}, got {}", 
+            return Err(format!(
+                "Event count mismatch: expected {}, got {}",
                 self.expected_events.len(),
                 self.captured_events.len()
             ));
         }
 
-        for (i, (expected, actual)) in self.expected_events.iter()
+        for (i, (expected, actual)) in self
+            .expected_events
+            .iter()
             .zip(self.captured_events.iter())
             .enumerate()
         {
             if expected != actual {
-                return Err(format!("Event mismatch at position {i}: expected {:?}, got {:?}", expected, actual));
+                return Err(format!(
+                    "Event mismatch at position {i}: expected {:?}, got {:?}",
+                    expected, actual
+                ));
             }
         }
 
@@ -118,11 +139,15 @@ impl MockDomainNatsClient {
         self.connected
     }
 
-    pub async fn create_domain_stream(&mut self, name: String, subjects: Vec<String>) -> Result<(), String> {
+    pub async fn create_domain_stream(
+        &mut self,
+        name: String,
+        subjects: Vec<String>,
+    ) -> Result<(), String> {
         if !self.connected {
             return Err("Not connected to NATS".to_string());
         }
-        
+
         self.streams.insert(name, subjects);
         Ok(())
     }
@@ -136,10 +161,11 @@ impl MockDomainNatsClient {
         if !self.connected {
             return Err("Not connected to NATS".to_string());
         }
-        
+
         // Simulate acknowledgment delay
         tokio::time::sleep(Duration::from_millis(5)).await;
-        self.published_events.push((aggregate_id, event_type, sequence));
+        self.published_events
+            .push((aggregate_id, event_type, sequence));
         Ok(())
     }
 
@@ -150,7 +176,7 @@ impl MockDomainNatsClient {
         if !self.connected {
             return Err("Not connected to NATS".to_string());
         }
-        
+
         // Find the event with matching aggregate_id
         self.published_events
             .iter()
@@ -171,12 +197,11 @@ mod tests {
     #[tokio::test]
     async fn test_domain_nats_connection() {
         // Arrange
-        let mut validator = DomainEventStreamValidator::new()
-            .expect_sequence(vec![
-                DomainInfrastructureEvent::DomainConnectionEstablished {
-                    client_name: "cim-domain-test".to_string(),
-                },
-            ]);
+        let mut validator = DomainEventStreamValidator::new().expect_sequence(vec![
+            DomainInfrastructureEvent::DomainConnectionEstablished {
+                client_name: "cim-domain-test".to_string(),
+            },
+        ]);
 
         let mut client = MockDomainNatsClient::new("cim-domain-test".to_string());
 
@@ -186,12 +211,12 @@ mod tests {
         // Assert
         assert!(result.is_ok());
         assert!(client.is_connected());
-        
+
         // Capture event
         validator.capture_event(DomainInfrastructureEvent::DomainConnectionEstablished {
             client_name: client.client_name.clone(),
         });
-        
+
         // Validate sequence
         assert!(validator.validate().is_ok());
     }
@@ -199,20 +224,19 @@ mod tests {
     #[tokio::test]
     async fn test_domain_stream_creation() {
         // Arrange
-        let mut validator = DomainEventStreamValidator::new()
-            .expect_sequence(vec![
-                DomainInfrastructureEvent::DomainConnectionEstablished {
-                    client_name: "cim-domain-test".to_string(),
-                },
-                DomainInfrastructureEvent::DomainStreamCreated {
-                    name: "CIM_DOMAIN_EVENTS".to_string(),
-                    subjects: vec![
-                        "cim.domain.aggregate.>".to_string(),
-                        "cim.domain.command.>".to_string(),
-                        "cim.domain.event.>".to_string(),
-                    ],
-                },
-            ]);
+        let mut validator = DomainEventStreamValidator::new().expect_sequence(vec![
+            DomainInfrastructureEvent::DomainConnectionEstablished {
+                client_name: "cim-domain-test".to_string(),
+            },
+            DomainInfrastructureEvent::DomainStreamCreated {
+                name: "CIM_DOMAIN_EVENTS".to_string(),
+                subjects: vec![
+                    "cim.domain.aggregate.>".to_string(),
+                    "cim.domain.command.>".to_string(),
+                    "cim.domain.event.>".to_string(),
+                ],
+            },
+        ]);
 
         let mut client = MockDomainNatsClient::new("cim-domain-test".to_string());
 
@@ -227,11 +251,10 @@ mod tests {
             "cim.domain.command.>".to_string(),
             "cim.domain.event.>".to_string(),
         ];
-        
-        let stream_result = client.create_domain_stream(
-            "CIM_DOMAIN_EVENTS".to_string(),
-            subjects.clone(),
-        ).await;
+
+        let stream_result = client
+            .create_domain_stream("CIM_DOMAIN_EVENTS".to_string(), subjects.clone())
+            .await;
 
         // Assert
         assert!(stream_result.is_ok());
@@ -239,29 +262,28 @@ mod tests {
             client.get_stream_subjects("CIM_DOMAIN_EVENTS"),
             Some(&subjects)
         );
-        
+
         validator.capture_event(DomainInfrastructureEvent::DomainStreamCreated {
             name: "CIM_DOMAIN_EVENTS".to_string(),
             subjects,
         });
-        
+
         assert!(validator.validate().is_ok());
     }
 
     #[tokio::test]
     async fn test_domain_event_publishing() {
         // Arrange
-        let mut validator = DomainEventStreamValidator::new()
-            .expect_sequence(vec![
-                DomainInfrastructureEvent::DomainConnectionEstablished {
-                    client_name: "cim-domain-test".to_string(),
-                },
-                DomainInfrastructureEvent::DomainEventPublished {
-                    aggregate_id: "agg_123".to_string(),
-                    event_type: "AggregateCreated".to_string(),
-                    sequence: 1,
-                },
-            ]);
+        let mut validator = DomainEventStreamValidator::new().expect_sequence(vec![
+            DomainInfrastructureEvent::DomainConnectionEstablished {
+                client_name: "cim-domain-test".to_string(),
+            },
+            DomainInfrastructureEvent::DomainEventPublished {
+                aggregate_id: "agg_123".to_string(),
+                event_type: "AggregateCreated".to_string(),
+                sequence: 1,
+            },
+        ]);
 
         let mut client = MockDomainNatsClient::new("cim-domain-test".to_string());
 
@@ -271,43 +293,40 @@ mod tests {
             client_name: client.client_name.clone(),
         });
 
-        let publish_result = client.publish_domain_event(
-            "agg_123".to_string(),
-            "AggregateCreated".to_string(),
-            1,
-        ).await;
+        let publish_result = client
+            .publish_domain_event("agg_123".to_string(), "AggregateCreated".to_string(), 1)
+            .await;
 
         // Assert
         assert!(publish_result.is_ok());
-        
+
         validator.capture_event(DomainInfrastructureEvent::DomainEventPublished {
             aggregate_id: "agg_123".to_string(),
             event_type: "AggregateCreated".to_string(),
             sequence: 1,
         });
-        
+
         assert!(validator.validate().is_ok());
     }
 
     #[tokio::test]
     async fn test_domain_event_consumption() {
         // Arrange
-        let mut validator = DomainEventStreamValidator::new()
-            .expect_sequence(vec![
-                DomainInfrastructureEvent::DomainConnectionEstablished {
-                    client_name: "cim-domain-test".to_string(),
-                },
-                DomainInfrastructureEvent::DomainEventPublished {
-                    aggregate_id: "agg_456".to_string(),
-                    event_type: "StateChanged".to_string(),
-                    sequence: 2,
-                },
-                DomainInfrastructureEvent::DomainEventConsumed {
-                    aggregate_id: "agg_456".to_string(),
-                    event_type: "StateChanged".to_string(),
-                    sequence: 2,
-                },
-            ]);
+        let mut validator = DomainEventStreamValidator::new().expect_sequence(vec![
+            DomainInfrastructureEvent::DomainConnectionEstablished {
+                client_name: "cim-domain-test".to_string(),
+            },
+            DomainInfrastructureEvent::DomainEventPublished {
+                aggregate_id: "agg_456".to_string(),
+                event_type: "StateChanged".to_string(),
+                sequence: 2,
+            },
+            DomainInfrastructureEvent::DomainEventConsumed {
+                aggregate_id: "agg_456".to_string(),
+                event_type: "StateChanged".to_string(),
+                sequence: 2,
+            },
+        ]);
 
         let mut client = MockDomainNatsClient::new("cim-domain-test".to_string());
 
@@ -318,12 +337,11 @@ mod tests {
         });
 
         // Publish event
-        client.publish_domain_event(
-            "agg_456".to_string(),
-            "StateChanged".to_string(),
-            2,
-        ).await.unwrap();
-        
+        client
+            .publish_domain_event("agg_456".to_string(), "StateChanged".to_string(), 2)
+            .await
+            .unwrap();
+
         validator.capture_event(DomainInfrastructureEvent::DomainEventPublished {
             aggregate_id: "agg_456".to_string(),
             event_type: "StateChanged".to_string(),
@@ -331,49 +349,47 @@ mod tests {
         });
 
         // Consume event
-        let (aggregate_id, event_type, sequence) = client.consume_domain_event("agg_456").await.unwrap();
+        let (aggregate_id, event_type, sequence) =
+            client.consume_domain_event("agg_456").await.unwrap();
 
         // Assert
         assert_eq!(aggregate_id, "agg_456");
         assert_eq!(event_type, "StateChanged");
         assert_eq!(sequence, 2);
-        
+
         validator.capture_event(DomainInfrastructureEvent::DomainEventConsumed {
             aggregate_id,
             event_type,
             sequence,
         });
-        
+
         assert!(validator.validate().is_ok());
     }
 
     #[tokio::test]
     async fn test_domain_connection_failure() {
         // Arrange
-        let mut validator = DomainEventStreamValidator::new()
-            .expect_sequence(vec![
-                DomainInfrastructureEvent::DomainConnectionFailed {
-                    error: "Not connected to NATS".to_string(),
-                },
-            ]);
+        let mut validator = DomainEventStreamValidator::new().expect_sequence(vec![
+            DomainInfrastructureEvent::DomainConnectionFailed {
+                error: "Not connected to NATS".to_string(),
+            },
+        ]);
 
         let mut client = MockDomainNatsClient::new("cim-domain-test".to_string());
 
         // Act - try to publish without connection
-        let publish_result = client.publish_domain_event(
-            "agg_789".to_string(),
-            "TestEvent".to_string(),
-            1,
-        ).await;
+        let publish_result = client
+            .publish_domain_event("agg_789".to_string(), "TestEvent".to_string(), 1)
+            .await;
 
         // Assert
         assert!(publish_result.is_err());
         assert_eq!(publish_result.unwrap_err(), "Not connected to NATS");
-        
+
         validator.capture_event(DomainInfrastructureEvent::DomainConnectionFailed {
             error: "Not connected to NATS".to_string(),
         });
-        
+
         assert!(validator.validate().is_ok());
     }
 
@@ -384,9 +400,18 @@ mod tests {
         client.connect().await.unwrap();
 
         // Act - publish events for multiple aggregates
-        client.publish_domain_event("agg_1".to_string(), "Created".to_string(), 1).await.unwrap();
-        client.publish_domain_event("agg_2".to_string(), "Updated".to_string(), 1).await.unwrap();
-        client.publish_domain_event("agg_1".to_string(), "Modified".to_string(), 2).await.unwrap();
+        client
+            .publish_domain_event("agg_1".to_string(), "Created".to_string(), 1)
+            .await
+            .unwrap();
+        client
+            .publish_domain_event("agg_2".to_string(), "Updated".to_string(), 1)
+            .await
+            .unwrap();
+        client
+            .publish_domain_event("agg_1".to_string(), "Modified".to_string(), 2)
+            .await
+            .unwrap();
 
         // Assert - verify we can consume events for specific aggregates
         let (id1, type1, seq1) = client.consume_domain_event("agg_1").await.unwrap();
@@ -399,4 +424,4 @@ mod tests {
         assert_eq!(type2, "Updated");
         assert_eq!(seq2, 1);
     }
-} 
+}

@@ -1,11 +1,7 @@
 // Copyright 2025 Cowboy AI, LLC.
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use cim_domain::{
-    EntityId,
-    DomainEntity,
-    persistence::*,
-};
+use cim_domain::{persistence::*, DomainEntity, EntityId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use serde::{Deserialize, Serialize};
 use tokio::runtime::Runtime;
 
@@ -22,7 +18,7 @@ struct BenchEntity {
 
 impl DomainEntity for BenchEntity {
     type IdType = BenchEntityMarker;
-    
+
     fn id(&self) -> EntityId<Self::IdType> {
         self.id
     }
@@ -48,7 +44,7 @@ fn setup_runtime() -> Runtime {
 
 fn benchmark_simple_repository_save(c: &mut Criterion) {
     let rt = setup_runtime();
-    
+
     // Skip if NATS not available
     let client = match rt.block_on(async_nats::connect("nats://localhost:4222")) {
         Ok(client) => client,
@@ -57,39 +53,33 @@ fn benchmark_simple_repository_save(c: &mut Criterion) {
             return;
         }
     };
-    
+
     let repo = rt.block_on(async {
         NatsSimpleRepository::new(
             client,
             "bench-simple".to_string(),
             "BenchEntity".to_string(),
-        ).await.unwrap()
+        )
+        .await
+        .unwrap()
     });
-    
+
     let mut group = c.benchmark_group("simple_repository_save");
-    
+
     for size in [100, 1_000, 10_000, 100_000].iter() {
         let entity = BenchEntity::new(*size);
-        
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    rt.block_on(async {
-                        repo.save(&entity).await.unwrap()
-                    })
-                });
-            },
-        );
+
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| rt.block_on(async { repo.save(&entity).await.unwrap() }));
+        });
     }
-    
+
     group.finish();
 }
 
 fn benchmark_simple_repository_load(c: &mut Criterion) {
     let rt = setup_runtime();
-    
+
     let client = match rt.block_on(async_nats::connect("nats://localhost:4222")) {
         Ok(client) => client,
         Err(_) => {
@@ -97,15 +87,17 @@ fn benchmark_simple_repository_load(c: &mut Criterion) {
             return;
         }
     };
-    
+
     let repo = rt.block_on(async {
         NatsSimpleRepository::new(
             client,
             "bench-simple-load".to_string(),
             "BenchEntity".to_string(),
-        ).await.unwrap()
+        )
+        .await
+        .unwrap()
     });
-    
+
     // Pre-save entities
     let entities: Vec<_> = [100, 1_000, 10_000, 100_000]
         .iter()
@@ -117,36 +109,32 @@ fn benchmark_simple_repository_load(c: &mut Criterion) {
             entity
         })
         .collect();
-    
+
     let mut group = c.benchmark_group("simple_repository_load");
-    
+
     for (i, size) in [100, 1_000, 10_000, 100_000].iter().enumerate() {
         let entity_id = entities[i].id();
-        
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    rt.block_on(async {
-                        let _loaded: Option<BenchEntity> = repo.load(&entity_id).await.unwrap();
-                    })
-                });
-            },
-        );
+
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| {
+                rt.block_on(async {
+                    let _loaded: Option<BenchEntity> = repo.load(&entity_id).await.unwrap();
+                })
+            });
+        });
     }
-    
+
     group.finish();
 }
 
 fn benchmark_kv_repository_with_ttl(c: &mut Criterion) {
     let rt = setup_runtime();
-    
+
     let client = match rt.block_on(async_nats::connect("nats://localhost:4222")) {
         Ok(client) => client,
         Err(_) => return,
     };
-    
+
     let repo: NatsKvRepository<BenchEntity> = rt.block_on(async {
         NatsKvRepositoryBuilder::new()
             .client(client)
@@ -157,57 +145,58 @@ fn benchmark_kv_repository_with_ttl(c: &mut Criterion) {
             .await
             .unwrap()
     });
-    
+
     c.bench_function("kv_repository_save_with_ttl", |b| {
         let entity = BenchEntity::new(1_000);
-        b.iter(|| {
-            rt.block_on(async {
-                repo.save(&entity).await.unwrap()
-            })
-        });
+        b.iter(|| rt.block_on(async { repo.save(&entity).await.unwrap() }));
     });
 }
 
 fn benchmark_read_model_store(c: &mut Criterion) {
     let rt = setup_runtime();
-    
+
     let client = match rt.block_on(async_nats::connect("nats://localhost:4222")) {
         Ok(client) => client,
         Err(_) => return,
     };
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     struct BenchReadModel {
         id: String,
         count: u32,
         data: Vec<u8>,
     }
-    
+
     impl ReadModel for BenchReadModel {
         fn model_type() -> &'static str {
             "BenchReadModel"
         }
-        
+
         fn id(&self) -> &str {
             &self.id
         }
-        
-        fn apply_event(&mut self, _: &dyn cim_domain::DomainEvent) -> Result<(), cim_domain::DomainError> {
+
+        fn apply_event(
+            &mut self,
+            _: &dyn cim_domain::DomainEvent,
+        ) -> Result<(), cim_domain::DomainError> {
             self.count += 1;
             Ok(())
         }
     }
-    
+
     let store = rt.block_on(async {
-        NatsReadModelStore::new(client, "bench-read-models".to_string()).await.unwrap()
+        NatsReadModelStore::new(client, "bench-read-models".to_string())
+            .await
+            .unwrap()
     });
-    
+
     let model = BenchReadModel {
         id: "bench-model-1".to_string(),
         count: 0,
         data: vec![0u8; 10_000],
     };
-    
+
     let metadata = ReadModelMetadata {
         id: model.id.clone(),
         model_type: BenchReadModel::model_type().to_string(),
@@ -216,15 +205,11 @@ fn benchmark_read_model_store(c: &mut Criterion) {
         last_event_position: 0,
         metadata: std::collections::HashMap::new(),
     };
-    
+
     c.bench_function("read_model_store_save", |b| {
-        b.iter(|| {
-            rt.block_on(async {
-                store.save(&model, metadata.clone()).await.unwrap()
-            })
-        });
+        b.iter(|| rt.block_on(async { store.save(&model, metadata.clone()).await.unwrap() }));
     });
-    
+
     // Benchmark load (with caching)
     c.bench_function("read_model_store_load_cached", |b| {
         b.iter(|| {
@@ -244,7 +229,7 @@ fn benchmark_query_building(c: &mut Criterion) {
                 .build()
         });
     });
-    
+
     c.bench_function("query_builder_complex", |b| {
         b.iter(|| {
             QueryBuilder::new()
@@ -258,7 +243,7 @@ fn benchmark_query_building(c: &mut Criterion) {
                 .build()
         });
     });
-    
+
     c.bench_function("pagination_calculation", |b| {
         b.iter(|| {
             for page in 0..100 {
