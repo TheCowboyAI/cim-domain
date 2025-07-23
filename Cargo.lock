@@ -515,8 +515,8 @@ dependencies = [
 
 [[package]]
 name = "cim-subject"
-version = "0.3.0"
-source = "git+https://github.com/TheCowboyAI/cim-subject?rev=4632d7eb68f43adf319b3488e6c4191c54da7868#4632d7eb68f43adf319b3488e6c4191c54da7868"
+version = "0.5.0"
+source = "git+https://github.com/TheCowboyAI/cim-subject#fb63eadbe000ceef21c707953edddb65908d5a8b"
 dependencies = [
  "cim-ipld",
  "dashmap",

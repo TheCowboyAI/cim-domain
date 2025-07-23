@@ -411,7 +411,7 @@ mod mock_types {
 
         /// Create an event from a command
         pub fn event_from_command(
-            event_cid: cid::Cid,
+            event_cid: cim_ipld::Cid,
             parent: &MessageIdentity,
         ) -> MessageIdentity {
             MessageIdentity {
@@ -448,7 +448,7 @@ mod mock_types {
 
     /// Wrapper for CID that can be serialized
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct SerializableCid(pub cid::Cid);
+    pub struct SerializableCid(pub cim_ipld::Cid);
 
     impl Serialize for SerializableCid {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -465,18 +465,18 @@ mod mock_types {
             D: serde::Deserializer<'de>,
         {
             let s = String::deserialize(deserializer)?;
-            let cid = s.parse::<cid::Cid>().map_err(serde::de::Error::custom)?;
+            let cid = s.parse::<cim_ipld::Cid>().map_err(serde::de::Error::custom)?;
             Ok(Self(cid))
         }
     }
 
-    impl From<cid::Cid> for SerializableCid {
-        fn from(cid: cid::Cid) -> Self {
+    impl From<cim_ipld::Cid> for SerializableCid {
+        fn from(cid: cim_ipld::Cid) -> Self {
             Self(cid)
         }
     }
 
-    impl From<SerializableCid> for cid::Cid {
+    impl From<SerializableCid> for cim_ipld::Cid {
         fn from(sc: SerializableCid) -> Self {
             sc.0
         }

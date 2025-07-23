@@ -120,25 +120,26 @@ impl ECommercePlatform {
         let event_store = Arc::new(RwLock::new(Box::new(InMemoryEventStore::new()) as Box<dyn EventStore>));
         
         // Initialize components
+        // Clone the event store for each component (in real app, use dependency injection)
         let search_widget = Arc::new(RwLock::new(
             SearchWidget::new(
-                DomainContext::new("product-search".into()),
-                event_store.read().await.clone()
+                "product-search".into(),
+                Box::new(InMemoryEventStore::new())
             )
         ));
         
         let domain_architecture = Arc::new(ECommerceDomainArchitecture::new());
         
         let event_stream_manager = Arc::new(EventStreamManager::new(
-            event_store.read().await.clone()
+            Box::new(InMemoryEventStore::new())
         ));
         
         let analytics_workspace = Arc::new(DataAnalystWorkspace::new(
-            event_store.read().await.clone()
+            Box::new(InMemoryEventStore::new())
         ));
         
         let integration_hub = Arc::new(IntegrationHub::new(
-            event_store.read().await.clone()
+            Box::new(InMemoryEventStore::new())
         ));
         
         Self {

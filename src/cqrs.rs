@@ -8,7 +8,7 @@
 
 use crate::entity::EntityId;
 use crate::markers::{CommandMarker, QueryMarker};
-use cid::Cid;
+use cim_ipld::Cid;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 

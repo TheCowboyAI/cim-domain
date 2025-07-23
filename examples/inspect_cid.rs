@@ -2,7 +2,7 @@
 
 //! Utility to inspect CID details
 
-use cid::Cid;
+use cim_ipld::Cid;
 
 fn main() {
     // Example CID from the error message

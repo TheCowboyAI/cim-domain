@@ -284,7 +284,8 @@ mod tests {
         let cid = calculate_event_cid(&event, None, 1).unwrap();
 
         // CID should be valid
-        assert_eq!(cid.version(), cid::Version::V1);
+        assert!(!cid.to_string().is_empty());
+        assert!(cid.to_string().starts_with("b"));
     }
 
     #[test]

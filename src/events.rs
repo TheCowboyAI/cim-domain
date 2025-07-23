@@ -9,7 +9,7 @@ use crate::{
     cqrs::{CausationId, CorrelationId, EventId, IdType},
     subject_abstraction::{SerializableCid, Subject as SubjectParts},
 };
-use cid::Cid;
+use cim_ipld::Cid;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use uuid::Uuid;

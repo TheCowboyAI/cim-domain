@@ -12,7 +12,7 @@ version = "0.5.0"
 edition = "2021"
 authors = ["The Cowboy AI"]
 description = "Core DDD components and traits for CIM - Domain-Driven Design building blocks"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/thecowboyai/cim-domain"
 keywords = ["ddd", "domain", "component", "entity", "aggregate"]
 categories = ["data-structures", "rust-patterns"]
@@ -35,7 +35,7 @@ futures = "0.3"
 
 # Domain dependencies
 cim-ipld = { git = "https://github.com/thecowboyai/cim-ipld", version = "0.5" }
-cim-subject = { git = "https://github.com/TheCowboyAI/cim-subject", rev = "4632d7eb68f43adf319b3488e6c4191c54da7868", optional = true }
+cim-subject = { git = "https://github.com/TheCowboyAI/cim-subject", version = "0.5", optional = true }
 cim-component = { git = "https://github.com/TheCowboyAI/cim-component", version = "0.3" }
 
 # Content addressing

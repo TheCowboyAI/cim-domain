@@ -12,7 +12,7 @@
 //! In production, you would use actual NATS JetStream or similar.
 
 use chrono::Utc;
-use cid::Cid;
+use cim_ipld::Cid;
 use cim_domain::{
     AggregateRoot,
     Command,
