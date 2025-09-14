@@ -4,6 +4,7 @@
 
 use crate::entity::{EntityId, GraphMarker};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::fmt;
 use uuid::Uuid;
 
@@ -11,12 +12,17 @@ use uuid::Uuid;
 ///
 /// Nodes are not entities - they're local identifiers within a graph.
 /// They don't have global identity or lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct NodeId(Uuid);
 
 impl NodeId {
-    /// Create a new random node ID
+    /// Create a new time-ordered node ID using UUID v7
     pub fn new() -> Self {
+        Self(Uuid::now_v7())
+    }
+    
+    /// Create a new random node ID using UUID v4
+    pub fn new_random() -> Self {
         Self(Uuid::new_v4())
     }
 
@@ -59,12 +65,17 @@ impl From<&NodeId> for Uuid {
 ///
 /// Edges are not entities - they're local identifiers within a graph.
 /// They represent relationships between nodes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct EdgeId(Uuid);
 
 impl EdgeId {
-    /// Create a new random edge ID
+    /// Create a new time-ordered edge ID using UUID v7
     pub fn new() -> Self {
+        Self(Uuid::now_v7())
+    }
+    
+    /// Create a new random edge ID using UUID v4
+    pub fn new_random() -> Self {
         Self(Uuid::new_v4())
     }
 

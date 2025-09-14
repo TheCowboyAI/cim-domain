@@ -6,7 +6,9 @@
 //! functionality, allowing it to be optional.
 
 use serde::{Deserialize, Serialize};
+use schemars::{JsonSchema, schema::Schema};
 use std::fmt;
+use std::str::FromStr;
 
 /// A trait for subject-like types that can be used for routing
 pub trait SubjectLike: fmt::Display + Send + Sync {
@@ -45,7 +47,7 @@ pub enum SubjectError {
 }
 
 /// A simple subject implementation for when cim-subject is not available
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct SimpleSubject {
     parts: Vec<String>,
 }
@@ -97,7 +99,7 @@ impl SubjectLike for SimpleSubject {
 }
 
 /// A simple pattern implementation for when cim-subject is not available
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct SimplePattern {
     parts: Vec<String>,
 }
@@ -254,12 +256,13 @@ mod mock_types {
     }
 
     /// Mock correlation ID for message tracking
-    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
     pub struct CorrelationId(pub Uuid);
 
     impl Default for CorrelationId {
         fn default() -> Self {
-            Self(Uuid::new_v4())
+            // Use UUID v7 for time-ordered correlation tracking
+            Self(Uuid::now_v7())
         }
     }
 
@@ -270,12 +273,13 @@ mod mock_types {
     }
 
     /// Mock causation ID for message causality tracking
-    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
     pub struct CausationId(pub Uuid);
 
     impl Default for CausationId {
         fn default() -> Self {
-            Self(Uuid::new_v4())
+            // Use UUID v7 for time-ordered causation tracking
+            Self(Uuid::now_v7())
         }
     }
 
@@ -286,7 +290,7 @@ mod mock_types {
     }
 
     /// Type of ID for message identity
-    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
     pub enum IdType {
         /// UUID-based ID
         Uuid(Uuid),
@@ -299,7 +303,7 @@ mod mock_types {
     }
 
     /// Message identity information
-    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
     pub struct MessageIdentity {
         /// Message ID
         pub message_id: IdType,
@@ -313,7 +317,7 @@ mod mock_types {
 
     impl Default for MessageIdentity {
         fn default() -> Self {
-            let id = Uuid::new_v4();
+            let id = Uuid::now_v7();
             Self {
                 message_id: IdType::Uuid(id),
                 correlation_id: CorrelationId::default(),
@@ -340,7 +344,7 @@ mod mock_types {
 
         /// Create a child message identity
         pub fn create_child_identity(&self, parent: &MessageIdentity) -> MessageIdentity {
-            let id = Uuid::new_v4();
+            let id = Uuid::now_v7();
             MessageIdentity {
                 message_id: IdType::Uuid(id),
                 correlation_id: parent.correlation_id.clone(),
@@ -353,7 +357,7 @@ mod mock_types {
         pub fn create_root_command(command_id: Uuid) -> MessageIdentity {
             MessageIdentity {
                 message_id: IdType::Uuid(command_id),
-                correlation_id: CorrelationId(Uuid::new_v4()),
+                correlation_id: CorrelationId(Uuid::now_v7()),
                 causation_id: CausationId(command_id),
                 parent_causation_id: None,
             }
@@ -393,7 +397,7 @@ mod mock_types {
         pub fn create_root_query(query_id: Uuid) -> MessageIdentity {
             MessageIdentity {
                 message_id: IdType::Uuid(query_id),
-                correlation_id: CorrelationId(Uuid::new_v4()),
+                correlation_id: CorrelationId(Uuid::now_v7()),
                 causation_id: CausationId(query_id),
                 parent_causation_id: None,
             }
@@ -411,7 +415,7 @@ mod mock_types {
 
         /// Create an event from a command
         pub fn event_from_command(
-            event_cid: cim_ipld::Cid,
+            event_cid: crate::Cid,
             parent: &MessageIdentity,
         ) -> MessageIdentity {
             MessageIdentity {
@@ -419,7 +423,7 @@ mod mock_types {
                 correlation_id: parent.correlation_id.clone(),
                 causation_id: match &parent.message_id {
                     IdType::Uuid(id) => CausationId(*id),
-                    _ => CausationId(Uuid::new_v4()),
+                    _ => CausationId(Uuid::now_v7()),
                 },
                 parent_causation_id: Some(parent.causation_id.clone()),
             }
@@ -448,7 +452,35 @@ mod mock_types {
 
     /// Wrapper for CID that can be serialized
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct SerializableCid(pub cim_ipld::Cid);
+    pub struct SerializableCid(pub crate::Cid);
+    
+    impl JsonSchema for SerializableCid {
+        fn schema_name() -> String {
+            "SerializableCid".to_string()
+        }
+        
+        fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> Schema {
+            // SerializableCid wraps the external cid::Cid type
+            // It serializes as a string (base58btc encoded)
+            let mut schema = schemars::schema::SchemaObject::default();
+            
+            schema.instance_type = Some(schemars::schema::InstanceType::String.into());
+            
+            schema.metadata = Some(Box::new(schemars::schema::Metadata {
+                title: Some("SerializableCid".to_string()),
+                description: Some("Serializable CID wrapper".to_string()),
+                ..Default::default()
+            }));
+            
+            schema.string = Some(Box::new(schemars::schema::StringValidation {
+                pattern: Some("^[a-zA-Z0-9]+$".to_string()),
+                min_length: Some(1),
+                ..Default::default()
+            }));
+            
+            Schema::Object(schema)
+        }
+    }
 
     impl Serialize for SerializableCid {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -465,20 +497,10 @@ mod mock_types {
             D: serde::Deserializer<'de>,
         {
             let s = String::deserialize(deserializer)?;
-            let cid = s.parse::<cim_ipld::Cid>().map_err(serde::de::Error::custom)?;
+            let cid = crate::Cid::from_str(&s).map_err(serde::de::Error::custom)?;
             Ok(Self(cid))
         }
     }
 
-    impl From<cim_ipld::Cid> for SerializableCid {
-        fn from(cid: cim_ipld::Cid) -> Self {
-            Self(cid)
-        }
-    }
-
-    impl From<SerializableCid> for cim_ipld::Cid {
-        fn from(sc: SerializableCid) -> Self {
-            sc.0
-        }
-    }
+    // Conversions removed - CID types are now in cim-domain, not cim_ipld
 }

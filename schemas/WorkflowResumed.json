@@ -1,0 +1,28 @@
+{
+  "$id": "https://schemas.cim-domain.ai/WorkflowResumed.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Workflow resumed event",
+  "properties": {
+    "current_state": {
+      "description": "The state from which the workflow resumed",
+      "type": "string"
+    },
+    "resumed_at": {
+      "description": "When the workflow was resumed",
+      "format": "date-time",
+      "type": "string"
+    },
+    "workflow_id": {
+      "description": "The workflow that was resumed",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "current_state",
+    "resumed_at",
+    "workflow_id"
+  ],
+  "title": "WorkflowResumed",
+  "type": "object"
+}

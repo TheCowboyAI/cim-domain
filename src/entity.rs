@@ -124,8 +124,27 @@ pub struct EntityId<T> {
 }
 
 impl<T> EntityId<T> {
-    /// Create a new random entity ID
+    /// Create a new time-ordered entity ID using UUID v7
+    /// 
+    /// UUID v7 provides:
+    /// - Time-ordered IDs for natural chronological sorting
+    /// - Better database index performance
+    /// - Built-in millisecond timestamp
+    /// 
+    /// Vector clocks handle causality, so we get the indexing benefits
+    /// without worrying about clock skew.
     pub fn new() -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            _phantom: PhantomData,
+        }
+    }
+    
+    /// Create a new random entity ID using UUID v4
+    /// 
+    /// Use this when you need non-time-ordered randomness,
+    /// such as for security tokens or when time ordering is undesirable.
+    pub fn new_random() -> Self {
         Self {
             id: Uuid::new_v4(),
             _phantom: PhantomData,

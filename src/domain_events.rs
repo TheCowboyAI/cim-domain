@@ -7,10 +7,11 @@
 use crate::events::*;
 use crate::identifiers::WorkflowId;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use uuid::Uuid;
 
 /// Enum wrapper for all domain events
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DomainEventEnum {
     // Graph events have been extracted to cim-domain-graph
 
@@ -38,7 +39,7 @@ pub enum DomainEventEnum {
 // Workflow event structs
 
 /// Workflow started event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowStarted {
     /// The unique identifier of the workflow instance
     pub workflow_id: WorkflowId,
@@ -51,7 +52,7 @@ pub struct WorkflowStarted {
 }
 
 /// Workflow transition executed event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowTransitionExecuted {
     /// The workflow that executed the transition
     pub workflow_id: WorkflowId,
@@ -68,7 +69,7 @@ pub struct WorkflowTransitionExecuted {
 }
 
 /// Workflow completed event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowCompleted {
     /// The workflow that completed
     pub workflow_id: WorkflowId,
@@ -81,7 +82,7 @@ pub struct WorkflowCompleted {
 }
 
 /// Workflow suspended event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowSuspended {
     /// The workflow that was suspended
     pub workflow_id: WorkflowId,
@@ -94,7 +95,7 @@ pub struct WorkflowSuspended {
 }
 
 /// Workflow resumed event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowResumed {
     /// The workflow that was resumed
     pub workflow_id: WorkflowId,
@@ -105,7 +106,7 @@ pub struct WorkflowResumed {
 }
 
 /// Workflow cancelled event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowCancelled {
     /// The workflow that was cancelled
     pub workflow_id: WorkflowId,
@@ -118,7 +119,7 @@ pub struct WorkflowCancelled {
 }
 
 /// Workflow failed event
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowFailed {
     /// The workflow that failed
     pub workflow_id: WorkflowId,
@@ -131,7 +132,7 @@ pub struct WorkflowFailed {
 }
 
 /// Workflow transition executed event (alias)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct WorkflowTransitioned {
     /// The workflow that transitioned
     pub workflow_id: WorkflowId,

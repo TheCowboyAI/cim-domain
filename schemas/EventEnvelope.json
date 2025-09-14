@@ -1,0 +1,71 @@
+{
+  "$id": "https://schemas.cim-domain.ai/EventEnvelope.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "PropagationScope": {
+      "description": "Basic event propagation scope",
+      "oneOf": [
+        {
+          "description": "Never leaves the app",
+          "enum": [
+            "LocalOnly"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble to container",
+          "enum": [
+            "Container"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble to local leaf",
+          "enum": [
+            "Leaf"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble to cluster",
+          "enum": [
+            "Cluster"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble globally",
+          "enum": [
+            "SuperCluster"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "Event envelope with subject and propagation scope",
+  "properties": {
+    "event": {
+      "description": "The domain event"
+    },
+    "propagation": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/PropagationScope"
+        }
+      ],
+      "description": "Determines if/how to escalate"
+    },
+    "subject": {
+      "description": "Subject for routing (e.g., \"people.person.registered.v1\")",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event",
+    "propagation",
+    "subject"
+  ],
+  "title": "EventEnvelope",
+  "type": "object"
+}

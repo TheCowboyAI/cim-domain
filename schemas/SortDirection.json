@@ -1,0 +1,11 @@
+{
+  "$id": "https://schemas.cim-domain.ai/SortDirection.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Sort direction for query results",
+  "enum": [
+    "Ascending",
+    "Descending"
+  ],
+  "title": "SortDirection",
+  "type": "string"
+}

@@ -29,11 +29,9 @@
 mod command_handlers;
 mod commands;
 mod component;
-mod component_sync;
 mod composition_types;
 mod context_types;
 mod cqrs;
-mod domain_component_bridge;
 mod domain_events;
 mod entity;
 mod errors;
@@ -57,9 +55,18 @@ pub mod integration;
 pub mod persistence;
 pub mod projections;
 
+// FP FOUNDATION - Entity as MONAD and Formal Domain Structure
+pub mod fp_monad;
+pub mod formal_domain;
+
+// Core domain concepts
+pub mod cid;
+
+// FP-aligned JSON schemas
+pub mod fp_schemas;
+
 // Re-export core types
 pub use component::{Component, ComponentEvent, ComponentExt, ComponentStorage, EcsComponentData};
-pub use component_sync::DomainComponentSync;
 pub use composition_types::{CompositionType, DomainCompositionType};
 pub use context_types::{ContextType, ServiceType, SubdomainType};
 pub use cqrs::{
@@ -68,7 +75,6 @@ pub use cqrs::{
     QueryAcknowledgment, QueryEnvelope, QueryHandler as CqrsQueryHandler, QueryId, QueryResponse,
     QueryStatus,
 };
-pub use domain_component_bridge::DomainComponentBridge;
 pub use entity::{AggregateRoot, DomainEntity, Entity, EntityId};
 pub use identifiers::{EdgeId, GraphId, NodeId, StateId, TransitionId, WorkflowId, WorkflowIdExt};
 pub use node_types::NodeType;
@@ -131,3 +137,35 @@ pub use infrastructure::event_replay::EventHandler as ReplayEventHandler;
 
 /// Type alias for aggregate identifiers using EntityId with AggregateMarker
 pub type AggregateId = EntityId<markers::AggregateMarker>;
+
+// ============================================================================
+// FP FOUNDATION EXPORTS
+// ============================================================================
+
+// Re-export Entity monad and helpers
+pub use fp_monad::{Entity as EntityMonad, Components, run_entity, KleisliArrow};
+
+// Re-export CID types
+pub use cid::{DomainCid, ContentType, CidChain, generate_cid, CidImpl as Cid, CidError};
+
+// Re-export formal domain traits
+pub use formal_domain::{
+    // Marker traits (REQUIRED for all domain concepts)
+    DomainConcept, ValueObject, FormalDomainEntity, FormalEntityId,
+    Aggregate, Policy, Saga,
+    
+    // State machines
+    MealyStateMachine,
+    
+    // Supporting types
+    DomainCommand as FormalCommand,
+    DomainEvent as FormalEvent,
+    DomainQuery as FormalQuery,
+    AggregateState, SagaState, SagaStepResult,
+    
+    // ECS bridge
+    System,
+    
+    // Validation
+    Invariant, Specification,
+};

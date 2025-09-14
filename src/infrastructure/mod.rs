@@ -5,19 +5,17 @@
 //! This module contains all infrastructure concerns including:
 //! - NATS client and JetStream integration
 //! - Event store implementation
-//! - CID chain management
 //! - Snapshot storage
 //! - Event replay services
 //! - Event streams as first-class objects
 
-pub mod cid_chain;
 pub mod event_replay;
 pub mod event_store;
 pub mod event_stream;
 pub mod event_stream_service;
 /// Event versioning and schema evolution support
 pub mod event_versioning;
-pub mod jetstream_event_store;
+// jetstream_event_store moved to backup - needs cim-ipld types
 pub mod nats_client;
 /// Projection checkpoint storage for fault-tolerant event processing
 pub mod projection_checkpoint;
@@ -27,9 +25,6 @@ pub mod saga;
 pub mod snapshot_policy;
 pub mod snapshot_store;
 
-pub use cid_chain::{
-    calculate_event_cid, verify_event_chain, ChainVerificationError, CidError, EventWithCid,
-};
 pub use event_replay::{
     AggregateEventProcessor, AggregateRebuilder, EventHandler, EventReplayService,
     ProjectionBuilder, ProjectionHandler, ReplayError, ReplayOptions, ReplayStats,
@@ -45,7 +40,8 @@ pub use event_versioning::{
     EventTypeMetadata, EventUpcaster, EventVersioningError, EventVersioningService, SimpleUpcaster,
     VersionedEvent,
 };
-pub use jetstream_event_store::JetStreamEventStore;
+// JetStreamEventStore moved to cim-ipld (uses storage-specific types)
+// pub use jetstream_event_store::JetStreamEventStore;
 pub use nats_client::{NatsClient, NatsConfig, NatsError};
 pub use projection_checkpoint::{
     CheckpointError, CheckpointManager, CheckpointStore, EventPosition, InMemoryCheckpointStore,

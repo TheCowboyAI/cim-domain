@@ -1,0 +1,22 @@
+{
+  "$id": "https://schemas.cim-domain.ai/QueryStatus.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Status of query acceptance",
+  "oneOf": [
+    {
+      "description": "Query was accepted for processing",
+      "enum": [
+        "Accepted"
+      ],
+      "type": "string"
+    },
+    {
+      "description": "Query was rejected (e.g., invalid parameters)",
+      "enum": [
+        "Rejected"
+      ],
+      "type": "string"
+    }
+  ],
+  "title": "QueryStatus"
+}

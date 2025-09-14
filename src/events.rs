@@ -9,13 +9,14 @@ use crate::{
     cqrs::{CausationId, CorrelationId, EventId, IdType},
     subject_abstraction::{SerializableCid, Subject as SubjectParts},
 };
-use cim_ipld::Cid;
+use crate::Cid;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::time::SystemTime;
 use uuid::Uuid;
 
 /// Propagation scope for event escalation (orthogonal to subjects)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum PropagationScope {
     /// Never leaves the app
     LocalOnly,
@@ -30,7 +31,7 @@ pub enum PropagationScope {
 }
 
 /// Event envelope with subject and propagation scope
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EventEnvelope<E> {
     /// The domain event
     pub event: E,
@@ -99,7 +100,7 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug {
 }
 
 /// Envelope for domain events with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DomainEventEnvelopeWithMetadata<E: DomainEvent> {
     /// The event ID
     pub event_id: EventId,
@@ -121,7 +122,7 @@ pub struct DomainEventEnvelopeWithMetadata<E: DomainEvent> {
 }
 
 /// Metadata for event processing
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct EventMetadata {
     /// Source service/context
     pub source: String,
@@ -137,7 +138,7 @@ pub struct EventMetadata {
 }
 
 /// Wrapper for domain events with metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DomainEventEnvelope<E> {
     /// Event metadata
     pub metadata: EventMetadata,
@@ -269,7 +270,7 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
 mod tests {
     use super::*;
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     struct TestEvent {
         id: Uuid,
         name: String,

@@ -8,8 +8,9 @@
 
 use crate::entity::EntityId;
 use crate::markers::{CommandMarker, QueryMarker};
-use cim_ipld::Cid;
+use crate::Cid;
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::fmt::Debug;
 
 // Re-export correlation types from abstraction layer
@@ -18,7 +19,7 @@ pub use crate::subject_abstraction::{
 };
 
 /// Status of command acceptance
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CommandStatus {
     /// Command was accepted for processing
     Accepted,
@@ -27,7 +28,7 @@ pub enum CommandStatus {
 }
 
 /// Status of query acceptance
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum QueryStatus {
     /// Query was accepted for processing
     Accepted,
@@ -36,7 +37,7 @@ pub enum QueryStatus {
 }
 
 /// Acknowledgment returned when a command is submitted
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CommandAcknowledgment {
     /// The command ID that was acknowledged
     pub command_id: CommandId,
@@ -62,7 +63,7 @@ pub struct QueryAcknowledgment {
 }
 
 /// Query response returned by query handlers
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QueryResponse {
     /// The query ID that was processed
     pub query_id: IdType,
@@ -147,7 +148,7 @@ pub type QueryId = EntityId<QueryMarker>;
 pub type EventId = Cid;
 
 /// A command with metadata for tracking and auditing
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CommandEnvelope<C> {
     /// Unique identifier for this command instance
     pub id: CommandId,
@@ -224,7 +225,7 @@ impl<C: Command> CommandEnvelope<C> {
 }
 
 /// A query with metadata for tracking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct QueryEnvelope<Q> {
     /// Unique identifier for this query instance
     pub id: QueryId,

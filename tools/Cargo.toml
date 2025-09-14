@@ -1,0 +1,17 @@
+[workspace]
+
+[package]
+name = "schema_export"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "schema_export"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+schemars = { version = "0.8", features = ["chrono", "uuid1"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }

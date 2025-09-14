@@ -1,0 +1,212 @@
+{
+  "$id": "https://schemas.cim-domain.ai/SagaEvent.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Saga orchestration event",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Started": {
+          "properties": {
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "saga_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "Started"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "StepStarted": {
+          "properties": {
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "step_id": {
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "saga_id",
+            "step_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "StepStarted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "StepCompleted": {
+          "properties": {
+            "result": true,
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "step_id": {
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result",
+            "saga_id",
+            "step_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "StepCompleted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "StepFailed": {
+          "properties": {
+            "error": {
+              "type": "string"
+            },
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "step_id": {
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "error",
+            "saga_id",
+            "step_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "StepFailed"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Completed": {
+          "properties": {
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "saga_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "Completed"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "CompensationStarted": {
+          "properties": {
+            "failed_step": {
+              "type": "string"
+            },
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "failed_step",
+            "saga_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "CompensationStarted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Compensated": {
+          "properties": {
+            "saga_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "saga_id",
+            "timestamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "Compensated"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "SagaEvent"
+}

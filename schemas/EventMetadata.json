@@ -1,0 +1,78 @@
+{
+  "$id": "https://schemas.cim-domain.ai/EventMetadata.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "PropagationScope": {
+      "description": "Basic event propagation scope",
+      "oneOf": [
+        {
+          "description": "Never leaves the app",
+          "enum": [
+            "LocalOnly"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble to container",
+          "enum": [
+            "Container"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble to local leaf",
+          "enum": [
+            "Leaf"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble to cluster",
+          "enum": [
+            "Cluster"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "May bubble globally",
+          "enum": [
+            "SuperCluster"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "Metadata for event processing",
+  "properties": {
+    "propagation_scope": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/PropagationScope"
+        }
+      ],
+      "description": "Propagation scope"
+    },
+    "properties": {
+      "additionalProperties": true,
+      "description": "Additional metadata",
+      "type": "object"
+    },
+    "source": {
+      "description": "Source service/context",
+      "type": "string"
+    },
+    "version": {
+      "description": "Event version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "propagation_scope",
+    "properties",
+    "source",
+    "version"
+  ],
+  "title": "EventMetadata",
+  "type": "object"
+}

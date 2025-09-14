@@ -1,0 +1,34 @@
+{
+  "$id": "https://schemas.cim-domain.ai/WorkflowCompleted.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Workflow completed event",
+  "properties": {
+    "completed_at": {
+      "description": "When the workflow completed",
+      "format": "date-time",
+      "type": "string"
+    },
+    "final_state": {
+      "description": "The final state of the workflow",
+      "type": "string"
+    },
+    "total_duration_seconds": {
+      "description": "The total duration of the workflow execution in seconds",
+      "format": "double",
+      "type": "number"
+    },
+    "workflow_id": {
+      "description": "The workflow that completed",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "completed_at",
+    "final_state",
+    "total_duration_seconds",
+    "workflow_id"
+  ],
+  "title": "WorkflowCompleted",
+  "type": "object"
+}

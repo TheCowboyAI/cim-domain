@@ -1,0 +1,33 @@
+{
+  "$id": "https://schemas.cim-domain.ai/WorkflowSuspended.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Workflow suspended event",
+  "properties": {
+    "current_state": {
+      "description": "The state at which the workflow was suspended",
+      "type": "string"
+    },
+    "reason": {
+      "description": "The reason for suspension",
+      "type": "string"
+    },
+    "suspended_at": {
+      "description": "When the workflow was suspended",
+      "format": "date-time",
+      "type": "string"
+    },
+    "workflow_id": {
+      "description": "The workflow that was suspended",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "current_state",
+    "reason",
+    "suspended_at",
+    "workflow_id"
+  ],
+  "title": "WorkflowSuspended",
+  "type": "object"
+}

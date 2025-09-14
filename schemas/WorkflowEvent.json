@@ -1,0 +1,350 @@
+{
+  "$id": "https://schemas.cim-domain.ai/WorkflowEvent.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "WorkflowCancelled": {
+      "description": "Workflow cancelled event",
+      "properties": {
+        "cancelled_at": {
+          "description": "When the workflow was cancelled",
+          "format": "date-time",
+          "type": "string"
+        },
+        "current_state": {
+          "description": "The state at which the workflow was cancelled",
+          "type": "string"
+        },
+        "reason": {
+          "description": "The reason for cancellation",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The workflow that was cancelled",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cancelled_at",
+        "current_state",
+        "reason",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowCompleted": {
+      "description": "Workflow completed event",
+      "properties": {
+        "completed_at": {
+          "description": "When the workflow completed",
+          "format": "date-time",
+          "type": "string"
+        },
+        "final_state": {
+          "description": "The final state of the workflow",
+          "type": "string"
+        },
+        "total_duration_seconds": {
+          "description": "The total duration of the workflow execution in seconds",
+          "format": "double",
+          "type": "number"
+        },
+        "workflow_id": {
+          "description": "The workflow that completed",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "completed_at",
+        "final_state",
+        "total_duration_seconds",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowFailed": {
+      "description": "Workflow failed event",
+      "properties": {
+        "current_state": {
+          "description": "The state at which the workflow failed",
+          "type": "string"
+        },
+        "error": {
+          "description": "The error that caused the failure",
+          "type": "string"
+        },
+        "failed_at": {
+          "description": "When the workflow failed",
+          "format": "date-time",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The workflow that failed",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "current_state",
+        "error",
+        "failed_at",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowResumed": {
+      "description": "Workflow resumed event",
+      "properties": {
+        "current_state": {
+          "description": "The state from which the workflow resumed",
+          "type": "string"
+        },
+        "resumed_at": {
+          "description": "When the workflow was resumed",
+          "format": "date-time",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The workflow that was resumed",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "current_state",
+        "resumed_at",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowStarted": {
+      "description": "Workflow started event",
+      "properties": {
+        "definition_id": {
+          "description": "The ID of the graph definition this workflow is based on",
+          "format": "uuid",
+          "type": "string"
+        },
+        "initial_state": {
+          "description": "The initial state of the workflow",
+          "type": "string"
+        },
+        "started_at": {
+          "description": "When the workflow was started",
+          "format": "date-time",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The unique identifier of the workflow instance",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition_id",
+        "initial_state",
+        "started_at",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowSuspended": {
+      "description": "Workflow suspended event",
+      "properties": {
+        "current_state": {
+          "description": "The state at which the workflow was suspended",
+          "type": "string"
+        },
+        "reason": {
+          "description": "The reason for suspension",
+          "type": "string"
+        },
+        "suspended_at": {
+          "description": "When the workflow was suspended",
+          "format": "date-time",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The workflow that was suspended",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "current_state",
+        "reason",
+        "suspended_at",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowTransitionExecuted": {
+      "description": "Workflow transition executed event",
+      "properties": {
+        "executed_at": {
+          "description": "When the transition was executed",
+          "format": "date-time",
+          "type": "string"
+        },
+        "from_state": {
+          "description": "The state before the transition",
+          "type": "string"
+        },
+        "input": {
+          "description": "The input that triggered the transition"
+        },
+        "output": {
+          "description": "The output produced by the transition"
+        },
+        "to_state": {
+          "description": "The state after the transition",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The workflow that executed the transition",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "executed_at",
+        "from_state",
+        "input",
+        "output",
+        "to_state",
+        "workflow_id"
+      ],
+      "type": "object"
+    },
+    "WorkflowTransitioned": {
+      "description": "Workflow transitioned event",
+      "properties": {
+        "from_state": {
+          "description": "The state before the transition",
+          "type": "string"
+        },
+        "to_state": {
+          "description": "The state after the transition",
+          "type": "string"
+        },
+        "transition_id": {
+          "description": "The unique identifier of the transition",
+          "type": "string"
+        },
+        "workflow_id": {
+          "description": "The workflow that transitioned",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_state",
+        "to_state",
+        "transition_id",
+        "workflow_id"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Combined workflow event enum",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Started": {
+          "$ref": "#/definitions/WorkflowStarted"
+        }
+      },
+      "required": [
+        "Started"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "TransitionExecuted": {
+          "$ref": "#/definitions/WorkflowTransitionExecuted"
+        }
+      },
+      "required": [
+        "TransitionExecuted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Transitioned": {
+          "$ref": "#/definitions/WorkflowTransitioned"
+        }
+      },
+      "required": [
+        "Transitioned"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Completed": {
+          "$ref": "#/definitions/WorkflowCompleted"
+        }
+      },
+      "required": [
+        "Completed"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Suspended": {
+          "$ref": "#/definitions/WorkflowSuspended"
+        }
+      },
+      "required": [
+        "Suspended"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Resumed": {
+          "$ref": "#/definitions/WorkflowResumed"
+        }
+      },
+      "required": [
+        "Resumed"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Cancelled": {
+          "$ref": "#/definitions/WorkflowCancelled"
+        }
+      },
+      "required": [
+        "Cancelled"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "Failed": {
+          "$ref": "#/definitions/WorkflowFailed"
+        }
+      },
+      "required": [
+        "Failed"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "WorkflowEvent"
+}

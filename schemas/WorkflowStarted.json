@@ -1,0 +1,34 @@
+{
+  "$id": "https://schemas.cim-domain.ai/WorkflowStarted.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Workflow started event",
+  "properties": {
+    "definition_id": {
+      "description": "The ID of the graph definition this workflow is based on",
+      "format": "uuid",
+      "type": "string"
+    },
+    "initial_state": {
+      "description": "The initial state of the workflow",
+      "type": "string"
+    },
+    "started_at": {
+      "description": "When the workflow was started",
+      "format": "date-time",
+      "type": "string"
+    },
+    "workflow_id": {
+      "description": "The unique identifier of the workflow instance",
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "definition_id",
+    "initial_state",
+    "started_at",
+    "workflow_id"
+  ],
+  "title": "WorkflowStarted",
+  "type": "object"
+}

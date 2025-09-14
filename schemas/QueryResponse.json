@@ -1,0 +1,27 @@
+{
+  "$id": "https://schemas.cim-domain.ai/QueryResponse.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Query response returned by query handlers",
+  "properties": {
+    "correlation_id": {
+      "description": "Correlation ID for tracking",
+      "format": "uuid",
+      "type": "string"
+    },
+    "query_id": {
+      "description": "The query ID that was processed",
+      "format": "uuid",
+      "type": "string"
+    },
+    "result": {
+      "description": "The result data"
+    }
+  },
+  "required": [
+    "correlation_id",
+    "query_id",
+    "result"
+  ],
+  "title": "QueryResponse",
+  "type": "object"
+}
