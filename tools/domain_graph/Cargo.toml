@@ -19,3 +19,11 @@ path = "src/bin/ul_projection.rs"
 [[bin]]
 name = "validate_domain_graph"
 path = "src/bin/validate_domain_graph.rs"
+
+[[bin]]
+name = "add_morphism"
+path = "src/bin/add_morphism.rs"
+
+[[bin]]
+name = "ul_narrative"
+path = "src/bin/ul_narrative.rs"

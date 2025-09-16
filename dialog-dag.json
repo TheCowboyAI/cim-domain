@@ -1143,6 +1143,38 @@
           "ul_projection diff"
         ]
       }
+    },
+    {
+      "cid": "bafkr4idxgpdracptdvkn26ajq2est72sowhuduoyk7244jlzkexubfnizu",
+      "content": {
+        "event_id": "3e7f1996-0476-473b-9eb7-1679374ed928",
+        "i_understood": "Added add_morphism CLI to append morphisms and update a diagram's describes list; maintains diff-first validation flow",
+        "parent_cid": "bafkr4ihuhm4qayfmofylzi64v5on24y4nfn5dqgkh2p7g4xjg4oawcmhpu",
+        "timestamp": 1758064123,
+        "type": "assistant",
+        "user_said": "Enable dynamic relationship additions via tool",
+        "what_i_did": [
+          "create tools/domain_graph/src/bin/add_morphism.rs",
+          "update Cargo.toml",
+          "document usage in event"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ictff4vak4bkntnmks7vvkdf7tsfszajbxsyvaukbolcapd5565ua",
+      "content": {
+        "event_id": "99f26ebe-b8c5-41b9-9a7e-9af2fb106d69",
+        "i_understood": "Added ul_narrative tool to emit human-readable sentences from lens morphisms (grouped by diagram)",
+        "parent_cid": "bafkr4idxgpdracptdvkn26ajq2est72sowhuduoyk7244jlzkexubfnizu",
+        "timestamp": 1758064242,
+        "type": "assistant",
+        "user_said": "Add UL narrative generator",
+        "what_i_did": [
+          "create tools/domain_graph/src/bin/ul_narrative.rs",
+          "update Cargo.toml",
+          "document usage in event"
+        ]
+      }
     }
   ],
   "insights": [
@@ -1557,5 +1589,5 @@
       ]
     }
   ],
-  "total_events": 67
+  "total_events": 69
 }
