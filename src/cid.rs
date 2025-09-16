@@ -262,6 +262,7 @@ impl ValueObject for CidChain {}
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
+    use std::str::FromStr as _;
 
     #[test]
     fn test_domain_cid_creation() {
@@ -339,5 +340,44 @@ mod tests {
         let meta = BTreeMap::new();
         let (node, _root) = DomainNode::from_payload(payload, DomainPayloadCodec::Raw, meta);
         assert!(matches!(node.payload_codec, DomainPayloadCodec::Raw));
+    }
+
+    #[test]
+    fn test_domain_node_payload_cid_codec_matches_annotation() {
+        let payload = br#"{ "example": true }"#;
+        let meta = BTreeMap::new();
+
+        // DagCbor
+        let (node_cbor, root_cbor) = DomainNode::from_payload(payload, DomainPayloadCodec::DagCbor, meta.clone());
+        assert_eq!(node_cbor.payload_cid.codec(), DomainPayloadCodec::DagCbor.code());
+        // Root cid is envelope (we encode as dag-cbor)
+        assert_eq!(root_cbor.inner().codec(), 0x71);
+
+        // DagJson
+        let (node_json, _root_json) = DomainNode::from_payload(payload, DomainPayloadCodec::DagJson, meta);
+        assert_eq!(node_json.payload_cid.codec(), DomainPayloadCodec::DagJson.code());
+    }
+
+    #[test]
+    fn test_domain_cid_from_content_uses_raw_and_roundtrips() {
+        let content = b"hello";
+        let dcid = DomainCid::from_content(content, ContentType::Document);
+        // Underlying CID uses RAW codec 0x55 per from_content implementation
+        assert_eq!(dcid.inner().codec(), 0x55);
+        // Display/parse roundtrip
+        let s = dcid.to_string();
+        let parsed = DomainCid::from_str(&s).expect("parse cid");
+        assert_eq!(parsed.inner(), dcid.inner());
+    }
+
+    #[test]
+    fn test_domain_node_payload_cid_is_valid_ipld_cid() {
+        let payload = br#"{ "ipld": "ok" }"#;
+        let meta = BTreeMap::new();
+        let (node, _root) = DomainNode::from_payload(payload, DomainPayloadCodec::DagJson, meta);
+        // payload_is IPLD.Cid: ensure it parses with cid crate
+        let cid_text = node.payload_cid.to_string();
+        let parsed = CidImpl::from_str(&cid_text).expect("valid IPLD.Cid string");
+        assert_eq!(parsed, node.payload_cid);
     }
 }

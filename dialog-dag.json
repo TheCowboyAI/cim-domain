@@ -1010,6 +1010,24 @@
           "cargo test --lib (all passed)"
         ]
       }
+    },
+    {
+      "cid": "bafkr4ihue4c3o2rcjzlkbvjtgbea65xwvd7e5zyiormo7rmqao64d5rbee",
+      "content": {
+        "event_id": "8a46a582-fdf9-4d04-bf5d-2c18cf20c94e",
+        "i_understood": "Add DomainNode/CID tests: codec mapping, root CID codec, CID parse; existing CidChain tests already cover genesis/link; run tests successfully",
+        "parent_cid": "bafkr4ibfjgo2bsncqc5lmvpijmy2vj64n75mps2gphxfunlnu56xuh4hmy",
+        "timestamp": 1758057283,
+        "type": "assistant",
+        "user_said": "Implement Priority 2 tests (content addressing)",
+        "what_i_did": [
+          "extend src/cid.rs tests (codec mapping for DagCbor/DagJson",
+          "root is dag-cbor",
+          "DomainCid from_content raw",
+          "payload_cid parses as IPLD)",
+          "cargo test --lib (all passed)"
+        ]
+      }
     }
   ],
   "insights": [
@@ -1376,5 +1394,5 @@
       ]
     }
   ],
-  "total_events": 59
+  "total_events": 60
 }
