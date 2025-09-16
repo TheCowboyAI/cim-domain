@@ -1043,6 +1043,23 @@
           "cargo test --lib (all passed)"
         ]
       }
+    },
+    {
+      "cid": "bafkr4icf5uq6s2j24iisqdk2zvvufwhg3vgpbhl4tbfcik7amd6k35bzk4",
+      "content": {
+        "event_id": "bdbaf150-87f4-462c-8dbe-b136b3391e36",
+        "i_understood": "Added graph↔code mapping doc and act rules note; generated UL diff summarizing added lens objects; awaiting approval to --write",
+        "parent_cid": "bafkr4idpnj3mnmbe4lqetb7hmkpex6euczsyzsubbqfmsbdxtbs4dxhn5q",
+        "timestamp": 1758061301,
+        "type": "assistant",
+        "user_said": "Priority 5: lens mapping docs and UL diff",
+        "what_i_did": [
+          "add doc/ul/graph_to_code_mapping.md",
+          "update doc/act/act_rules_codex.md",
+          "run ul_projection diff",
+          "no write"
+        ]
+      }
     }
   ],
   "insights": [
@@ -1409,5 +1426,5 @@
       ]
     }
   ],
-  "total_events": 61
+  "total_events": 62
 }

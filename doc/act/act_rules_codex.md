@@ -76,9 +76,15 @@ You are the ACT Expert operating strictly within the Mathematical Foundations Ca
   1) String Diagram proofs
   2) Code AST
 
+### Naming Lens Mapping
+- The category lens may use UL‑friendly names that differ from code identifiers. We record explicit mappings to avoid churn.
+- Examples:
+  - `StateMachine` (graph) ↔ `formal_domain::MealyStateMachine` (code)
+  - `ReadModel`/`EventStream` remain conceptual in the lens; code provides pure traits/contracts (`Projection`, `EventStreamSubscription`), while infra implements persistence/transport downstream.
+- See `doc/ul/graph_to_code_mapping.md` for the current list.
+
 ## Quality Gates
 
 - Identity laws recorded for all objects
 - Composition rules capture key commuting diagrams and any conditions
 - Non-commutative cases annotated with remediation path
-
