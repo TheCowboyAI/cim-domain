@@ -1,5 +1,7 @@
 # String Diagrams for FP Domain Model
 
+![FP Domain Overview](./fp_domain_overview.svg)
+
 ## 1. Entity Monad Composition
 
 ### Basic Entity Wrapping (pure/return)
@@ -109,7 +111,11 @@ Input → [Policy₁] → Intermediate → [Policy₂] → Output
       Output
 ```
 
-## 5. Saga Orchestration
+## 5. Saga (Aggregate-of-Aggregates) with Vector Clocks
+
+Sagas compose aggregates and use Vector Clocks for causal ordering across domains.
+
+![Saga Vector Clocks](./saga_vector_clock.svg)
 
 ```
      Saga(Initial)

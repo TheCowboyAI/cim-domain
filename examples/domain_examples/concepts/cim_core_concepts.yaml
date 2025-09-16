@@ -1,0 +1,77 @@
+concepts:
+  - id: perception
+    name: Perception
+    description: Process by which sensory input is interpreted to form meaningful experiences.
+    synonyms: [sensory_processing]
+    tags: [cognitive, sensing]
+  - id: attention
+    name: Attention
+    description: Selective allocation of cognitive resources to relevant stimuli while ignoring others.
+    synonyms: [focus]
+    tags: [cognitive]
+  - id: memory
+    name: Memory
+    description: Encoding, storage, and retrieval of information; includes short-term and long-term.
+    synonyms: [knowledge_storage]
+    tags: [cognitive]
+  - id: schema
+    name: Schema
+    description: Mental frameworks organizing and interpreting information based on prior knowledge.
+    synonyms: [framework]
+    tags: [cognitive, structure]
+  - id: problem_solving
+    name: Problem Solving
+    description: Identifying and executing strategies to overcome challenges; includes plan, execute, evaluate.
+    synonyms: [reasoning]
+    tags: [cognitive, action]
+  - id: decision_making
+    name: Decision Making
+    description: Selecting a course of action among alternatives; influenced by heuristics and biases.
+    synonyms: [choice]
+    tags: [cognitive, action]
+  - id: language
+    name: Language
+    description: System of symbols and rules for communication affecting thought and interaction.
+    synonyms: [communication]
+    tags: [cognitive, social]
+  - id: cognitive_bias
+    name: Cognitive Bias
+    description: Systematic errors in thinking impacting judgments and decisions (e.g., confirmation, availability).
+    synonyms: [bias]
+    tags: [cognitive]
+  - id: metacognition
+    name: Metacognition
+    description: Awareness and regulation of one's own cognition (planning, monitoring, evaluating).
+    synonyms: [self_reflection]
+    tags: [cognitive]
+  - id: cognitive_development
+    name: Cognitive Development
+    description: Evolution of thinking over time across stages (sensorimotor, preoperational, concrete, formal).
+    synonyms: [development]
+    tags: [cognitive, temporal]
+
+relations:
+  - from: perception
+    to: attention
+    rel: RelatedTo
+  - from: attention
+    to: memory
+    rel: RelatedTo
+  - from: memory
+    to: schema
+    rel: RelatedTo
+  - from: schema
+    to: language
+    rel: RelatedTo
+  - from: problem_solving
+    to: decision_making
+    rel: RelatedTo
+  - from: cognitive_bias
+    to: decision_making
+    rel: RelatedTo
+  - from: metacognition
+    to: problem_solving
+    rel: RelatedTo
+  - from: cognitive_development
+    to: memory
+    rel: RelatedTo

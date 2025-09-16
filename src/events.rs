@@ -5,41 +5,15 @@
 //! Events represent facts that have occurred in the domain. They are immutable
 //! and form the basis of event sourcing and event-driven communication.
 
-use crate::{
-    cqrs::{CausationId, CorrelationId, EventId, IdType},
-    subject_abstraction::{SerializableCid, Subject as SubjectParts},
-};
-use crate::Cid;
-use serde::{Deserialize, Serialize};
+use crate::cid::DomainCid;
+use crate::fp_adts::Either;
+use crate::cqrs::{CausationId, CorrelationId, EventId};
 use schemars::JsonSchema;
-use std::time::SystemTime;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Propagation scope for event escalation (orthogonal to subjects)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub enum PropagationScope {
-    /// Never leaves the app
-    LocalOnly,
-    /// May bubble to container
-    Container,
-    /// May bubble to local leaf
-    Leaf,
-    /// May bubble to cluster
-    Cluster,
-    /// May bubble globally
-    SuperCluster,
-}
-
-/// Event envelope with subject and propagation scope
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct EventEnvelope<E> {
-    /// The domain event
-    pub event: E,
-    /// Subject for routing (e.g., "people.person.registered.v1")
-    pub subject: String,
-    /// Determines if/how to escalate
-    pub propagation: PropagationScope,
-}
+// PropagationScope removed - infrastructure concern, belongs in transport layer
+// EventEnvelope removed - has routing concerns, belongs in cim-subject or transport layer
 
 /// Base trait for all domain events
 ///
@@ -57,10 +31,6 @@ pub struct EventEnvelope<E> {
 /// }
 ///
 /// impl DomainEvent for UserCreatedEvent {
-///     fn subject(&self) -> String {
-///         "users.user.created.v1".to_string()
-///     }
-///     
 ///     fn aggregate_id(&self) -> Uuid {
 ///         self.user_id
 ///     }
@@ -81,12 +51,8 @@ pub struct EventEnvelope<E> {
 /// };
 ///
 /// assert_eq!(event.event_type(), "UserCreated");
-/// assert_eq!(event.subject(), "users.user.created.v1");
 /// ```
 pub trait DomainEvent: Send + Sync + std::fmt::Debug {
-    /// Get the subject for this event
-    fn subject(&self) -> String;
-
     /// Get the aggregate ID this event relates to
     fn aggregate_id(&self) -> Uuid;
 
@@ -99,17 +65,20 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug {
     }
 }
 
-/// Envelope for domain events with metadata
+/// How an event payload is represented inside an envelope.
+// Payload is modeled as an Either: Left(DomainCid) | Right(Event)
+
+/// Domain event envelope carrying identity and either an inline payload or a CID reference.
+///
+/// This type is pure and performs no persistence; infrastructure is responsible for
+/// extracting `Inline(E)`, producing a `DomainCid`, and replacing the payload with `ByCid(DomainCid)`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct DomainEventEnvelopeWithMetadata<E: DomainEvent> {
+pub struct DomainEventEnvelope<E: DomainEvent> {
     /// The event ID
     pub event_id: EventId,
 
-    /// The actual event
-    pub event: E,
-
-    /// When the event occurred
-    pub occurred_at: SystemTime,
+    /// Aggregate identifier copied from the event so it remains available after CID substitution
+    pub aggregate_id: uuid::Uuid,
 
     /// Correlation ID for tracking across services
     pub correlation_id: CorrelationId,
@@ -117,143 +86,86 @@ pub struct DomainEventEnvelopeWithMetadata<E: DomainEvent> {
     /// ID of the event that caused this one
     pub causation_id: CausationId,
 
-    /// Metadata for routing and processing
-    pub metadata: EventMetadata,
+    /// Metadata that describes the payload (schema/source/properties)
+    pub payload_metadata: PayloadMetadata,
+
+    /// Event payload, either inline or by CID
+    pub payload: Either<DomainCid, E>,
 }
 
-/// Metadata for event processing
+/// Metadata that describes the payload (not the event itself)
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct EventMetadata {
-    /// Source service/context
+pub struct PayloadMetadata {
+    /// Source or schema namespace for the payload
     pub source: String,
 
-    /// Event version
+    /// Payload schema or version tag
     pub version: String,
 
-    /// Propagation scope
-    pub propagation_scope: PropagationScope,
-
-    /// Additional metadata
+    /// Additional metadata properties (payload-oriented)
     pub properties: std::collections::HashMap<String, serde_json::Value>,
 }
 
-/// Wrapper for domain events with metadata
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct DomainEventEnvelope<E> {
-    /// Event metadata
-    pub metadata: EventMetadata,
-
-    /// The actual event
-    pub event: E,
-
-    /// NATS subject for routing
-    pub subject: String,
-}
+// DomainEventEnvelope removed - had subject routing which belongs in transport layer
 
 impl<E: DomainEvent> DomainEventEnvelope<E> {
-    /// Create a new event envelope
-    pub fn new(event: E, metadata: EventMetadata) -> Self {
-        let subject = event.subject();
-        Self {
-            metadata,
-            event,
-            subject,
-        }
-    }
-
-    /// Parse the subject into components
-    pub fn subject_parts(&self) -> crate::DomainResult<SubjectParts> {
-        use crate::subject_abstraction::SubjectLike;
-        SubjectParts::parse(&self.subject)
-            .map_err(|e| crate::DomainError::InvalidSubject(e.to_string()))
-    }
-}
-
-impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
-    /// Create a new event envelope
-    /// Note: event_id (CID) will be generated by the event store from the content
-    pub fn new(event: E, triggered_by: String) -> Self {
-        Self {
-            event_id: Cid::default(), // Placeholder - will be replaced by event store
-            event,
-            occurred_at: SystemTime::now(),
-            #[cfg(feature = "subject-routing")]
-            correlation_id: CorrelationId(IdType::Uuid(Uuid::new_v4())),
-            #[cfg(not(feature = "subject-routing"))]
-            correlation_id: CorrelationId(Uuid::new_v4()),
-            #[cfg(feature = "subject-routing")]
-            causation_id: CausationId(IdType::Uuid(Uuid::new_v4())),
-            #[cfg(not(feature = "subject-routing"))]
-            causation_id: CausationId(Uuid::new_v4()),
-            metadata: EventMetadata {
-                source: triggered_by,
-                version: "v1".to_string(),
-                propagation_scope: PropagationScope::LocalOnly,
-                properties: std::collections::HashMap::new(),
-            },
-        }
-    }
-
-    /// Create from a command
-    /// Note: event_id (CID) will be generated by the event store from the content
-    pub fn from_command(event: E, command_id: Uuid, triggered_by: String) -> Self {
-        Self {
-            event_id: Cid::default(), // Placeholder - will be replaced by event store
-            event,
-            occurred_at: SystemTime::now(),
-            #[cfg(feature = "subject-routing")]
-            correlation_id: CorrelationId(IdType::Uuid(command_id)),
-            #[cfg(not(feature = "subject-routing"))]
-            correlation_id: CorrelationId(command_id),
-            #[cfg(feature = "subject-routing")]
-            causation_id: CausationId(IdType::Uuid(command_id)),
-            #[cfg(not(feature = "subject-routing"))]
-            causation_id: CausationId(command_id),
-            metadata: EventMetadata {
-                source: triggered_by,
-                version: "v1".to_string(),
-                propagation_scope: PropagationScope::LocalOnly,
-                properties: std::collections::HashMap::new(),
-            },
-        }
-    }
-
-    /// Create from another event (for event chains)
-    /// Note: event_id (CID) will be generated by the event store from the content
-    pub fn from_event(
+    /// Construct an envelope with an inline event payload (pre-persist).
+    pub fn inline(
+        event_id: EventId,
         event: E,
-        causing_event: EventId,
         correlation_id: CorrelationId,
-        triggered_by: String,
+        causation_id: CausationId,
+        payload_metadata: PayloadMetadata,
+    ) -> Self {
+        let aggregate_id = event.aggregate_id();
+        Self {
+            event_id,
+            aggregate_id,
+            correlation_id,
+            causation_id,
+            payload_metadata,
+            payload: Either::Right(event),
+        }
+    }
+
+    /// Construct an envelope that references the event payload by CID (post-persist).
+    pub fn by_cid(
+        event_id: EventId,
+        aggregate_id: uuid::Uuid,
+        correlation_id: CorrelationId,
+        causation_id: CausationId,
+        payload_metadata: PayloadMetadata,
+        cid: DomainCid,
     ) -> Self {
         Self {
-            event_id: Cid::default(), // Placeholder - will be replaced by event store
-            event,
-            occurred_at: SystemTime::now(),
+            event_id,
+            aggregate_id,
             correlation_id,
-            #[cfg(feature = "subject-routing")]
-            causation_id: CausationId(IdType::Cid(SerializableCid(causing_event))),
-            #[cfg(not(feature = "subject-routing"))]
-            causation_id: CausationId(Uuid::new_v4()),
-            metadata: EventMetadata {
-                source: triggered_by,
-                version: "v1".to_string(),
-                propagation_scope: PropagationScope::LocalOnly,
-                properties: std::collections::HashMap::new(),
-            },
+            causation_id,
+            payload_metadata,
+            payload: Either::Left(cid),
         }
     }
 
-    /// Set propagation scope
-    pub fn with_propagation(mut self, scope: PropagationScope) -> Self {
-        self.metadata.propagation_scope = scope;
-        self
+    /// Replace an inline payload with a CID reference, keeping all metadata.
+    pub fn with_payload_cid(self, cid: DomainCid) -> Self {
+        Self { payload: Either::Left(cid), ..self }
     }
 
-    /// Set the actual CID after it's been calculated from content
-    pub fn with_cid(mut self, cid: Cid) -> Self {
-        self.event_id = cid;
-        self
+    /// Accessor: return inline event reference if present.
+    pub fn inline_event(&self) -> Option<&E> {
+        match &self.payload {
+            Either::Right(e) => Some(e),
+            _ => None,
+        }
+    }
+
+    /// Accessor: return CID reference if present.
+    pub fn payload_cid(&self) -> Option<&DomainCid> {
+        match &self.payload {
+            Either::Left(c) => Some(c),
+            _ => None,
+        }
     }
 }
 
@@ -266,272 +178,64 @@ impl<E: DomainEvent> DomainEventEnvelopeWithMetadata<E> {
 // - Document events: cim-domain-document
 // - Policy events: cim-domain-policy
 
+// Subject/propagation tests removed; transport concerns live downstream
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
     struct TestEvent {
         id: Uuid,
         name: String,
     }
 
     impl DomainEvent for TestEvent {
-        fn subject(&self) -> String {
-            "test.entity.created.v1".to_string()
-        }
-
-        fn aggregate_id(&self) -> Uuid {
-            self.id
-        }
-
-        fn event_type(&self) -> &'static str {
-            "TestEvent"
-        }
-
-        fn version(&self) -> &'static str {
-            "v1"
-        }
+        fn aggregate_id(&self) -> Uuid { self.id }
+        fn event_type(&self) -> &'static str { "TestEvent" }
+        fn version(&self) -> &'static str { "v1" }
     }
 
     #[test]
-    fn test_propagation_scope() {
-        assert_eq!(PropagationScope::LocalOnly as u8, 0);
-        assert_ne!(PropagationScope::Container, PropagationScope::Leaf);
-
-        // Test serialization
-        let json = serde_json::to_string(&PropagationScope::Cluster).unwrap();
-        assert_eq!(json, "\"Cluster\"");
-
-        // Test deserialization
-        let scope: PropagationScope = serde_json::from_str("\"SuperCluster\"").unwrap();
-        assert_eq!(scope, PropagationScope::SuperCluster);
-    }
-
-    #[test]
-    fn test_event_envelope() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "test-event".to_string(),
-        };
-
-        let envelope = EventEnvelope {
-            event: event.clone(),
-            subject: "test.entity.created.v1".to_string(),
-            propagation: PropagationScope::Container,
-        };
-
-        assert_eq!(envelope.subject, "test.entity.created.v1");
-        assert_eq!(envelope.propagation, PropagationScope::Container);
-        assert_eq!(envelope.event.name, "test-event");
-    }
-
-    #[test]
-    fn test_domain_event_trait() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "domain-test".to_string(),
-        };
-
-        assert_eq!(event.subject(), "test.entity.created.v1");
-        assert_eq!(event.event_type(), "TestEvent");
-        assert_eq!(event.version(), "v1");
-        assert_eq!(event.aggregate_id(), event.id);
-    }
-
-    #[test]
-    fn test_event_metadata() {
-        let mut metadata = EventMetadata {
-            source: "test-service".to_string(),
-            version: "v1".to_string(),
-            propagation_scope: PropagationScope::Leaf,
-            properties: std::collections::HashMap::new(),
-        };
-
-        metadata
-            .properties
-            .insert("key".to_string(), serde_json::json!("value"));
-
-        assert_eq!(metadata.source, "test-service");
-        assert_eq!(metadata.version, "v1");
-        assert_eq!(metadata.propagation_scope, PropagationScope::Leaf);
-        assert_eq!(
-            metadata.properties.get("key").unwrap(),
-            &serde_json::json!("value")
-        );
-    }
-
-    #[test]
-    fn test_domain_event_envelope() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "envelope-test".to_string(),
-        };
-
-        let metadata = EventMetadata {
-            source: "test-source".to_string(),
-            version: "v1".to_string(),
-            propagation_scope: PropagationScope::Cluster,
-            properties: std::collections::HashMap::new(),
-        };
-
-        let envelope = DomainEventEnvelope::new(event.clone(), metadata);
-
-        assert_eq!(envelope.subject, "test.entity.created.v1");
-        assert_eq!(envelope.metadata.source, "test-source");
-        assert_eq!(envelope.event.name, "envelope-test");
-    }
-
-    #[test]
-    fn test_subject_parts_parsing() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "subject-test".to_string(),
-        };
-
-        let metadata = EventMetadata {
-            source: "test".to_string(),
-            version: "v1".to_string(),
-            propagation_scope: PropagationScope::LocalOnly,
-            properties: std::collections::HashMap::new(),
-        };
-
-        let envelope = DomainEventEnvelope::new(event, metadata);
-        let parts = envelope.subject_parts().unwrap();
-
-        // Subject parts should parse correctly
-        let subject_str = parts.to_string();
-        assert_eq!(subject_str, "test.entity.created.v1");
-    }
-
-    #[test]
-    fn test_domain_event_envelope_with_metadata() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "metadata-test".to_string(),
-        };
-
-        let envelope =
-            DomainEventEnvelopeWithMetadata::new(event.clone(), "test-service".to_string());
-
-        assert_eq!(envelope.event.name, "metadata-test");
-        assert_eq!(envelope.metadata.source, "test-service");
-        assert_eq!(
-            envelope.metadata.propagation_scope,
-            PropagationScope::LocalOnly
-        );
-        assert!(envelope.occurred_at <= SystemTime::now());
-    }
-
-    #[test]
-    fn test_envelope_from_command() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "command-test".to_string(),
-        };
-
-        let command_id = Uuid::new_v4();
-        let envelope = DomainEventEnvelopeWithMetadata::from_command(
+    fn event_envelope_inline_and_cid() {
+        let event = TestEvent { id: Uuid::new_v4(), name: "created".into() };
+        let eid = Uuid::new_v4();
+        let env = DomainEventEnvelope::inline(
+            crate::cqrs::EventId(eid),
             event.clone(),
-            command_id,
-            "command-service".to_string(),
+            CorrelationId::Single(Uuid::new_v4()),
+            CausationId(Uuid::new_v4()),
+            PayloadMetadata { source: "tests".into(), version: "v1".into(), properties: Default::default() },
         );
+        assert_eq!(env.event_id, crate::cqrs::EventId(eid));
+        assert_eq!(env.aggregate_id, event.id);
+        assert!(env.inline_event().is_some());
 
-        assert_eq!(envelope.event.name, "command-test");
-        assert_eq!(envelope.metadata.source, "command-service");
-
-        // Check correlation and causation IDs match command ID
-        match &envelope.correlation_id.0 {
-            IdType::Uuid(id) => assert_eq!(*id, command_id),
-            _ => panic!("Expected UUID correlation ID"),
-        }
-
-        match &envelope.causation_id.0 {
-            IdType::Uuid(id) => assert_eq!(*id, command_id),
-            _ => panic!("Expected UUID causation ID"),
-        }
+        // Simulate persistence by swapping payload for a CID
+        let cid = crate::cid::generate_cid(&event, crate::cid::ContentType::Event).unwrap();
+        let env2 = env.with_payload_cid(cid.clone());
+        assert!(env2.inline_event().is_none());
+        assert_eq!(env2.payload_cid().cloned(), Some(cid));
     }
 
     #[test]
-    fn test_envelope_from_event() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "event-chain-test".to_string(),
-        };
-
-        let causing_event_id = Cid::default();
-        let correlation_id = CorrelationId(IdType::Uuid(Uuid::new_v4()));
-
-        let envelope = DomainEventEnvelopeWithMetadata::from_event(
-            event.clone(),
-            causing_event_id,
-            correlation_id.clone(),
-            "event-service".to_string(),
+    fn event_envelope_serde_roundtrip() {
+        let event = TestEvent { id: Uuid::new_v4(), name: "updated".into() };
+        let env = DomainEventEnvelope::inline(
+            crate::cqrs::EventId(Uuid::new_v4()),
+            event,
+            CorrelationId::Single(Uuid::new_v4()),
+            CausationId(Uuid::new_v4()),
+            PayloadMetadata { source: "tests".into(), version: "v1".into(), properties: Default::default() },
         );
-
-        assert_eq!(envelope.event.name, "event-chain-test");
-        assert_eq!(envelope.metadata.source, "event-service");
-        assert_eq!(envelope.correlation_id, correlation_id);
-
-        // Check causation ID is from causing event
-        match &envelope.causation_id.0 {
-            IdType::Cid(cid) => assert_eq!(cid.0, causing_event_id),
-            _ => panic!("Expected CID causation ID"),
-        }
-    }
-
-    #[test]
-    fn test_with_propagation() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "propagation-test".to_string(),
-        };
-
-        let envelope = DomainEventEnvelopeWithMetadata::new(event, "test".to_string())
-            .with_propagation(PropagationScope::SuperCluster);
-
-        assert_eq!(
-            envelope.metadata.propagation_scope,
-            PropagationScope::SuperCluster
-        );
-    }
-
-    #[test]
-    fn test_with_cid() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "cid-test".to_string(),
-        };
-
-        let new_cid =
-            Cid::try_from("bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi").unwrap();
-        let envelope =
-            DomainEventEnvelopeWithMetadata::new(event, "test".to_string()).with_cid(new_cid);
-
-        assert_eq!(envelope.event_id, new_cid);
-    }
-
-    #[test]
-    fn test_event_envelope_serialization() {
-        let event = TestEvent {
-            id: Uuid::new_v4(),
-            name: "serialize-test".to_string(),
-        };
-
-        let envelope = EventEnvelope {
-            event: event.clone(),
-            subject: "test.subject".to_string(),
-            propagation: PropagationScope::Container,
-        };
-
-        let json = serde_json::to_string(&envelope).unwrap();
-        assert!(json.contains("serialize-test"));
-        assert!(json.contains("test.subject"));
-        assert!(json.contains("Container"));
-
-        let deserialized: EventEnvelope<TestEvent> = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.event.name, event.name);
-        assert_eq!(deserialized.subject, envelope.subject);
-        assert_eq!(deserialized.propagation, envelope.propagation);
+        let json = serde_json::to_string(&env).unwrap();
+        let back: DomainEventEnvelope<TestEvent> = serde_json::from_str(&json).unwrap();
+        assert_eq!(env.event_id, back.event_id);
+        assert_eq!(env.aggregate_id, back.aggregate_id);
+        assert_eq!(env.correlation_id, back.correlation_id);
+        assert_eq!(env.causation_id, back.causation_id);
+        assert_eq!(env.payload_metadata.source, back.payload_metadata.source);
+        assert!(back.payload.right().is_some());
     }
 }

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="320" viewBox="0 0 780 320" role="img" aria-label="Saga Vector Clocks">
+  <style>
+    .box{fill:#f8fbff;stroke:#2b6cb0;stroke-width:2}
+    .title{font:700 14px sans-serif;fill:#2b6cb0}
+    .text{font:12px sans-serif;fill:#1a202c}
+    .arrow{stroke:#4a5568;stroke-width:2;marker-end:url(#m)}
+    .label{font:12px sans-serif;fill:#4a5568}
+  </style>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4a5568" />
+    </marker>
+  </defs>
+
+  <!-- Root Aggregate -->
+  <rect class="box" x="30" y="40" width="210" height="100" rx="8"/>
+  <text class="title" x="45" y="62">Root Aggregate</text>
+  <text class="text" x="45" y="84">id: A₀</text>
+  <text class="text" x="45" y="102">vc["root"] = 2</text>
+
+  <!-- Participant A -->
+  <rect class="box" x="290" y="40" width="210" height="100" rx="8"/>
+  <text class="title" x="305" y="62">Participant (payments)</text>
+  <text class="text" x="305" y="84">id: P₁</text>
+  <text class="text" x="305" y="102">vc["payments"] = 1</text>
+
+  <!-- Participant B -->
+  <rect class="box" x="550" y="40" width="210" height="100" rx="8"/>
+  <text class="title" x="565" y="62">Participant (shipping)</text>
+  <text class="text" x="565" y="84">id: S₂</text>
+  <text class="text" x="565" y="102">vc["shipping"] = 1</text>
+
+  <!-- Clock comparisons -->
+  <line class="arrow" x1="240" y1="90" x2="290" y2="90"/>
+  <text class="label" x="245" y="80">After</text>
+  
+  <line class="arrow" x1="500" y1="90" x2="550" y2="90"/>
+  <text class="label" x="505" y="80">Concurrent</text>
+
+  <!-- Legend -->
+  <rect x="30" y="180" width="730" height="110" fill="#f7fafc" stroke="#e2e8f0"/>
+  <text class="title" x="45" y="202">Legend</text>
+  <text class="text" x="45" y="224">• VectorClock contains logical counters per actor (e.g., "root", "payments", "shipping").</text>
+  <text class="text" x="45" y="244">• Order(root, participant) = Before | After | Concurrent determined by vector clock comparison (no wall‑clock time).</text>
+  <text class="text" x="45" y="264">• Sagas are aggregates whose entities are other aggregates; vector clocks provide causal order across domains.</text>
+</svg>

@@ -9,7 +9,7 @@ All previously disabled examples have been successfully rewritten to work with t
 ### ✅ Completed Examples
 
 1. **event_stream_example.rs**
-   - Uses JetStreamEventStore for event persistence
+   - Pure example; no external services
    - Demonstrates publishing domain events
    - Shows loading events from the store
    - Working with event metadata
@@ -36,8 +36,7 @@ All previously disabled examples have been successfully rewritten to work with t
    - Different query patterns (by ID, search, filter)
    - QueryCriteria for flexible filtering
 
-5. **persistence_example.rs**
-   - NATS KV repository for durable persistence
+5. Removed persistence examples (moved to infrastructure crates)
    - Read model storage for queries
    - Aggregate metadata and versioning
    - Batch operations
@@ -66,13 +65,13 @@ All previously disabled examples have been successfully rewritten to work with t
 
 ## Key API Changes Addressed
 
-1. **Event Store**: Now uses JetStreamEventStore instead of InMemoryEventStore
+1. Removed event store demos from this crate (pure library scope)
 2. **Event Metadata**: Changed structure with optional fields
 3. **Correlation/Causation IDs**: Now use IdType enum wrapper
 4. **Event Handler**: Updated trait signature with ReplayStats parameter
 5. **Command Acknowledgment**: Changed field names (reason instead of message)
 6. **Query Response**: Now returns result as serde_json::Value
-7. **Persistence**: SimpleRepository trait for NATS KV, separate from event sourcing
+7. Persistence moved to infrastructure crates; this library provides domain traits only
 8. **Component System**: Uses cim-component re-exported traits
 9. **State Machines**: Simplified API without aggregate dependencies
 10. **Integration**: Uses public APIs only, avoiding internal types
@@ -86,13 +85,13 @@ cargo run --example event_stream_example
 cargo run --example command_handler_example  
 cargo run --example event_replay_example
 cargo run --example query_handler_example
-cargo run --example persistence_example
+// persistence examples moved downstream
 cargo run --example bevy_integration
 cargo run --example workflow_basics
 cargo run --example integration_example
 ```
 
-Note: Most examples require a running NATS server with JetStream enabled:
+Note: Examples in this crate are pure and require no external services.
 ```bash
 docker run -p 4222:4222 nats:latest -js
 ```

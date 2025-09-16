@@ -210,7 +210,7 @@ impl DomainTopos {
     ) -> Result<DomainObject, DomainError> {
         // Create subobject satisfying predicate
         let mut sub_object = object.clone();
-        sub_object.id = format!("{}_sub_{}", object.id, predicate.to_string());
+        sub_object.id = format!("{}_sub_{}", object.id, predicate);
         sub_object
             .metadata
             .insert("comprehension_predicate".to_string(), predicate.to_string());

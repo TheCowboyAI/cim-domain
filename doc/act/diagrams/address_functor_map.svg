@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" width="820" height="360">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#444" />
+    </marker>
+    <style><![CDATA[
+      .node { fill: #eef2ff; stroke: #3730a3; stroke-width: 1.1; rx: 8; ry: 8; }
+      .label { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; font-size: 14px; fill: #1f2937; }
+      .small { font-size: 12px; fill: #374151; }
+      .edge { stroke: #444; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .title { font-size: 18px; font-weight: 600; }
+    ]]></style>
+  </defs>
+
+  <text x="20" y="28" class="label title">List.map over PhysicalAddress (functor laws)</text>
+
+  <rect x="60" y="100" width="200" height="56" class="node" />
+  <text x="80" y="132" class="label">PhysicalAddress</text>
+
+  <rect x="60" y="200" width="200" height="56" class="node" />
+  <text x="80" y="232" class="label">PhysicalAddress</text>
+
+  <rect x="380" y="100" width="170" height="56" class="node" />
+  <text x="400" y="132" class="label">String (country)</text>
+
+  <rect x="380" y="200" width="170" height="56" class="node" />
+  <text x="400" y="232" class="label">String (country)</text>
+
+  <path class="edge" d="M260,128 C300,128 340,128 380,128" />
+  <text x="290" y="118" class="small">g: country</text>
+
+  <path class="edge" d="M260,228 C300,228 340,228 380,228" />
+  <text x="290" y="218" class="small">g: country</text>
+
+  <text x="60" y="310" class="small">Laws: map(id)=id; map(g∘f)=map(g)∘map(f)</text>
+</svg>

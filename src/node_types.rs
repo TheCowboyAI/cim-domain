@@ -30,7 +30,7 @@ pub enum NodeType {
     Query,
 
     // Workflow types
-    /// Workflow activity or step
+    /// Workflow transition (graph edge)
     Activity,
     /// Decision point in a workflow
     Gateway,

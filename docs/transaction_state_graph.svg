@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="280" viewBox="0 0 760 280" role="img" aria-label="Transaction State Graph">
+  <style>
+    .s{fill:#f8fbff;stroke:#2b6cb0;stroke-width:2}
+    .t{font:700 14px sans-serif;fill:#2b6cb0}
+    .l{font:12px sans-serif;fill:#4a5568}
+    .a{stroke:#4a5568;stroke-width:2;marker-end:url(#m)}
+  </style>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4a5568" />
+    </marker>
+  </defs>
+
+  <!-- States -->
+  <rect class="s" x="30" y="110" width="120" height="60" rx="8"/>
+  <text class="t" x="55" y="145">Idle</text>
+
+  <rect class="s" x="200" y="110" width="120" height="60" rx="8"/>
+  <text class="t" x="220" y="145">Started</text>
+
+  <rect class="s" x="370" y="110" width="120" height="60" rx="8"/>
+  <text class="t" x="392" y="145">Applied</text>
+
+  <rect class="s" x="540" y="40" width="160" height="60" rx="8"/>
+  <text class="t" x="560" y="75">Committed</text>
+
+  <rect class="s" x="540" y="120" width="160" height="60" rx="8"/>
+  <text class="t" x="565" y="155">Cancelled</text>
+
+  <rect class="s" x="540" y="200" width="160" height="60" rx="8"/>
+  <text class="t" x="575" y="235">Failed</text>
+
+  <!-- Arrows -->
+  <line class="a" x1="150" y1="140" x2="200" y2="140" />
+  <text class="l" x="150" y="130">Start</text>
+
+  <line class="a" x1="320" y1="140" x2="370" y2="140" />
+  <text class="l" x="322" y="130">ValidateOk</text>
+
+  <line class="a" x1="320" y1="140" x2="540" y2="230" />
+  <text class="l" x="385" y="188">ValidateFail</text>
+
+  <line class="a" x1="490" y1="140" x2="540" y2="70" />
+  <text class="l" x="505" y="105">Commit</text>
+
+  <line class="a" x1="490" y1="140" x2="540" y2="150" />
+  <text class="l" x="505" y="135">Cancel</text>
+
+  <!-- Legend -->
+  <text class="l" x="30" y="30">Mealy State Machine: edges labeled by inputs (rules), output emits events.</text>
+</svg>

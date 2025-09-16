@@ -8,15 +8,161 @@
 
 use crate::entity::EntityId;
 use crate::markers::{CommandMarker, QueryMarker};
-use crate::Cid;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use std::fmt::Debug;
+use serde::{Deserialize, Serialize};
+use std::fmt::{self, Debug};
+use uuid::Uuid;
 
-// Re-export correlation types from abstraction layer
-pub use crate::subject_abstraction::{
-    CausationId, CorrelationId, IdType, MessageFactory, MessageIdentity,
-};
+/// Correlation ID for tracking related commands and events.
+///
+/// Math: correlation_id = (message_id | aggregate_transaction_id)
+/// - Single: non-transactional, single morphism; correlation == message_id
+/// - Transaction: transactional; correlation == aggregate transaction id
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "kind", content = "value")]
+pub enum CorrelationId {
+    /// Non-transactional, correlation equals message_id
+    Single(Uuid),
+    /// Transactional, correlation equals aggregate transaction id
+    Transaction(AggregateTransactionId),
+}
+
+// No default; correlation must be provided explicitly
+
+impl fmt::Display for CorrelationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CorrelationId::Single(id) => write!(f, "correlation:{}", id),
+            CorrelationId::Transaction(tx) => write!(f, "correlation:{}", tx.0),
+        }
+    }
+}
+
+/// Causation ID for tracking event causality
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct CausationId(pub Uuid);
+
+// No default; causation must be provided explicitly
+
+impl fmt::Display for CausationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "causation:{}", self.0)
+    }
+}
+
+/// Type alias for ID types
+pub type IdType = Uuid;
+
+/// Aggregate Transaction identifier (provides correlation IDs for transactions)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct AggregateTransactionId(pub Uuid);
+
+impl From<AggregateTransactionId> for CorrelationId {
+    fn from(tx: AggregateTransactionId) -> Self {
+        CorrelationId::Transaction(tx)
+    }
+}
+
+/// Factory for creating message identities
+pub struct MessageFactory;
+
+impl MessageFactory {
+    /// Create a non-transactional root identity (single morphism):
+    /// correlation == causation == message id
+    pub fn create_root_command(id: Uuid) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: CorrelationId::Single(id),
+            causation_id: CausationId(id),
+            message_id: id,
+        }
+    }
+
+    /// Create a transactional root identity (correlation comes from tx).
+    /// Root causation references its own message_id (no prior cause).
+    pub fn create_root_command_in_tx(id: Uuid, tx: AggregateTransactionId) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: tx.into(),
+            causation_id: CausationId(id),
+            message_id: id,
+        }
+    }
+
+    pub fn command_from_command(id: Uuid, parent: &MessageIdentity) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: parent.correlation_id,
+            causation_id: CausationId(parent.message_id),
+            message_id: id,
+        }
+    }
+
+    pub fn command_from_query(id: Uuid, parent: &MessageIdentity) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: parent.correlation_id,
+            causation_id: CausationId(parent.message_id),
+            message_id: id,
+        }
+    }
+
+    pub fn command_from_event(id: Uuid, parent: &MessageIdentity) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: parent.correlation_id,
+            causation_id: CausationId(parent.message_id),
+            message_id: id,
+        }
+    }
+
+    /// Create a non-transactional root identity (single morphism) for a query
+    pub fn create_root_query(id: Uuid) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: CorrelationId::Single(id),
+            causation_id: CausationId(id),
+            message_id: id,
+        }
+    }
+
+    /// Create a transactional root identity for a query
+    pub fn create_root_query_in_tx(id: Uuid, tx: AggregateTransactionId) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: tx.into(),
+            causation_id: CausationId(id),
+            message_id: id,
+        }
+    }
+
+    pub fn query_from_command(id: Uuid, parent: &MessageIdentity) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: parent.correlation_id,
+            causation_id: CausationId(parent.message_id),
+            message_id: id,
+        }
+    }
+
+    pub fn query_from_query(id: Uuid, parent: &MessageIdentity) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: parent.correlation_id,
+            causation_id: CausationId(parent.message_id),
+            message_id: id,
+        }
+    }
+
+    pub fn query_from_event(id: Uuid, parent: &MessageIdentity) -> MessageIdentity {
+        MessageIdentity {
+            correlation_id: parent.correlation_id,
+            causation_id: CausationId(parent.message_id),
+            message_id: id,
+        }
+    }
+}
+
+/// Message identity for tracking message metadata
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct MessageIdentity {
+    pub correlation_id: CorrelationId,
+    pub causation_id: CausationId,
+    pub message_id: Uuid,
+}
+
+// No default; identities must be constructed explicitly via factory.
 
 /// Status of command acceptance
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -145,7 +291,28 @@ pub type CommandId = EntityId<CommandMarker>;
 pub type QueryId = EntityId<QueryMarker>;
 
 /// Type alias for event IDs (using CID)
-pub type EventId = Cid;
+/// Event ID - UUID v7 for time-ordered event identification
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+pub struct EventId(pub Uuid);
+
+impl EventId {
+    /// Create a new EventId with UUID v7 (time-ordered)
+    pub fn new() -> Self {
+        Self(Uuid::now_v7())
+    }
+}
+
+impl Default for EventId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl fmt::Display for EventId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// A command with metadata for tracking and auditing
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -161,11 +328,23 @@ pub struct CommandEnvelope<C> {
 }
 
 impl<C: Command> CommandEnvelope<C> {
-    /// Create a new command envelope (user-initiated, starts new correlation)
+    /// Create a new command envelope within an aggregate transaction (correlation provided).
+    pub fn new_in_tx(command: C, issued_by: String, tx: AggregateTransactionId) -> Self {
+        let id = CommandId::new();
+        let identity = MessageFactory::create_root_command_in_tx(*id.as_uuid(), tx);
+
+        Self {
+            id,
+            command,
+            issued_by,
+            identity,
+        }
+    }
+
+    /// Create a non-transactional (single morphism) command envelope.
     pub fn new(command: C, issued_by: String) -> Self {
         let id = CommandId::new();
         let identity = MessageFactory::create_root_command(*id.as_uuid());
-
         Self {
             id,
             command,
@@ -238,11 +417,23 @@ pub struct QueryEnvelope<Q> {
 }
 
 impl<Q: Query> QueryEnvelope<Q> {
-    /// Create a new query envelope (user-initiated, starts new correlation)
+    /// Create a new query envelope within an aggregate transaction (correlation provided).
+    pub fn new_in_tx(query: Q, issued_by: String, tx: AggregateTransactionId) -> Self {
+        let id = QueryId::new();
+        let identity = MessageFactory::create_root_query_in_tx(*id.as_uuid(), tx);
+
+        Self {
+            id,
+            query,
+            issued_by,
+            identity,
+        }
+    }
+
+    /// Create a non-transactional (single morphism) query envelope.
     pub fn new(query: Q, issued_by: String) -> Self {
         let id = QueryId::new();
         let identity = MessageFactory::create_root_query(*id.as_uuid());
-
         Self {
             id,
             query,
@@ -401,21 +592,18 @@ mod tests {
             aggregate_id: Some(EntityId::new()),
         };
 
-        let envelope = CommandEnvelope::new(command.clone(), "user123".to_string());
+        let tx = AggregateTransactionId(Uuid::new_v4());
+        let envelope = CommandEnvelope::new_in_tx(command.clone(), "user123".to_string(), tx);
 
         // Verify basic properties
         assert_eq!(envelope.issued_by, "user123");
 
-        // Verify correlation and causation are self-reference (root message)
-        match &envelope.identity.correlation_id.0 {
-            IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
-            _ => panic!("Expected UUID correlation for command"),
+        // Root message: correlation from tx; causation from message id
+        match envelope.identity.correlation_id {
+            CorrelationId::Transaction(t) => assert_eq!(t.0, tx.0),
+            _ => panic!("expected transactional correlation"),
         }
-
-        match &envelope.identity.causation_id.0 {
-            IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
-            _ => panic!("Expected UUID causation for root command"),
-        }
+        assert_eq!(envelope.identity.causation_id.0, *envelope.id.as_uuid());
     }
 
     /// Test command caused by another command
@@ -435,7 +623,8 @@ mod tests {
             _name: "parent".to_string(),
             aggregate_id: None,
         };
-        let parent_envelope = CommandEnvelope::new(parent_command, "user".to_string());
+        let tx = AggregateTransactionId(Uuid::new_v4());
+        let parent_envelope = CommandEnvelope::new_in_tx(parent_command, "user".to_string(), tx);
 
         // Create child command
         let child_command = TestCommand {
@@ -449,11 +638,11 @@ mod tests {
             &parent_envelope.identity,
         );
 
-        // Verify causation points to parent
-        match &child_envelope.identity.causation_id.0 {
-            IdType::Uuid(uuid) => assert_eq!(uuid, parent_envelope.id.as_uuid()),
-            _ => panic!("Expected UUID causation"),
-        }
+        // Verify causation points to parent message id
+        assert_eq!(
+            child_envelope.identity.causation_id.0,
+            *parent_envelope.id.as_uuid()
+        );
 
         // Verify correlation is preserved from parent
         assert_eq!(
@@ -476,21 +665,18 @@ mod tests {
             _filter: "active".to_string(),
         };
 
-        let envelope = QueryEnvelope::new(query, "user456".to_string());
+        let tx = AggregateTransactionId(Uuid::new_v4());
+        let envelope = QueryEnvelope::new_in_tx(query, "user456".to_string(), tx);
 
         // Verify basic properties
         assert_eq!(envelope.issued_by, "user456");
 
-        // Verify correlation and causation are self-reference (root message)
-        match &envelope.identity.correlation_id.0 {
-            IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
-            _ => panic!("Expected UUID correlation for query"),
+        // Root query: correlation from tx; causation from message id
+        match envelope.identity.correlation_id {
+            CorrelationId::Transaction(t) => assert_eq!(t.0, tx.0),
+            _ => panic!("expected transactional correlation"),
         }
-
-        match &envelope.identity.causation_id.0 {
-            IdType::Uuid(uuid) => assert_eq!(uuid, envelope.id.as_uuid()),
-            _ => panic!("Expected UUID causation for root query"),
-        }
+        assert_eq!(envelope.identity.causation_id.0, *envelope.id.as_uuid());
     }
 
     /// Test query caused by event
@@ -504,15 +690,8 @@ mod tests {
     /// ```
     #[test]
     fn test_query_envelope_from_event() {
-        use crate::subject_abstraction::SerializableCid;
-
-        // Create a mock event identity
-        let event_cid = Cid::default();
-        let event_identity = MessageIdentity {
-            message_id: IdType::Cid(SerializableCid(event_cid)),
-            correlation_id: CorrelationId(IdType::Cid(SerializableCid(event_cid))),
-            causation_id: CausationId(IdType::Cid(SerializableCid(event_cid))),
-        };
+        // Create a mock event identity with UUIDs only (CIDs are payload-only)
+        let event_identity = MessageFactory::create_root_command(Uuid::new_v4());
 
         let query = TestQuery {
             _filter: "by-event".to_string(),
@@ -521,11 +700,8 @@ mod tests {
         let envelope =
             QueryEnvelope::from_event(query, "event-handler".to_string(), &event_identity);
 
-        // Verify causation points to event
-        match &envelope.identity.causation_id.0 {
-            IdType::Cid(cid) => assert_eq!(cid, &SerializableCid(event_cid)),
-            _ => panic!("Expected CID causation"),
-        }
+        // Verify causation points to event message_id
+        assert_eq!(envelope.identity.causation_id.0, event_identity.message_id);
 
         // Verify correlation is preserved
         assert_eq!(
@@ -538,7 +714,7 @@ mod tests {
     #[test]
     fn test_correlation_id_display() {
         let command_id = CommandId::new();
-        let correlation = CorrelationId(IdType::Uuid(*command_id.as_uuid()));
+        let correlation = CorrelationId::Single(*command_id.as_uuid());
         let display = format!("{correlation}");
         assert!(display.starts_with("correlation:"));
         assert!(display.contains(&command_id.as_uuid().to_string()));
@@ -548,7 +724,7 @@ mod tests {
     #[test]
     fn test_causation_id_display() {
         let query_id = QueryId::new();
-        let causation = CausationId(IdType::Uuid(*query_id.as_uuid()));
+        let causation = CausationId(*query_id.as_uuid());
         let display = format!("{causation}");
         assert!(display.starts_with("causation:"));
         assert!(display.contains(&query_id.as_uuid().to_string()));
@@ -558,7 +734,7 @@ mod tests {
     #[test]
     fn test_command_acknowledgment() {
         let command_id = CommandId::new();
-        let correlation_id = CorrelationId(IdType::Uuid(*command_id.as_uuid()));
+        let correlation_id = CorrelationId::Single(*command_id.as_uuid());
 
         let ack = CommandAcknowledgment {
             command_id,
@@ -591,8 +767,8 @@ mod tests {
     /// ```
     #[test]
     fn test_event_stream_subscription() {
-        let correlation_id = CorrelationId(IdType::Uuid(Uuid::new_v4()));
-        let causation_id = CausationId(IdType::Uuid(Uuid::new_v4()));
+        let correlation_id = CorrelationId::Single(Uuid::new_v4());
+        let causation_id = CausationId(Uuid::new_v4());
 
         // Test correlation filter
         let sub1 = EventStreamSubscription::for_correlation(
@@ -646,7 +822,8 @@ mod tests {
             aggregate_id: None,
         };
 
-        let envelope = CommandEnvelope::new(command, "user".to_string());
+        let tx = AggregateTransactionId(Uuid::new_v4());
+        let envelope = CommandEnvelope::new_in_tx(command, "user".to_string(), tx);
         let ack = handler.handle(envelope.clone());
 
         assert_eq!(ack.command_id, envelope.id);

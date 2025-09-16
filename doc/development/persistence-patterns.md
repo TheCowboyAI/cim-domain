@@ -2,7 +2,7 @@
 
 # Persistence Patterns in CIM Domain
 
-This guide covers the persistence patterns and best practices for using the CIM Domain persistence layer with NATS JetStream.
+Note: This crate is now a pure domain library. Persistence, routing, and transport have moved to downstream infrastructure crates. The content below is retained for historical context and will be updated or relocated.
 
 ## Overview
 

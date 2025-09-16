@@ -44,19 +44,74 @@
         ];
       in
       {
+        checks = {
+          fmt = pkgs.runCommand "fmt-check" {
+            nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [ rustfmt ]);
+          } ''
+            export HOME=$TMPDIR
+            cargo fmt --all -- --check
+            touch $out
+          '';
+
+          clippy = pkgs.runCommand "clippy-check" {
+            nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [ clippy ]);
+          } ''
+            export HOME=$TMPDIR
+            cargo clippy --workspace --all-features -- -D warnings
+            touch $out
+          '';
+
+          tests = pkgs.runCommand "unit-tests" {
+            nativeBuildInputs = nativeBuildInputs;
+          } ''
+            export HOME=$TMPDIR
+            cargo test --workspace --all-features --locked -- --nocapture
+            touch $out
+          '';
+
+          coverage = pkgs.runCommand "coverage-llvm-cov" {
+            nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [ cargo-llvm-cov llvmPackages.llvm ]);
+          } ''
+            export HOME=$TMPDIR
+            # llvm-cov does runtime instrumentation; ptrace not required (works in sandbox)
+            cargo llvm-cov --workspace --all-features --fail-under-lines 100 --no-report
+            touch $out
+          '';
+        };
+
+        apps = {
+          # On-demand strict ACT/DDD verification gate (does not run in default checks)
+          act-strict = {
+            type = "app";
+            program = pkgs.writeShellScriptBin "act-strict" ''
+              set -euo pipefail
+              export HOME=${TMPDIR:-/tmp}
+              echo "Running strict ACT/DDD tests (feature: act_strict)"
+              cargo test --features act_strict -- --nocapture
+            '';
+          };
+
+          # TDD run: execute all tests but do not fail the app exit code (useful during red phase)
+          tdd = {
+            type = "app";
+            program = pkgs.writeShellScriptBin "tdd" ''
+              export HOME=${TMPDIR:-/tmp}
+              echo "TDD mode: running tests and continuing even if failing..."
+              set +e
+              cargo test --workspace --all-features -- --nocapture
+              code=$?
+              echo "\n[TDD] cargo test exit code: $code (non-blocking)"
+              exit 0
+            '';
+          };
+        };
+
         packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = "cim-domain";
-          version = "0.3.0";
+          version = "0.7.5";
           src = ./.;
           
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-            outputHashes = {
-              "cim-component-0.3.0" = "sha256-LoKgeBSETa2zl3JAelIPu+sx8MgZehhVzNiixezreio=";
-              "cim-ipld-0.5.0" = "sha256-Yc2cczSARqegmei6V5+C8ChE/rg89fjHai3npc+PXwk=";
-              "cim-subject-0.3.0" = "sha256-MdX+uSkSGxfY/XDQolqUeczsPFVpHmjsP2CXLKQq+hw=";
-            };
-          };
+          cargoLock = { lockFile = ./Cargo.lock; };
 
           inherit buildInputs nativeBuildInputs;
 

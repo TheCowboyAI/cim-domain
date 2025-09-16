@@ -7,14 +7,7 @@ use thiserror::Error;
 /// Errors that can occur in domain operations
 #[derive(Debug, Clone, Error)]
 pub enum DomainError {
-    /// Component already exists
-    #[error("Component already exists: {0}")]
-    ComponentAlreadyExists(String),
-
-    /// Component not found
-    #[error("Component not found: {0}")]
-    ComponentNotFound(String),
-
+    // Component-related errors removed in pure-library scope
     /// Entity not found
     #[error("Entity not found: {entity_type} with id {id}")]
     EntityNotFound {
@@ -97,18 +90,9 @@ pub enum DomainError {
     #[error("Internal error: {0}")]
     InternalError(String),
 
-    /// Invalid subject format
-    #[error("Invalid subject: {0}")]
-    InvalidSubject(String),
+    // Subject parsing errors removed (transport concern)
 
-    /// Component synchronization error
-    #[error("Component error: {0}")]
-    ComponentError(String),
-
-    /// NATS communication error
-    #[error("NATS error: {0}")]
-    NatsError(String),
-
+    // Integration errors removed in pure-library scope
     /// Not found error (generic)
     #[error("Not found: {0}")]
     NotFound(String),
@@ -141,9 +125,7 @@ impl DomainError {
     pub fn is_not_found(&self) -> bool {
         matches!(
             self,
-            DomainError::EntityNotFound { .. }
-                | DomainError::ComponentNotFound(_)
-                | DomainError::AggregateNotFound(_)
+            DomainError::EntityNotFound { .. } | DomainError::AggregateNotFound(_)
         )
     }
 
@@ -177,13 +159,7 @@ mod tests {
     /// ```
     #[test]
     fn test_error_display_messages() {
-        // Test ComponentAlreadyExists
-        let err = DomainError::ComponentAlreadyExists("TestComponent".to_string());
-        assert_eq!(err.to_string(), "Component already exists: TestComponent");
-
-        // Test ComponentNotFound
-        let err = DomainError::ComponentNotFound("MissingComponent".to_string());
-        assert_eq!(err.to_string(), "Component not found: MissingComponent");
+        // Component-specific errors removed
 
         // Test EntityNotFound
         let err = DomainError::EntityNotFound {
@@ -283,9 +259,7 @@ mod tests {
         let err = DomainError::InternalError("Unexpected state".to_string());
         assert_eq!(err.to_string(), "Internal error: Unexpected state");
 
-        // Test InvalidSubject
-        let err = DomainError::InvalidSubject("missing.parts".to_string());
-        assert_eq!(err.to_string(), "Invalid subject: missing.parts");
+        // Subject parsing errors are transport concerns
     }
 
     /// Test error cloning
@@ -325,7 +299,6 @@ mod tests {
         }
         .is_not_found());
 
-        assert!(DomainError::ComponentNotFound("Test".to_string()).is_not_found());
         assert!(DomainError::AggregateNotFound("Test".to_string()).is_not_found());
 
         // Should return false for other errors
@@ -405,7 +378,6 @@ mod tests {
     #[test]
     fn test_error_pattern_matching() {
         let errors = vec![
-            DomainError::ComponentAlreadyExists("Test".to_string()),
             DomainError::EntityNotFound {
                 entity_type: "User".to_string(),
                 id: "123".to_string(),
@@ -416,20 +388,17 @@ mod tests {
             },
         ];
 
-        let mut component_exists_count = 0;
         let mut entity_not_found_count = 0;
         let mut concurrency_count = 0;
 
         for error in errors {
             match error {
-                DomainError::ComponentAlreadyExists(_) => component_exists_count += 1,
                 DomainError::EntityNotFound { .. } => entity_not_found_count += 1,
                 DomainError::ConcurrencyConflict { .. } => concurrency_count += 1,
                 _ => {}
             }
         }
 
-        assert_eq!(component_exists_count, 1);
         assert_eq!(entity_not_found_count, 1);
         assert_eq!(concurrency_count, 1);
     }
@@ -478,13 +447,9 @@ mod tests {
     /// Test untested error types
     #[test]
     fn test_untested_error_types() {
-        // Test ComponentError
-        let err = DomainError::ComponentError("Component sync failed".to_string());
-        assert_eq!(err.to_string(), "Component error: Component sync failed");
+        // ComponentError removed in pure-library scope
 
-        // Test NatsError
-        let err = DomainError::NatsError("Connection lost".to_string());
-        assert_eq!(err.to_string(), "NATS error: Connection lost");
+        // NatsError removed in pure-library scope
 
         // Test NotFound (generic)
         let err = DomainError::NotFound("Resource XYZ".to_string());
@@ -535,8 +500,7 @@ mod tests {
         };
         assert!(entity_not_found.is_not_found());
 
-        let component_not_found = DomainError::ComponentNotFound("Comp".to_string());
-        assert!(component_not_found.is_not_found());
+        // ComponentNotFound removed
 
         let aggregate_not_found = DomainError::AggregateNotFound("Agg".to_string());
         assert!(aggregate_not_found.is_not_found());
@@ -546,8 +510,7 @@ mod tests {
     #[test]
     fn test_all_errors_clone() {
         let errors: Vec<DomainError> = vec![
-            DomainError::ComponentAlreadyExists("test".to_string()),
-            DomainError::ComponentNotFound("test".to_string()),
+            // Component errors removed
             DomainError::EntityNotFound {
                 entity_type: "Type".to_string(),
                 id: "123".to_string(),
@@ -578,9 +541,6 @@ mod tests {
             },
             DomainError::Generic("test".to_string()),
             DomainError::InternalError("test".to_string()),
-            DomainError::InvalidSubject("test".to_string()),
-            DomainError::ComponentError("test".to_string()),
-            DomainError::NatsError("test".to_string()),
             DomainError::NotFound("test".to_string()),
             DomainError::AlreadyExists("test".to_string()),
             DomainError::NotImplemented("test".to_string()),

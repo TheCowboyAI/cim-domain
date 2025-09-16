@@ -8,7 +8,7 @@
 [![Test Coverage](https://img.shields.io/codecov/c/github/thecowboyai/cim-domain)](https://codecov.io/gh/thecowboyai/cim-domain)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Core Domain-Driven Design (DDD) components and traits for the Composable Information Machine (CIM), featuring a complete persistence layer with NATS JetStream integration.
+Core Domain-Driven Design (DDD) components and traits for the Composable Information Machine (CIM). This crate is a pure domain library: no persistence, routing, or external I/O.
 
 ## Critical Context
 
@@ -18,12 +18,10 @@ Core Domain-Driven Design (DDD) components and traits for the Composable Informa
 
 The `cim-domain` crate provides the fundamental building blocks for implementing Domain-Driven Design patterns in any CIM implementation:
 
-- **Event-driven architecture** foundation with CQRS implementation
+- **Event-driven architecture** foundation with CQRS traits
 - **Domain-Driven Design (DDD) primitives** (Aggregates, Commands, Events, Queries)
-- **Category Theory-based** inter-domain communication
-- **Event sourcing** with NATS JetStream integration
-- **Cross-domain integration** patterns
-- **Production-ready infrastructure** for building domains
+- **Category Theory-informed** interfaces for inter-domain concepts
+- **Pure library** scope suitable for composing domain models
 
 ## Core Components
 
@@ -42,19 +40,14 @@ The `cim-domain` crate provides the fundamental building blocks for implementing
 
 - Event-driven architecture with CQRS pattern
 - Content-addressed events with CID chains
-- Async event streams using NATS JetStream
+- Interfaces for event streams (infrastructure provided downstream)
 - State machine abstractions (Moore and Mealy machines)
 - Component system for extensible domain objects
 - Full test coverage with examples
 
-### Persistence Layer
+### Infrastructure Boundary
 
-- **Simple Repository**: Basic CRUD operations for aggregates
-- **NATS KV Repository**: Advanced storage with TTL and versioning
-- **Read Model Store**: Optimized storage for CQRS read models with caching
-- **Query Support**: Type-safe query building with filters, sorting, and pagination
-- **Event Sourcing**: Full event sourcing support (advanced modules)
-- **Metrics Collection**: Built-in performance monitoring and instrumentation
+This crate does not include persistence, routing, or transport. Implement these concerns in downstream crates (e.g., storage, messaging, and subject routing live outside this library).
 
 ## Core Entities
 
@@ -83,7 +76,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cim-domain = "0.5.0"
+cim-domain = "0.7.5"
 ```
 
 ## Usage
@@ -134,64 +127,10 @@ enum UserCommand {
 impl Command for UserCommand {}
 ```
 
-### Persistence Example
+### Infrastructure Example
 
-```rust
-use cim_domain::{
-    EntityId,
-    DomainEntity,
-    persistence::*,
-};
-
-// Define your aggregate
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Product {
-    id: EntityId<ProductMarker>,
-    name: String,
-    price: f64,
-}
-
-impl DomainEntity for Product {
-    type IdType = ProductMarker;
-    
-    fn id(&self) -> EntityId<Self::IdType> {
-        self.id
-    }
-}
-
-// Create repository
-let repo = NatsKvRepositoryBuilder::new()
-    .client(client)
-    .bucket_name("products")
-    .aggregate_type("Product")
-    .ttl_seconds(3600)  // 1 hour TTL
-    .build()
-    .await?;
-
-// Save aggregate
-let product = Product::new("Laptop", 999.99);
-let metadata = repo.save(&product).await?;
-
-// Load aggregate
-let loaded: Option<Product> = repo.load(&product.id()).await?;
-
-// Query with filters
-let query = QueryBuilder::new()
-    .filter("category", json!("electronics"))
-    .sort_by("price", SortDirection::Ascending)
-    .limit(10)
-    .build();
-
-// Add metrics instrumentation
-use cim_domain::persistence::instrumented_repository::InstrumentedRepository;
-
-let instrumented_repo = InstrumentedRepository::new(repo);
-instrumented_repo.save(&product).await?;
-
-// Get metrics summary
-let summary = instrumented_repo.metrics().summary().await;
-println!("Save operations: {}", summary.counters.get("repository.save.count").unwrap_or(&0));
-```
+Persistence, transport, and routing are intentionally out of scope here.
+Compose them in your infrastructure crate and keep domain logic pure.
 
 ## Project Structure
 
@@ -208,20 +147,49 @@ cim-domain/
 │   ├── category/           # Category theory
 │   ├── domain/             # Domain utilities
 │   ├── integration/        # Cross-domain
-│   ├── persistence/        # Persistence layer
-│   │   ├── simple_repository.rs
-│   │   ├── nats_kv_repository.rs
-│   │   ├── read_model_store_v2.rs
-│   │   └── query_support.rs
 │   └── state_machine.rs    # State machines
 ├── crates/
-│   ├── cim-component/      # ECS component system
-│   ├── cim-ipld/           # Content addressing
-│   └── cim-subject/        # NATS subject algebra
+│   └── (infrastructure crates live outside this repo)
 ├── tests/                  # Integration tests
 ├── benches/                # Performance benchmarks
 └── examples/               # Usage examples
 ```
+
+## Dialog DAG Tools
+
+This repository maintains a `dialog-dag.json` that captures conversation history as a content-addressed DAG.
+To keep the core crate pure, the maintenance utilities live in a separate tools crate:
+
+- Location: `tools/dialog_dag/`
+- Purpose: append and merge dialog events, and reindex CIDs using the same content-addressing approach used across CIM (Blake3 → Multihash 0x1e → CIDv1 codec 0x55).
+
+Quickstart:
+
+```
+# Recompute proper CIDv1 values for all events and fix parent links
+cargo run -p dialog_dag_tools --bin reindex_dialog_cids -- dialog-dag.json
+
+# Append a new event (what_i_did is semicolon-separated)
+cargo run -p dialog_dag_tools --bin log_dialog_event -- \
+  dialog-dag.json assistant \
+  "Short summary of my message" \
+  "What I understood" \
+  "action1;action2"
+
+# Merge a continuation file into the main DAG (de-dupes by cid)
+cargo run -p dialog_dag_tools --bin merge_dialog_dag -- \
+  dialog-dag.json continuation.json
+```
+
+File shape (simplified):
+
+- `conversation_id`: UUID for the overall dialog
+- `events[]`: array of nodes
+  - `cid`: CIDv1 (base32) computed from `content`
+  - `content`: `{ event_id, type, user_said, i_understood, what_i_did[], parent_cid, timestamp }`
+- `total_events`: count of events
+
+Note: These tools are optional and live outside the library boundary; they perform local filesystem updates only.
 
 ## Development
 
@@ -234,20 +202,14 @@ cargo build
 ### Testing
 
 ```bash
-# Run all tests (requires NATS running on localhost:4222)
+# Run all tests (hermetic; no external services)
 cargo test
 
 # Run with verbose output
 cargo test -- --nocapture
 
-# Start NATS with JetStream for tests
-docker run -d -p 4222:4222 nats:latest -js
-
 # Run specific test suites
-cargo test --lib                           # 396 unit tests
-cargo test --test infrastructure_tests     # 19 integration tests
-cargo test --test jetstream_event_store_tests  # 6 JetStream tests
-cargo test --test persistence_tests        # 7 persistence tests
+cargo test --lib
 
 # Run benchmarks
 cargo bench
@@ -256,71 +218,33 @@ cargo bench
 cargo test -- --format json > test-results.json
 ```
 
-#### NATS Test Requirements
-
-All persistence and infrastructure tests require NATS with JetStream to be running on `localhost:4222`. The tests will:
-- Create temporary buckets/streams for isolation
-- Clean up resources after completion
-- Test TTL expiration, versioning, and event streaming
-
 ### Running Examples
 
 ```bash
-# Basic CQRS pattern demo
-cargo run --example cqrs_pattern_demo
-
-# State machine demo
-cargo run --example state_machine_demo
-
-# Event sourcing demo
-cargo run --example full_event_sourcing_demo
-
 # Simple example demonstrating core functionality
 cargo run --example simple_example
 
-# Persistence layer example
-cargo run --example persistence_example_v2
-
-# Advanced persistence with TTL
-cargo run --example advanced_persistence_example
-
-# Persistence metrics collection and monitoring
-cargo run --example persistence_metrics_demo
+# Query handler example
+cargo run --example query_handler_example
 ```
 
 ## Current Status
 
-**Library Status**: ✅ Complete and functional
-- **All tests passing** (100% pass rate - 437 total tests)
+**Library Status**: ✅ Complete and functional (pure library)
+- **All tests passing**
 - **Zero compilation warnings**
-- **Production ready** with full persistence layer
+- **Production ready** for composing domains
 
 **Test Coverage**: ✅ Comprehensive
-- **396** library unit tests
-- **19** infrastructure integration tests  
-- **6** JetStream event store tests
-- **7** persistence integration tests (including NATS)
-- **9** additional integration tests
-- All NATS-dependent tests enabled and passing
+- Hermetic unit and integration tests (no external services)
 
-**Persistence Layer**: ✅ Complete
-- Simple repository for basic CRUD operations
-- NATS KV repository with TTL and versioning
-- Read model store with caching
-- Query support with filters and pagination
-- Integration tests with real NATS server
-- Performance benchmarks included
+Infrastructure concerns (persistence, routing, transport) are implemented downstream.
 
-**Infrastructure**: ✅ Complete
-- Event Store integration with NATS JetStream
-- Command/Query handlers with proper CQRS separation
-- Cross-domain integration patterns
-- Event replay and snapshot capabilities
+Infrastructure belongs in separate crates; this library provides domain constructs only.
 
 **CI/CD**: ✅ Complete
 - GitHub Actions workflow for continuous integration
-- Automated testing with NATS services
-- Code coverage reporting
+- Test coverage reporting
 - Clippy and formatting checks
 - Test results capture for dashboard reporting
 
@@ -331,6 +255,9 @@ cargo run --example persistence_metrics_demo
 - [Component Architecture](doc/design/component-architecture.md)
 - [Domain Design Principles](doc/design/domain-design-principles.md)
 - [Test Infrastructure Guide](doc/testing/test-infrastructure.md)
+ - [Saga Principle: Aggregate-of-Aggregates](doc/architecture/sagas.md)
+ - [Transaction State Machine (Mealy)](doc/architecture/transaction_state_machine.md)
+ - [Serialization & JSON Schemas (Primitives)](docs/SERIALIZATION_AND_SCHEMAS.md)
 
 ## Performance Targets
 
@@ -360,9 +287,7 @@ This is a foundational crate for CIM implementations. All changes must:
 ## Dependencies
 
 ### Internal (within cim-domain workspace)
-- `cim-component` - ECS component system
-- `cim-ipld` - Content addressing with CIDs
-- `cim-subject` - NATS subject algebra
+// Infrastructure crates are not part of this library
 
 ### External
 - `tokio` - Async runtime
@@ -381,10 +306,16 @@ This project is licensed under the MIT License:
 ## Working with this Module
 
 When making changes:
-1. **Always run tests first** - `cargo test`
+1. **Run tests** - `cargo test`
 2. **Check benchmarks** - `cargo bench`
 3. **Update docs** - `cargo doc --open`
-4. **Run examples** - `cargo run --example <name>`
-5. **Verify downstream** - Test dependent domains
+4. **Run examples** - `cargo run --example <name>` (pure examples only)
+5. **Verify downstream** - Test dependent infrastructure crates
 
 This module is the foundation of CIM - treat it with appropriate care and rigor.
+### Canonical Value Objects (Invariants)
+
+- `PhysicalAddress`: street, locality, region, optional subregion, country, postal code — treated as a single invariant value.
+- `Temperature`: numeric value with a `TemperatureScale` (C/F/K). A number without a scale is not meaningful in domain terms.
+
+These are immutable `ValueObject`s updated by replacement (e.g., `.with_locality(..)` returns a new value). See unit tests and BDD scenarios in `doc/qa/features/value_objects.feature`.

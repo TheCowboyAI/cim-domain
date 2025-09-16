@@ -1,7 +1,7 @@
 // Copyright 2025 Cowboy AI, LLC.
 
 //! Entity as MONAD - The bridge between DDD and ECS
-//! 
+//!
 //! This module implements Entity as a proper monad M where M(A) wraps type A
 //! with identity and components. This is the fundamental abstraction that
 //! bridges Domain-Driven Design (DDD) with Entity-Component-System (ECS).
@@ -19,14 +19,14 @@
 //! 2. Right Identity: `m >>= pure ≡ m`
 //! 3. Associativity: `(m >>= f) >>= g ≡ m >>= (λx. f x >>= g)`
 
+use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use std::any::Any;
 
 use crate::entity::EntityId;
 
 /// Entity is the MONAD M where M(A) wraps type A with identity and components
-/// 
+///
 /// This is our fundamental abstraction that bridges DDD concepts with ECS patterns.
 /// Every domain object is wrapped in this monad, providing:
 /// - Type-safe identity through phantom types
@@ -51,14 +51,14 @@ pub struct Components<A> {
 
 impl<A: 'static + Send + Sync> Entity<A> {
     /// return/pure: Lift a value into the monad
-    /// 
+    ///
     /// This is the monadic return operation that wraps a plain value
     /// into the Entity monad context.
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// use cim_domain::fp_monad::Entity;
-    /// 
+    ///
     /// let value = 42;
     /// let entity = Entity::pure(value);
     /// ```
@@ -71,7 +71,7 @@ impl<A: 'static + Send + Sync> Entity<A> {
             },
         }
     }
-    
+
     /// Create an entity with a specific ID
     pub fn with_id(id: EntityId<A>, value: A) -> Entity<A> {
         Entity {
@@ -82,16 +82,16 @@ impl<A: 'static + Send + Sync> Entity<A> {
             },
         }
     }
-    
+
     /// bind/flatMap: M(A) -> (A -> M(B)) -> M(B)
-    /// 
+    ///
     /// The monadic bind operation that allows chaining computations
     /// that return Entity values.
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// use cim_domain::fp_monad::Entity;
-    /// 
+    ///
     /// let entity = Entity::pure(10);
     /// let result = entity.bind(|x| Entity::pure(x * 2));
     /// ```
@@ -101,22 +101,24 @@ impl<A: 'static + Send + Sync> Entity<A> {
         A: Clone,
         B: Send + Sync + 'static,
     {
-        let value = self.components.data
+        let value = self
+            .components
+            .data
             .downcast_ref::<A>()
             .expect("Type mismatch in Entity monad")
             .clone();
         f(value)
     }
-    
+
     /// map: Functor operation
-    /// 
+    ///
     /// Transform the value inside the monad without changing the monadic context.
     /// This is derived from bind and pure.
-    /// 
+    ///
     /// # Example
     /// ```rust
     /// use cim_domain::fp_monad::Entity;
-    /// 
+    ///
     /// let entity = Entity::pure(5);
     /// let doubled = entity.map(|x| x * 2);
     /// ```
@@ -128,16 +130,17 @@ impl<A: 'static + Send + Sync> Entity<A> {
     {
         self.bind(|a| Entity::pure(f(a)))
     }
-    
+
     /// Extract the value (use carefully at module boundaries)
-    /// 
+    ///
     /// BREAKING FP: Entity extraction at module boundaries
     /// REASON: Need to bridge monadic and non-monadic code at system boundaries
     pub fn extract(self) -> A
     where
         A: Clone,
     {
-        self.components.data
+        self.components
+            .data
             .downcast_ref::<A>()
             .expect("Type mismatch in Entity extraction")
             .clone()
@@ -145,7 +148,7 @@ impl<A: 'static + Send + Sync> Entity<A> {
 }
 
 /// Helper to run an Entity computation and extract the result
-/// 
+///
 /// BREAKING FP: Entity extraction at module boundaries
 /// REASON: Need to bridge monadic and non-monadic code at system boundaries
 pub fn run_entity<A: Clone + Send + Sync + 'static>(entity: Entity<A>) -> A {
@@ -153,7 +156,7 @@ pub fn run_entity<A: Clone + Send + Sync + 'static>(entity: Entity<A>) -> A {
 }
 
 /// Kleisli arrow: A → Entity<B>
-/// 
+///
 /// Functions that return monadic values, used for composing
 /// monadic computations.
 pub trait KleisliArrow<A, B>: Fn(A) -> Entity<B>
@@ -178,50 +181,50 @@ mod tests {
         // Left Identity: pure a >>= f ≡ f a
         let a = 42;
         let f = |x: i32| Entity::pure(x * 2);
-        
+
         let left = Entity::pure(a).bind(f);
         let right = f(a);
-        
+
         assert_eq!(left.extract(), right.extract());
     }
-    
+
     #[test]
     fn test_monad_right_identity() {
         // Right Identity: m >>= pure ≡ m
         let m = Entity::pure(42);
         let m_value = m.clone().extract();
-        
+
         let result = m.bind(Entity::pure);
-        
+
         assert_eq!(result.extract(), m_value);
     }
-    
+
     #[test]
     fn test_monad_associativity() {
         // Associativity: (m >>= f) >>= g ≡ m >>= (λx. f x >>= g)
         let m = Entity::pure(10);
         let f = |x: i32| Entity::pure(x * 2);
         let g = |x: i32| Entity::pure(x + 5);
-        
+
         let left = m.clone().bind(f).bind(g);
         let right = m.bind(|x| f(x).bind(g));
-        
+
         assert_eq!(left.extract(), right.extract());
     }
-    
+
     #[test]
     fn test_functor_map() {
         let entity = Entity::pure(10);
         let doubled = entity.map(|x| x * 2);
-        
+
         assert_eq!(doubled.extract(), 20);
     }
-    
+
     #[test]
     fn test_entity_with_id() {
         let id = EntityId::new();
         let entity = Entity::with_id(id, "test");
-        
+
         assert_eq!(entity.id, id);
         assert_eq!(entity.extract(), "test");
     }

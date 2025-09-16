@@ -13,43 +13,62 @@
 // NodeListProjection is now in cim-domain-graph
 // WorkflowStatusProjection is now in cim-domain-workflow
 
-use crate::domain_events::DomainEventEnum;
+use crate::DomainEvent;
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 
-/// Trait for all projections
+/// Trait for all projections (read models)
+///
+/// Projections are domain concepts that define how to build
+/// optimized read models from events. The actual storage and
+/// checkpointing are infrastructure concerns.
 #[async_trait]
 pub trait Projection: Send + Sync {
     /// Handle a domain event to update the projection
-    async fn handle_event(&mut self, event: DomainEventEnum) -> Result<(), String>;
-
-    /// Get the current checkpoint (last processed event sequence)
-    async fn get_checkpoint(&self) -> Option<EventSequence>;
-
-    /// Save the checkpoint after processing events
-    async fn save_checkpoint(&mut self, sequence: EventSequence) -> Result<(), String>;
+    async fn handle_event(&mut self, event: &dyn DomainEvent) -> Result<(), String>;
 
     /// Clear the projection (for rebuilding)
     async fn clear(&mut self) -> Result<(), String>;
 }
 
-/// Event sequence number for checkpointing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct EventSequence(pub u64);
+// Checkpointing and event sequencing removed - infrastructure concerns
+// These belong in the infrastructure layer that implements projections
 
-impl EventSequence {
-    /// Create a new event sequence with the given value
-    pub fn new(seq: u64) -> Self {
-        Self(seq)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::DomainEvent;
+    use uuid::Uuid;
+
+    #[derive(Debug, Default)]
+    struct CounterProjection(usize);
+
+    #[async_trait]
+    impl Projection for CounterProjection {
+        async fn handle_event(&mut self, _event: &dyn DomainEvent) -> Result<(), String> {
+            self.0 += 1;
+            Ok(())
+        }
+        async fn clear(&mut self) -> Result<(), String> {
+            self.0 = 0;
+            Ok(())
+        }
     }
 
-    /// Increment the sequence number by one
-    pub fn increment(&mut self) {
-        self.0 += 1;
+    #[derive(Debug)]
+    struct E(Uuid);
+    impl DomainEvent for E {
+        fn aggregate_id(&self) -> Uuid { self.0 }
+        fn event_type(&self) -> &'static str { "E" }
     }
 
-    /// Get the current sequence value
-    pub fn value(&self) -> u64 {
-        self.0
+    #[tokio::test]
+    async fn projection_handles_and_clears() {
+        let mut p = CounterProjection::default();
+        let event = E(Uuid::new_v4());
+        p.handle_event(&event).await.unwrap();
+        p.handle_event(&event).await.unwrap();
+        assert_eq!(p.0, 2);
+        p.clear().await.unwrap();
+        assert_eq!(p.0, 0);
     }
 }

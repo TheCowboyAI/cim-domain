@@ -13,8 +13,10 @@ use crate::errors::DomainError;
 use crate::events::DomainEvent;
 
 // Type aliases for complex function types
-type EventTransformer<S, T> = Box<dyn Fn(S, Vec<Box<dyn DomainEvent>>) -> Result<T, DomainError> + Send + Sync>;
-type SingleEventTransformer<S, T> = Box<dyn Fn(S, Box<dyn DomainEvent>) -> Result<T, DomainError> + Send + Sync>;
+type EventTransformer<S, T> =
+    Box<dyn Fn(S, Vec<Box<dyn DomainEvent>>) -> Result<T, DomainError> + Send + Sync>;
+type SingleEventTransformer<S, T> =
+    Box<dyn Fn(S, Box<dyn DomainEvent>) -> Result<T, DomainError> + Send + Sync>;
 type ValueExtractor<S, T> = Box<dyn Fn(&S) -> Result<T, DomainError> + Send + Sync>;
 
 /// A morphism between domain objects
@@ -148,10 +150,7 @@ impl<S, T> CommandMorphism<S, T> {
     /// # Arguments
     /// * `command_metadata` - Metadata about the command
     /// * `transformer` - Function that transforms state based on events
-    pub fn new(
-        command_metadata: CommandMetadata,
-        transformer: EventTransformer<S, T>,
-    ) -> Self {
+    pub fn new(command_metadata: CommandMetadata, transformer: EventTransformer<S, T>) -> Self {
         Self {
             command_metadata,
             transformer,
@@ -214,10 +213,7 @@ impl<S, T> EventMorphism<S, T> {
     /// # Arguments
     /// * `event_type` - The type of event this morphism handles
     /// * `transformer` - Function that transforms state based on the event
-    pub fn new(
-        event_type: String,
-        transformer: SingleEventTransformer<S, T>,
-    ) -> Self {
+    pub fn new(event_type: String, transformer: SingleEventTransformer<S, T>) -> Self {
         Self {
             event_type,
             _transformer: transformer,
@@ -259,10 +255,7 @@ impl<S, T> QueryMorphism<S, T> {
     /// # Arguments
     /// * `query_type` - The type of query this morphism handles
     /// * `extractor` - Function that extracts data from the source state
-    pub fn new(
-        query_type: String,
-        extractor: ValueExtractor<S, T>,
-    ) -> Self {
+    pub fn new(query_type: String, extractor: ValueExtractor<S, T>) -> Self {
         Self {
             query_type,
             extractor,

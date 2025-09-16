@@ -1,0 +1,16 @@
+features:
+  - id: transaction_state
+    kind: bdd
+    file: doc/qa/features/transaction_state.feature
+    tests:
+      - examples/domain_examples/tests/bdd_transaction_state.rs
+    tdd:
+      - src/transaction_state.rs
+
+  - id: act_category
+    kind: doc
+    file: doc/act/string_diagrams.md
+    tests:
+      - tests/act_category_graph_tests.rs
+    tdd:
+      - tests/act_category_graph_tests.rs

@@ -1,0 +1,169 @@
+{
+  "ul_projection": [
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "EntityId<T>",
+      "object_id": "EntityId",
+      "type": "ValueObject",
+      "ul_concept_id": "entityid_t_"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema",
+        "cognitive_development"
+      ],
+      "name": "DomainEventEnvelope",
+      "object_id": "DomainEventEnvelope",
+      "type": "Entity",
+      "ul_concept_id": "domaineventenvelope"
+    },
+    {
+      "core_concepts": [],
+      "name": "AggregateRoot",
+      "object_id": "AggregateRoot",
+      "type": "Trait",
+      "ul_concept_id": "aggregateroot"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "language"
+      ],
+      "name": "DomainEvent",
+      "object_id": "DomainEvent",
+      "type": "Event",
+      "ul_concept_id": "domainevent"
+    },
+    {
+      "core_concepts": [
+        "attention",
+        "decision_making",
+        "language"
+      ],
+      "name": "Command",
+      "object_id": "Command",
+      "type": "Command",
+      "ul_concept_id": "command"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "problem_solving",
+        "language",
+        "metacognition"
+      ],
+      "name": "StateMachine",
+      "object_id": "StateMachine",
+      "type": "Concept",
+      "ul_concept_id": "statemachine"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema",
+        "language"
+      ],
+      "name": "Projection",
+      "object_id": "Projection",
+      "type": "Projection",
+      "ul_concept_id": "projection"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema",
+        "language"
+      ],
+      "name": "ReadModel",
+      "object_id": "ReadModel",
+      "type": "ReadModel",
+      "ul_concept_id": "readmodel"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "QueryResponse",
+      "object_id": "QueryResponse",
+      "type": "ValueObject",
+      "ul_concept_id": "queryresponse"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language",
+        "metacognition"
+      ],
+      "name": "EventStream",
+      "object_id": "EventStream",
+      "type": "Concept",
+      "ul_concept_id": "eventstream"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "problem_solving",
+        "decision_making"
+      ],
+      "name": "SagaAggregate",
+      "object_id": "SagaAggregate",
+      "type": "Aggregate",
+      "ul_concept_id": "sagaaggregate"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language"
+      ],
+      "name": "BoundedContext",
+      "object_id": "BoundedContext",
+      "type": "Context",
+      "ul_concept_id": "boundedcontext"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language",
+        "metacognition"
+      ],
+      "name": "Concept",
+      "object_id": "Concept",
+      "type": "Concept",
+      "ul_concept_id": "concept"
+    },
+    {
+      "core_concepts": [],
+      "name": "ConceptSpace",
+      "object_id": "ConceptSpace",
+      "type": "ConceptGraph",
+      "ul_concept_id": "conceptspace"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language",
+        "metacognition"
+      ],
+      "name": "ValueObject",
+      "object_id": "ValueObject",
+      "type": "Concept",
+      "ul_concept_id": "valueobject"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema",
+        "cognitive_development"
+      ],
+      "name": "DomainEntity",
+      "object_id": "DomainEntity",
+      "type": "Entity",
+      "ul_concept_id": "domainentity"
+    }
+  ]
+}

@@ -5,7 +5,7 @@
 //! Command handlers process commands, validate business rules, and emit events.
 //! They return only acknowledgments, not data - use queries for data retrieval.
 
-use crate::{cqrs::CorrelationId, domain_events::DomainEventEnum, AggregateRoot};
+use crate::{cqrs::CorrelationId, AggregateRoot, DomainEvent};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -14,7 +14,7 @@ pub trait EventPublisher: Send + Sync {
     /// Publish domain events
     fn publish_events(
         &self,
-        events: Vec<DomainEventEnum>,
+        events: Vec<Box<dyn DomainEvent>>,
         correlation_id: CorrelationId,
     ) -> Result<(), String>;
 }
@@ -22,7 +22,7 @@ pub trait EventPublisher: Send + Sync {
 /// Mock event publisher for testing
 #[derive(Clone)]
 pub struct MockEventPublisher {
-    published_events: Arc<RwLock<Vec<(DomainEventEnum, CorrelationId)>>>,
+    published_events: Arc<RwLock<Vec<(String, CorrelationId)>>>,
 }
 
 impl Default for MockEventPublisher {
@@ -40,8 +40,14 @@ impl MockEventPublisher {
     }
 
     /// Get all published events for verification in tests
-    pub fn get_published_events(&self) -> Vec<(DomainEventEnum, CorrelationId)> {
-        self.published_events.read().unwrap().clone()
+    pub fn get_published_events(&self) -> Vec<(String, CorrelationId)> {
+        // In core domain we only track event type names here to avoid cloning trait objects.
+        self.published_events
+            .read()
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect()
     }
 
     /// Get a reference to self as Any for downcasting
@@ -53,12 +59,12 @@ impl MockEventPublisher {
 impl EventPublisher for MockEventPublisher {
     fn publish_events(
         &self,
-        events: Vec<DomainEventEnum>,
+        events: Vec<Box<dyn DomainEvent>>,
         correlation_id: CorrelationId,
     ) -> Result<(), String> {
         let mut published = self.published_events.write().unwrap();
-        for event in events {
-            published.push((event, correlation_id.clone()));
+        for event in events.into_iter() {
+            published.push((event.event_type().to_string(), correlation_id));
         }
         Ok(())
     }
@@ -122,7 +128,60 @@ where
 
 #[cfg(test)]
 mod tests {
-    // Location command handler tests have been moved to cim-domain-location
+    use super::*;
+    use crate::DomainEvent;
+    use uuid::Uuid;
 
-    // Workflow command handler tests have been moved to cim-domain-workflow
+    #[derive(Debug)]
+    struct TestEvent(Uuid);
+    impl DomainEvent for TestEvent {
+        fn aggregate_id(&self) -> Uuid { self.0 }
+        fn event_type(&self) -> &'static str { "TestEvent" }
+    }
+
+    #[test]
+    fn test_mock_event_publisher_records_events() {
+        let publisher = MockEventPublisher::new();
+        let correlation = CorrelationId::Single(Uuid::new_v4());
+        let events: Vec<Box<dyn DomainEvent>> = vec![
+            Box::new(TestEvent(Uuid::new_v4())),
+            Box::new(TestEvent(Uuid::new_v4())),
+        ];
+
+        publisher.publish_events(events, correlation).unwrap();
+        let published = publisher.get_published_events();
+
+        assert_eq!(published.len(), 2);
+        for (etype, corr) in published {
+            assert_eq!(etype, "TestEvent");
+            assert_eq!(corr, correlation);
+        }
+    }
+
+    #[derive(Clone)]
+    struct SimpleAggregate {
+        id: crate::entity::EntityId<crate::entity::AggregateMarker>,
+        version: u64,
+    }
+    impl AggregateRoot for SimpleAggregate {
+        type Id = crate::entity::EntityId<crate::entity::AggregateMarker>;
+        fn id(&self) -> Self::Id { self.id }
+        fn version(&self) -> u64 { self.version }
+        fn increment_version(&mut self) { self.version += 1; }
+    }
+
+    #[test]
+    fn test_in_memory_repository_save_and_load() {
+        type AId = crate::entity::EntityId<crate::entity::AggregateMarker>;
+        let repo: InMemoryRepository<SimpleAggregate> = InMemoryRepository::new();
+        let agg = SimpleAggregate { id: AId::new(), version: 0 };
+
+        // Save, then load
+        repo.save(&agg).unwrap();
+        let loaded = repo.load(agg.id()).unwrap();
+        assert!(loaded.is_some());
+        let loaded = loaded.unwrap();
+        assert_eq!(loaded.id, agg.id);
+        assert_eq!(loaded.version, agg.version);
+    }
 }

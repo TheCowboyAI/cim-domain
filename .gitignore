@@ -27,3 +27,7 @@ lcov.info
 *.tmp
 *.bak
 *~
+
+# Secrets (never commit)
+secrets/
+*.api.key

@@ -2,6 +2,7 @@
 
 //! Entity types with identity and lifecycle
 
+use crate::cqrs::AggregateTransactionId;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::marker::PhantomData;
@@ -125,12 +126,12 @@ pub struct EntityId<T> {
 
 impl<T> EntityId<T> {
     /// Create a new time-ordered entity ID using UUID v7
-    /// 
+    ///
     /// UUID v7 provides:
     /// - Time-ordered IDs for natural chronological sorting
     /// - Better database index performance
     /// - Built-in millisecond timestamp
-    /// 
+    ///
     /// Vector clocks handle causality, so we get the indexing benefits
     /// without worrying about clock skew.
     pub fn new() -> Self {
@@ -139,9 +140,9 @@ impl<T> EntityId<T> {
             _phantom: PhantomData,
         }
     }
-    
+
     /// Create a new random entity ID using UUID v4
-    /// 
+    ///
     /// Use this when you need non-time-ordered randomness,
     /// such as for security tokens or when time ordering is undesirable.
     pub fn new_random() -> Self {
@@ -263,6 +264,16 @@ pub trait AggregateRoot: Sized {
 
     /// Increment the version
     fn increment_version(&mut self);
+
+    /// Start a new Aggregate Transaction and return its unique transaction ID.
+    ///
+    /// By definition, only an AggregateRoot may originate a transaction.
+    /// Correlation IDs for messages within the transaction MUST be derived
+    /// from this `AggregateTransactionId`.
+    fn start_transaction_id(&self) -> AggregateTransactionId {
+        // Use UUID v7 for natural ordering (consistent with other IDs in domain)
+        AggregateTransactionId(Uuid::now_v7())
+    }
 }
 
 /// Trait for domain entities with identity

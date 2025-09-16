@@ -1,10 +1,11 @@
 // Copyright 2025 Cowboy AI, LLC.
 
-//! Saga orchestration for cross-domain workflows
+//! Saga orchestration for cross-domain workflows (graph of transitions)
 //!
 //! Sagas represent long-running transactions that span multiple domains.
-//! They are implemented as morphisms in the topos of domain compositions
-//! and orchestrated by state machines.
+//! They are aggregates-of-aggregates coordinated by a state machine. The
+//! model is a graph: nodes are saga states; edges (often called "steps" in
+//! legacy docs) are transitions labeled by inputs and guarded by rules.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,12 +16,24 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::category::DomainCategory;
+use std::any::TypeId;
 use crate::entity::{AggregateRoot, EntityId};
 use crate::errors::DomainError;
 use crate::events::DomainEvent;
 use crate::state_machine::{
     MealyMachine, MealyStateTransitions, State, TransitionInput, TransitionOutput,
 };
+
+/// Type-erased identifier for a concrete command type used by a saga transition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CommandTypeId(TypeId);
+
+impl CommandTypeId {
+    /// Create a marker for the given command type.
+    pub fn of<C: crate::commands::DomainCommand + 'static>() -> Self {
+        CommandTypeId(TypeId::of::<C>())
+    }
+}
 
 /// A saga representing a cross-domain workflow
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,7 +44,7 @@ pub struct Saga {
     /// Name of the saga
     pub name: String,
 
-    /// Steps in the saga
+    /// Transitions in the saga (legacy name "steps"; each entry denotes a transition edge)
     pub steps: Vec<SagaStep>,
 
     /// Current state of the saga
@@ -47,19 +60,21 @@ pub struct Saga {
     pub metadata: HashMap<String, String>,
 }
 
-/// A step in a saga
+/// A transition edge in a saga graph (legacy name "SagaStep")
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SagaStep {
-    /// Step identifier
+    /// Transition identifier
     pub id: String,
 
     /// Target domain
     pub domain: String,
 
-    /// Command to execute
-    pub command_type: String,
+    /// The concrete command type used by this transition (type-erased).
+    /// We store only the TypeId to ensure this is not a stringly-typed API.
+    #[serde(skip)]
+    pub command_type_id: CommandTypeId,
 
-    /// Step dependencies
+    /// Transition dependencies
     pub depends_on: Vec<String>,
 
     /// Retry policy
@@ -67,6 +82,26 @@ pub struct SagaStep {
 
     /// Timeout in milliseconds
     pub timeout_ms: u64,
+}
+
+impl SagaStep {
+    /// Construct a typed saga step bound to a concrete command type `C`.
+    pub fn typed<C: crate::commands::DomainCommand + 'static>(
+        id: impl Into<String>,
+        domain: impl Into<String>,
+        depends_on: Vec<String>,
+        retry_policy: RetryPolicy,
+        timeout_ms: u64,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            domain: domain.into(),
+            command_type_id: CommandTypeId::of::<C>(),
+            depends_on,
+            retry_policy,
+            timeout_ms,
+        }
+    }
 }
 
 /// State of a saga - implements State trait for state machine
@@ -77,24 +112,24 @@ pub enum SagaState {
 
     /// Currently executing
     Running {
-        /// The step currently being executed
+    /// The transition currently being executed
         current_step: String,
-        /// Steps that have been successfully completed
+        /// Transitions that have been successfully completed
         completed_steps: Vec<String>,
     },
 
     /// Successfully completed
     Completed,
 
-    /// Failed and compensating
+    /// Failed and compensating transitions
     Compensating {
-        /// The step that failed
+        /// The transition that failed
         failed_step: String,
-        /// Steps that have been compensated
+        /// Transitions that have been compensated
         compensated_steps: Vec<String>,
     },
 
-    /// Compensation complete
+    /// Compensation transitions complete
     Compensated,
 
     /// Failed to compensate
@@ -130,31 +165,31 @@ pub enum SagaTransitionInput {
     /// Start the saga
     Start,
 
-    /// Step completed successfully
+    /// Transition completed successfully
     StepCompleted {
-        /// ID of the completed step
+        /// ID of the completed transition
         step_id: String,
         /// Result data from the step
         result: serde_json::Value,
     },
 
-    /// Step failed
+    /// Transition failed
     StepFailed {
-        /// ID of the failed step
+        /// ID of the failed transition
         step_id: String,
         /// Error message
         error: String,
     },
 
-    /// Compensation step completed
+    /// Compensation transition completed
     CompensationCompleted {
-        /// ID of the compensated step
+        /// ID of the compensated transition
         step_id: String,
     },
 
-    /// Compensation failed
+    /// Compensation transition failed
     CompensationFailed {
-        /// ID of the step that failed to compensate
+        /// ID of the transition that failed to compensate
         step_id: String,
         /// Error message
         error: String,
@@ -166,23 +201,23 @@ impl TransitionInput for SagaTransitionInput {
         match self {
             SagaTransitionInput::Start => "Start saga".to_string(),
             SagaTransitionInput::StepCompleted { step_id, .. } => {
-                format!("Step {step_id} completed")
+                format!("Transition {step_id} completed")
             }
             SagaTransitionInput::StepFailed { step_id, error } => {
-                format!("Step {step_id} failed: {error}")
+                format!("Transition {step_id} failed: {error}")
             }
             SagaTransitionInput::CompensationCompleted { step_id } => {
-                format!("Compensation for {step_id} completed")
+                format!("Compensation transition for {step_id} completed")
             }
             SagaTransitionInput::CompensationFailed { step_id, error } => {
-                format!("Compensation for {step_id} failed: {error}")
+                format!("Compensation transition for {step_id} failed: {error}")
             }
         }
     }
 }
 
 /// Output from saga state transitions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct SagaTransitionOutput {
     /// Events to emit
     pub events: Vec<SagaEvent>,
@@ -200,21 +235,21 @@ impl TransitionOutput for SagaTransitionOutput {
 }
 
 /// Commands generated by saga transitions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum SagaCommand {
-    /// Execute a step
+    /// Execute a transition
     ExecuteStep {
-        /// ID of the step to execute
+        /// ID of the transition to execute
         step_id: String,
         /// Target domain for the command
         domain: String,
-        /// Command to execute
-        command: String,
+        /// Command type marker
+        command_type_id: CommandTypeId,
     },
 
-    /// Execute compensation
+    /// Execute compensation transition
     ExecuteCompensation {
-        /// ID of the step to compensate
+        /// ID of the transition to compensate
         step_id: String,
         /// Compensation action to perform
         action: CompensationAction,
@@ -400,20 +435,20 @@ impl Default for RetryPolicy {
     }
 }
 
-/// Saga aggregate for AggregateRoot implementation
+/// Saga aggregate root for AggregateRoot implementation
 #[derive(Debug, Clone)]
-pub struct SagaAggregate {
+pub struct SagaRoot {
     id: Uuid,
     version: u64,
 }
 
-impl Default for SagaAggregate {
+impl Default for SagaRoot {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SagaAggregate {
+impl SagaRoot {
     /// Create a new saga aggregate with a unique ID
     pub fn new() -> Self {
         Self {
@@ -423,7 +458,7 @@ impl SagaAggregate {
     }
 }
 
-impl AggregateRoot for SagaAggregate {
+impl AggregateRoot for SagaRoot {
     type Id = Uuid;
 
     fn id(&self) -> Self::Id {
@@ -440,7 +475,7 @@ impl AggregateRoot for SagaAggregate {
 }
 
 // Type alias for saga storage
-type SagaStorage = Arc<Mutex<HashMap<Uuid, (Saga, MealyMachine<SagaState, SagaAggregate>)>>>;
+type SagaStorage = Arc<Mutex<HashMap<Uuid, (Saga, MealyMachine<SagaState, SagaRoot>)>>>;
 
 /// Saga orchestrator for managing saga execution using state machines
 pub struct SagaOrchestrator {
@@ -561,7 +596,7 @@ impl SagaOrchestrator {
         let saga_id = saga.id;
 
         // Create state machine for the saga
-        let entity_id = EntityId::<SagaAggregate>::new();
+        let entity_id = EntityId::<SagaRoot>::new();
         let state_machine = MealyMachine::new(SagaState::Pending, entity_id);
 
         // Store saga with its state machine
@@ -718,11 +753,11 @@ impl SagaOrchestrator {
             SagaCommand::ExecuteStep {
                 step_id,
                 domain,
-                command,
+                command_type_id,
             } => {
                 // Execute step and handle result
                 match self
-                    .execute_step_internal(saga_id, &step_id, &domain, &command)
+                    .execute_step_internal(saga_id, &step_id, &domain, command_type_id)
                     .await
                 {
                     Ok(result) => {
@@ -779,13 +814,12 @@ impl SagaOrchestrator {
         _saga_id: Uuid,
         step_id: &str,
         domain: &str,
-        command: &str,
+        _command_type_id: CommandTypeId,
     ) -> Result<serde_json::Value, DomainError> {
         // In real implementation, this would execute the command in the domain
         Ok(serde_json::json!({
             "step": step_id,
             "domain": domain,
-            "command": command,
             "status": "completed"
         }))
     }
@@ -820,7 +854,7 @@ impl SagaOrchestrator {
     pub async fn get_state_machine(
         &self,
         saga_id: Uuid,
-    ) -> Result<MealyMachine<SagaState, SagaAggregate>, DomainError> {
+    ) -> Result<MealyMachine<SagaState, SagaRoot>, DomainError> {
         let sagas = self.sagas.lock().await;
         let (_, state_machine) = sagas
             .get(&saga_id)
@@ -901,34 +935,32 @@ impl SagaBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::AcknowledgeCommand;
 
     #[tokio::test]
     async fn test_saga_builder() {
         let saga = SagaBuilder::new("OrderProcessing".to_string())
-            .add_step(SagaStep {
-                id: "validate_order".to_string(),
-                domain: "OrderDomain".to_string(),
-                command_type: "ValidateOrder".to_string(),
-                depends_on: vec![],
-                retry_policy: RetryPolicy::default(),
-                timeout_ms: 5000,
-            })
-            .add_step(SagaStep {
-                id: "reserve_inventory".to_string(),
-                domain: "InventoryDomain".to_string(),
-                command_type: "ReserveItems".to_string(),
-                depends_on: vec!["validate_order".to_string()],
-                retry_policy: RetryPolicy::default(),
-                timeout_ms: 10000,
-            })
-            .add_step(SagaStep {
-                id: "process_payment".to_string(),
-                domain: "PaymentDomain".to_string(),
-                command_type: "ChargePayment".to_string(),
-                depends_on: vec!["reserve_inventory".to_string()],
-                retry_policy: RetryPolicy::default(),
-                timeout_ms: 15000,
-            })
+            .add_step(SagaStep::typed::<AcknowledgeCommand>(
+                "validate_order",
+                "OrderDomain",
+                vec![],
+                RetryPolicy::default(),
+                5000,
+            ))
+            .add_step(SagaStep::typed::<AcknowledgeCommand>(
+                "reserve_inventory",
+                "InventoryDomain",
+                vec!["validate_order".to_string()],
+                RetryPolicy::default(),
+                10000,
+            ))
+            .add_step(SagaStep::typed::<AcknowledgeCommand>(
+                "process_payment",
+                "PaymentDomain",
+                vec!["reserve_inventory".to_string()],
+                RetryPolicy::default(),
+                15000,
+            ))
             .with_compensation(
                 "reserve_inventory".to_string(),
                 CompensationAction {
@@ -968,14 +1000,13 @@ mod tests {
 
         // Create simple saga
         let saga = SagaBuilder::new("TestSaga".to_string())
-            .add_step(SagaStep {
-                id: "step1".to_string(),
-                domain: "OrderDomain".to_string(),
-                command_type: "TestCommand".to_string(),
-                depends_on: vec![],
-                retry_policy: RetryPolicy::default(),
-                timeout_ms: 1000,
-            })
+            .add_step(SagaStep::typed::<AcknowledgeCommand>(
+                "step1",
+                "OrderDomain",
+                vec![],
+                RetryPolicy::default(),
+                1000,
+            ))
             .build();
 
         let saga_id = orchestrator.start_saga(saga).await.unwrap();

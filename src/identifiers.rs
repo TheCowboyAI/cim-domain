@@ -3,8 +3,8 @@
 //! Identifier types for graphs, nodes, and edges
 
 use crate::entity::{EntityId, GraphMarker};
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -20,7 +20,7 @@ impl NodeId {
     pub fn new() -> Self {
         Self(Uuid::now_v7())
     }
-    
+
     /// Create a new random node ID using UUID v4
     pub fn new_random() -> Self {
         Self(Uuid::new_v4())
@@ -73,7 +73,7 @@ impl EdgeId {
     pub fn new() -> Self {
         Self(Uuid::now_v7())
     }
-    
+
     /// Create a new random edge ID using UUID v4
     pub fn new_random() -> Self {
         Self(Uuid::new_v4())
@@ -194,30 +194,7 @@ impl From<&str> for TransitionId {
 /// This is just a convenience alias for EntityId<GraphMarker>.
 pub type GraphId = EntityId<GraphMarker>;
 
-/// Type alias for workflow entity IDs
-///
-/// Workflows are entities with global identity and lifecycle.
-/// This is just a convenience alias for EntityId<WorkflowMarker>.
-pub type WorkflowId = EntityId<markers::WorkflowMarker>;
-
-/// Marker types for different entity kinds
-pub mod markers {
-    /// Marker for Workflow entities
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct WorkflowMarker;
-}
-
-/// Extension trait for WorkflowId to provide convenient methods
-pub trait WorkflowIdExt {
-    /// Convert to UUID
-    fn to_uuid(&self) -> Uuid;
-}
-
-impl WorkflowIdExt for EntityId<markers::WorkflowMarker> {
-    fn to_uuid(&self) -> Uuid {
-        Uuid::from(*self)
-    }
-}
+// Workflow identifiers are domain‑specific and live downstream (cim-domain-workflow)
 
 #[cfg(test)]
 mod tests {

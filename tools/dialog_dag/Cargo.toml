@@ -1,0 +1,29 @@
+[package]
+name = "dialog_dag_tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock" ] }
+cid = { version = "0.11", features = ["serde"] }
+multihash = "0.19"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.7", features = ["v4", "fast-rng", "serde"] }
+blake3 = "1.5"
+
+[[bin]]
+name = "log_dialog_event"
+path = "src/bin/log_dialog_event.rs"
+
+[[bin]]
+name = "merge_dialog_dag"
+path = "src/bin/merge_dialog_dag.rs"
+
+[[bin]]
+name = "reindex_dialog_cids"
+path = "src/bin/reindex_dialog_cids.rs"
+
+[[bin]]
+name = "log_insight"
+path = "src/bin/log_insight.rs"

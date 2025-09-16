@@ -1,0 +1,1066 @@
+{
+  "aggregates": [
+    {
+      "details": {
+        "module": "saga"
+      },
+      "kind": "Aggregate",
+      "name": "Saga"
+    }
+  ],
+  "bounded_contexts": [
+    {
+      "id": "formal-domain",
+      "modules": [
+        "formal_domain",
+        "fp_monad"
+      ],
+      "name": "Formal Domain"
+    },
+    {
+      "id": "cqrs",
+      "modules": [
+        "cqrs",
+        "commands",
+        "query_handlers",
+        "events"
+      ],
+      "name": "CQRS"
+    },
+    {
+      "id": "category",
+      "modules": [
+        "category"
+      ],
+      "name": "Category Theory"
+    },
+    {
+      "id": "domain",
+      "modules": [
+        "domain"
+      ],
+      "name": "Cross-Domain"
+    }
+  ],
+  "category": {
+    "composition_rules": [
+      {
+        "associative": true,
+        "notes": "Free monoid fold; identity=[]",
+        "rule": "fold(x) ∘ fold(y) = fold(x ∘ y)"
+      },
+      {
+        "associative": true,
+        "notes": "Projection functor preserves composition",
+        "rule": "P(e2 ∘ e1) = P(e2) ∘ P(e1)"
+      },
+      {
+        "associative": true,
+        "notes": "Lift functor between bounded contexts",
+        "object": "BoundedContext",
+        "rule": "F(id) = id ∧ F(g∘f) = F(g)∘F(f)"
+      },
+      {
+        "associative": true,
+        "notes": "Naturality of characteristic maps under pullback",
+        "object": "Subobject",
+        "rule": "χ_{f*m} = χ_m ∘ f"
+      },
+      {
+        "associative": true,
+        "notes": "Type conversion is transitive",
+        "rule": "convert(A→B) ∘ convert(B→C) = convert(A→C)"
+      },
+      {
+        "associative": true,
+        "notes": "Collections of values form a monoid under concatenation with the empty collection as identity",
+        "object": "ValueCollection",
+        "rule": "concat(x) ∘ concat(y) = concat(x ∘ y); identity = ∅"
+      }
+    ],
+    "diagrams": [
+      {
+        "commutes": true,
+        "describes": [
+          "fold_events"
+        ],
+        "id": "ddd_domain_category",
+        "notes": "fold ∘ decide ∘ handle = transition",
+        "path": "doc/act/diagrams/ddd_domain_category.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "has_values"
+        ],
+        "id": "aggregate_composition",
+        "path": "doc/act/diagrams/aggregate_composition.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "fold_events"
+        ],
+        "id": "event_sourcing_fold",
+        "notes": "Free monoid fold; left fold over time-ordered events unless right fold is explicitly stated; associative; identity=[]",
+        "path": "doc/act/diagrams/event_sourcing_fold.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "read_query"
+        ],
+        "id": "cqrs_projection_functor",
+        "notes": "P(e2∘e1)=P(e2)∘P(e1)",
+        "path": "doc/act/diagrams/cqrs_projection_functor.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "compose_saga"
+        ],
+        "id": "saga_as_composed_aggregate",
+        "path": "doc/act/diagrams/saga_as_composed_aggregate.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "lift_context"
+        ],
+        "id": "bounded_context_functors",
+        "path": "doc/act/diagrams/bounded_context_functors.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "is_a",
+          "part_of",
+          "related_to"
+        ],
+        "id": "concept_graph",
+        "path": "doc/act/diagrams/concept_graph.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "name_entity"
+        ],
+        "id": "entity_naming",
+        "notes": "Adjectives/Adverbs are relationships; naming binds DomainEntity to a Concept in the UL.",
+        "path": "doc/act/diagrams/entity_naming.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "concat_collections"
+        ],
+        "id": "value_collection_monoid",
+        "notes": "(ValueCollection, ⊕, ∅) forms a monoid (associative; identity ∅).",
+        "path": "doc/act/diagrams/value_collection_monoid.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "handled_by",
+          "emits_event",
+          "governed_by",
+          "constrained_by_policy",
+          "updates_read_model",
+          "consumes_event",
+          "subscribes_to_stream",
+          "appended_to_stream",
+          "wraps_event",
+          "reads_from",
+          "responds_with",
+          "coordinates",
+          "contains_aggregate",
+          "contains_projection",
+          "contains_read_model",
+          "contains_event_stream",
+          "contains_command",
+          "contains_query",
+          "contains_policy",
+          "contains_state_machine",
+          "contains_saga",
+          "causes_event",
+          "saga_has_participant",
+          "maintains_clock"
+        ],
+        "id": "domain_objects_overview",
+        "notes": "Overview of core domain objects and their relationships.",
+        "path": "doc/act/diagrams/domain_objects_overview.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "handled_by",
+          "causes_event",
+          "emits_event",
+          "wraps_event",
+          "payload_cid",
+          "appended_to_stream",
+          "stream_contains_envelope"
+        ],
+        "id": "event_pipeline",
+        "notes": "Command→Aggregate→Event→Envelope→Stream pipeline.",
+        "path": "doc/act/diagrams/event_pipeline.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "command_envelope_has_id",
+          "command_envelope_encloses",
+          "command_envelope_has_identity",
+          "query_envelope_has_id",
+          "query_envelope_encloses",
+          "query_envelope_has_identity",
+          "identity_has_correlation_id",
+          "identity_has_causation_id",
+          "identity_has_command_message_id",
+          "identity_has_query_message_id",
+          "identity_has_event_message_id",
+          "envelope_has_event_id",
+          "envelope_has_aggregate_id",
+          "envelope_has_correlation_id",
+          "envelope_has_causation_id",
+          "envelope_has_payload_metadata",
+          "correlates_command_envelope_to_event_envelope",
+          "correlates_query_envelope_to_event_envelope",
+          "precedes_event_envelope",
+          "command_acknowledged_by",
+          "query_acknowledged_by"
+        ],
+        "id": "identity_envelope",
+        "notes": "MessageIdentity and envelope fields; correlation/causation/temporal.",
+        "path": "doc/act/diagrams/identity_envelope.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "domain_cid_defines_node",
+          "domain_node_uses_codec",
+          "domain_node_payload_is",
+          "domain_node_has_metadata",
+          "defined_by_ipld",
+          "payload_cid"
+        ],
+        "id": "addressing",
+        "notes": "Content addressing: DomainCid, DomainNode, IPLD.Cid, codec, metadata.",
+        "path": "doc/act/diagrams/addressing.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "subscribes_to_stream",
+          "consumes_event",
+          "updates_read_model",
+          "reads_from",
+          "responds_with"
+        ],
+        "id": "read_path",
+        "notes": "Projection→ReadModel→Query/Response read path.",
+        "path": "doc/act/diagrams/read_path.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "defined_by_ipld"
+        ],
+        "id": "external_ipld_reference",
+        "notes": "DomainCid is defined by reference to external IPLD CID; we only define usage and constraints.",
+        "path": "doc/act/diagrams/external_ipld_reference.svg"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "specified_by_cim_graph"
+        ],
+        "id": "external_cim_graph_reference",
+        "notes": "Concept graphs are specified by external cim-graph; we reference it.",
+        "path": "doc/act/diagrams/external_cim_graph_reference.svg"
+      }
+    ],
+    "identity_morphisms": [],
+    "interpretation": true,
+    "morphisms": [
+      {
+        "id": "is_a",
+        "name": "IsA",
+        "source": "Concept",
+        "target": "Concept",
+        "type": "ConceptRelationship"
+      },
+      {
+        "id": "part_of",
+        "name": "PartOf",
+        "source": "Concept",
+        "target": "Concept",
+        "type": "ConceptRelationship"
+      },
+      {
+        "id": "related_to",
+        "name": "RelatedTo",
+        "source": "Concept",
+        "target": "Concept",
+        "type": "ConceptRelationship"
+      },
+      {
+        "id": "name_entity",
+        "name": "NameEntity",
+        "source": "DomainEntity",
+        "target": "Concept",
+        "type": "NamingRelationship"
+      },
+      {
+        "id": "has_values",
+        "name": "HasValues",
+        "notes": "Entities own collections of value objects as part of their state",
+        "source": "DomainEntity",
+        "target": "ValueCollection",
+        "type": "Containment"
+      },
+      {
+        "id": "concat_collections",
+        "name": "ConcatCollections",
+        "notes": "Binary operation (modeled abstractly) representing collection concatenation/union",
+        "source": "ValueCollection",
+        "target": "ValueCollection",
+        "type": "MonoidOperation"
+      },
+      {
+        "id": "defined_by_ipld",
+        "name": "DefinedBy",
+        "notes": "DomainCid usage is defined by reference to IPLD CID; semantics live in the IPLD domain.",
+        "source": "DomainCid",
+        "target": "IPLD.Cid",
+        "type": "ExternalDefinition"
+      },
+      {
+        "id": "specified_by_cim_graph",
+        "name": "SpecifiedBy",
+        "notes": "Concept graph semantics are specified by the external cim-graph.",
+        "source": "Concept",
+        "target": "CIM.Graph",
+        "type": "ExternalDefinition"
+      },
+      {
+        "id": "handled_by",
+        "name": "HandledBy",
+        "notes": "Commands are handled by aggregate roots.",
+        "source": "Command",
+        "target": "AggregateRoot",
+        "type": "HandlingRelationship"
+      },
+      {
+        "id": "emits_event",
+        "name": "Emits",
+        "notes": "Aggregates emit domain events.",
+        "source": "AggregateRoot",
+        "target": "DomainEvent",
+        "type": "EmissionRelationship"
+      },
+      {
+        "id": "governed_by",
+        "name": "GovernedBy",
+        "notes": "Aggregate transitions are governed by a state machine.",
+        "source": "AggregateRoot",
+        "target": "StateMachine",
+        "type": "Governance"
+      },
+      {
+        "id": "constrained_by_policy",
+        "name": "ConstrainedBy",
+        "notes": "Policies constrain aggregate behavior.",
+        "source": "AggregateRoot",
+        "target": "Policy",
+        "type": "Constraint"
+      },
+      {
+        "id": "updates_read_model",
+        "name": "Updates",
+        "notes": "Projections update read models.",
+        "source": "Projection",
+        "target": "ReadModel",
+        "type": "ProjectionUpdate"
+      },
+      {
+        "id": "consumes_event",
+        "name": "Consumes",
+        "notes": "Projections consume domain events.",
+        "source": "Projection",
+        "target": "DomainEvent",
+        "type": "Consumption"
+      },
+      {
+        "id": "subscribes_to_stream",
+        "name": "SubscribesTo",
+        "notes": "Projections subscribe to event streams.",
+        "source": "Projection",
+        "target": "EventStream",
+        "type": "Subscription"
+      },
+      {
+        "id": "appended_to_stream",
+        "name": "AppendedTo",
+        "notes": "Event envelopes are appended to event streams.",
+        "source": "DomainEventEnvelope",
+        "target": "EventStream",
+        "type": "Append"
+      },
+      {
+        "id": "wraps_event",
+        "name": "Wraps",
+        "notes": "Envelopes wrap domain events (inline or by CID).",
+        "source": "DomainEventEnvelope",
+        "target": "DomainEvent",
+        "type": "Envelope"
+      },
+      {
+        "id": "payload_cid",
+        "name": "PayloadCid",
+        "notes": "Envelope payload may be content-addressed (CID).",
+        "source": "DomainEventEnvelope",
+        "target": "DomainCid",
+        "type": "Reference"
+      },
+      {
+        "id": "reads_from",
+        "name": "ReadsFrom",
+        "notes": "Queries read from read models.",
+        "source": "Query",
+        "target": "ReadModel",
+        "type": "Read"
+      },
+      {
+        "id": "responds_with",
+        "name": "RespondsWith",
+        "notes": "Queries respond with a QueryResponse value object.",
+        "source": "Query",
+        "target": "QueryResponse",
+        "type": "Response"
+      },
+      {
+        "id": "coordinates",
+        "name": "Coordinates",
+        "notes": "Saga coordinates multiple aggregates.",
+        "source": "Saga",
+        "target": "AggregateRoot",
+        "type": "Coordination"
+      },
+      {
+        "id": "contains_aggregate",
+        "name": "Contains",
+        "notes": "BoundedContext contains aggregates.",
+        "source": "BoundedContext",
+        "target": "AggregateRoot",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_projection",
+        "name": "Contains",
+        "notes": "BoundedContext contains projections.",
+        "source": "BoundedContext",
+        "target": "Projection",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_read_model",
+        "name": "Contains",
+        "notes": "BoundedContext contains read models.",
+        "source": "BoundedContext",
+        "target": "ReadModel",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_event_stream",
+        "name": "Contains",
+        "notes": "BoundedContext contains event streams.",
+        "source": "BoundedContext",
+        "target": "EventStream",
+        "type": "Containment"
+      },
+      {
+        "id": "causes_event",
+        "name": "Causes",
+        "notes": "Command handling causes domain events.",
+        "source": "Command",
+        "target": "DomainEvent",
+        "type": "Causation"
+      },
+      {
+        "id": "saga_has_participant",
+        "name": "HasParticipant",
+        "notes": "Saga is a collection of participant aggregates.",
+        "source": "Saga",
+        "target": "AggregateRoot",
+        "type": "Containment"
+      },
+      {
+        "id": "maintains_clock",
+        "name": "MaintainsClock",
+        "notes": "Saga maintains a vector clock for causal ordering across participants.",
+        "source": "Saga",
+        "target": "VectorClock",
+        "type": "CausalityTracking"
+      },
+      {
+        "id": "command_envelope_has_id",
+        "name": "HasCommandId",
+        "notes": "CommandEnvelope carries a CommandId",
+        "source": "CommandEnvelope",
+        "target": "CommandId",
+        "type": "Identity"
+      },
+      {
+        "id": "command_envelope_encloses",
+        "name": "Encloses",
+        "notes": "CommandEnvelope encloses a Command",
+        "source": "CommandEnvelope",
+        "target": "Command",
+        "type": "Envelope"
+      },
+      {
+        "id": "command_envelope_has_identity",
+        "name": "HasIdentity",
+        "notes": "CommandEnvelope includes MessageIdentity for correlation/causation",
+        "source": "CommandEnvelope",
+        "target": "MessageIdentity",
+        "type": "Identity"
+      },
+      {
+        "id": "query_envelope_has_id",
+        "name": "HasQueryId",
+        "notes": "QueryEnvelope carries a QueryId",
+        "source": "QueryEnvelope",
+        "target": "QueryId",
+        "type": "Identity"
+      },
+      {
+        "id": "query_envelope_encloses",
+        "name": "Encloses",
+        "notes": "QueryEnvelope encloses a Query",
+        "source": "QueryEnvelope",
+        "target": "Query",
+        "type": "Envelope"
+      },
+      {
+        "id": "query_envelope_has_identity",
+        "name": "HasIdentity",
+        "notes": "QueryEnvelope includes MessageIdentity for correlation/causation",
+        "source": "QueryEnvelope",
+        "target": "MessageIdentity",
+        "type": "Identity"
+      },
+      {
+        "id": "identity_has_correlation_id",
+        "name": "HasCorrelationId",
+        "notes": "MessageIdentity has a CorrelationId",
+        "source": "MessageIdentity",
+        "target": "CorrelationId",
+        "type": "Identity"
+      },
+      {
+        "id": "identity_has_causation_id",
+        "name": "HasCausationId",
+        "notes": "MessageIdentity has a CausationId",
+        "source": "MessageIdentity",
+        "target": "CausationId",
+        "type": "Identity"
+      },
+      {
+        "id": "identity_has_command_message_id",
+        "name": "HasCommandMessageId",
+        "notes": "MessageIdentity can carry a command message id (context-dependent)",
+        "source": "MessageIdentity",
+        "target": "CommandId",
+        "type": "Identity"
+      },
+      {
+        "id": "identity_has_query_message_id",
+        "name": "HasQueryMessageId",
+        "notes": "MessageIdentity can carry a query message id (context-dependent)",
+        "source": "MessageIdentity",
+        "target": "QueryId",
+        "type": "Identity"
+      },
+      {
+        "id": "identity_has_event_message_id",
+        "name": "HasEventMessageId",
+        "notes": "MessageIdentity can carry an event id (context-dependent)",
+        "source": "MessageIdentity",
+        "target": "EventId",
+        "type": "Identity"
+      },
+      {
+        "id": "envelope_has_event_id",
+        "name": "HasEventId",
+        "notes": "DomainEventEnvelope carries an EventId",
+        "source": "DomainEventEnvelope",
+        "target": "EventId",
+        "type": "Identity"
+      },
+      {
+        "id": "envelope_has_aggregate_id",
+        "name": "HasAggregateId",
+        "notes": "DomainEventEnvelope duplicates the aggregate id for post-persist access",
+        "source": "DomainEventEnvelope",
+        "target": "EntityId",
+        "type": "Identity"
+      },
+      {
+        "id": "envelope_has_correlation_id",
+        "name": "HasCorrelationId",
+        "notes": "DomainEventEnvelope carries a CorrelationId",
+        "source": "DomainEventEnvelope",
+        "target": "CorrelationId",
+        "type": "Identity"
+      },
+      {
+        "id": "envelope_has_causation_id",
+        "name": "HasCausationId",
+        "notes": "DomainEventEnvelope carries a CausationId",
+        "source": "DomainEventEnvelope",
+        "target": "CausationId",
+        "type": "Identity"
+      },
+      {
+        "id": "envelope_has_payload_metadata",
+        "name": "HasPayloadMetadata",
+        "notes": "Envelope includes PayloadMetadata describing the payload",
+        "source": "DomainEventEnvelope",
+        "target": "PayloadMetadata",
+        "type": "Metadata"
+      },
+      {
+        "id": "domain_node_uses_codec",
+        "name": "UsesCodec",
+        "notes": "DomainNode payload is encoded with a DomainPayloadCodec",
+        "source": "DomainNode",
+        "target": "DomainPayloadCodec",
+        "type": "Annotation"
+      },
+      {
+        "id": "domain_node_payload_is",
+        "name": "PayloadIs",
+        "notes": "DomainNode references an IPLD payload CID",
+        "source": "DomainNode",
+        "target": "IPLD.Cid",
+        "type": "Reference"
+      },
+      {
+        "id": "domain_node_has_metadata",
+        "name": "HasMetadata",
+        "notes": "DomainNode has typed metadata values",
+        "source": "DomainNode",
+        "target": "ValueObject",
+        "type": "Metadata"
+      },
+      {
+        "id": "domain_cid_defines_node",
+        "name": "DefinesNode",
+        "notes": "The root DomainCid defines the DomainNode envelope",
+        "source": "DomainCid",
+        "target": "DomainNode",
+        "type": "Definition"
+      },
+      {
+        "id": "command_acknowledged_by",
+        "name": "AcknowledgedBy",
+        "notes": "Commands are acknowledged by CommandAcknowledgment",
+        "source": "Command",
+        "target": "CommandAcknowledgment",
+        "type": "Acknowledgment"
+      },
+      {
+        "id": "query_acknowledged_by",
+        "name": "AcknowledgedBy",
+        "notes": "Queries are acknowledged by QueryAcknowledgment",
+        "source": "Query",
+        "target": "QueryAcknowledgment",
+        "type": "Acknowledgment"
+      },
+      {
+        "id": "stream_contains_envelope",
+        "name": "Contains",
+        "notes": "EventStream contains DomainEventEnvelopes appended to it",
+        "source": "EventStream",
+        "target": "DomainEventEnvelope",
+        "type": "Containment"
+      },
+      {
+        "id": "correlates_command_envelope_to_event_envelope",
+        "name": "CorrelatesTo",
+        "notes": "CommandEnvelope correlates to resulting DomainEventEnvelopes (via correlation id)",
+        "source": "CommandEnvelope",
+        "target": "DomainEventEnvelope",
+        "type": "Correlation"
+      },
+      {
+        "id": "correlates_query_envelope_to_event_envelope",
+        "name": "CorrelatesTo",
+        "notes": "QueryEnvelope correlates to DomainEventEnvelopes (via correlation id)",
+        "source": "QueryEnvelope",
+        "target": "DomainEventEnvelope",
+        "type": "Correlation"
+      },
+      {
+        "id": "precedes_event_envelope",
+        "name": "Precedes",
+        "notes": "Event envelopes are partially ordered by EventId v7 (time order)",
+        "source": "DomainEventEnvelope",
+        "target": "DomainEventEnvelope",
+        "type": "Temporal"
+      },
+      {
+        "id": "contains_command",
+        "name": "Contains",
+        "notes": "BoundedContext contains commands",
+        "source": "BoundedContext",
+        "target": "Command",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_query",
+        "name": "Contains",
+        "notes": "BoundedContext contains queries",
+        "source": "BoundedContext",
+        "target": "Query",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_policy",
+        "name": "Contains",
+        "notes": "BoundedContext contains policies",
+        "source": "BoundedContext",
+        "target": "Policy",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_state_machine",
+        "name": "Contains",
+        "notes": "BoundedContext contains state machines",
+        "source": "BoundedContext",
+        "target": "StateMachine",
+        "type": "Containment"
+      },
+      {
+        "id": "contains_saga",
+        "name": "Contains",
+        "notes": "BoundedContext contains sagas",
+        "source": "BoundedContext",
+        "target": "Saga",
+        "type": "Containment"
+      }
+    ],
+    "name": "CIM-Domain-Category",
+    "notes": "Category is an interpretation lens over the domain, not the domain itself.",
+    "objects": [
+      {
+        "id": "EntityId",
+        "name": "EntityId<T>",
+        "type": "ValueObject"
+      },
+      {
+        "id": "DomainEventEnvelope",
+        "name": "DomainEventEnvelope",
+        "type": "Event"
+      },
+      {
+        "id": "AggregateRoot",
+        "name": "AggregateRoot",
+        "type": "Trait"
+      },
+      {
+        "id": "DomainEvent",
+        "name": "DomainEvent",
+        "type": "Event"
+      },
+      {
+        "id": "Command",
+        "name": "Command",
+        "type": "Command"
+      },
+      {
+        "id": "StateMachine",
+        "name": "StateMachine",
+        "type": "Concept"
+      },
+      {
+        "id": "Projection",
+        "name": "Projection",
+        "type": "Projection"
+      },
+      {
+        "id": "ReadModel",
+        "name": "ReadModel",
+        "type": "ReadModel"
+      },
+      {
+        "id": "QueryResponse",
+        "name": "QueryResponse",
+        "type": "ValueObject"
+      },
+      {
+        "id": "EventStream",
+        "name": "EventStream",
+        "type": "Concept"
+      },
+      {
+        "id": "CommandEnvelope",
+        "name": "CommandEnvelope",
+        "type": "Concept"
+      },
+      {
+        "id": "QueryEnvelope",
+        "name": "QueryEnvelope",
+        "type": "Concept"
+      },
+      {
+        "id": "MessageIdentity",
+        "name": "MessageIdentity",
+        "type": "Concept"
+      },
+      {
+        "id": "Saga",
+        "name": "Saga",
+        "type": "Aggregate"
+      },
+      {
+        "id": "BoundedContext",
+        "name": "BoundedContext",
+        "type": "Context"
+      },
+      {
+        "id": "Concept",
+        "name": "Concept",
+        "type": "Concept"
+      },
+      {
+        "id": "Query",
+        "name": "Query",
+        "type": "Query"
+      },
+      {
+        "details": {
+          "domain": "cim-graph",
+          "notes": "External specification of concept graphs; we reference it rather than redefine.",
+          "reference": "cim-graph:concept_graph (external)"
+        },
+        "id": "CIM.Graph",
+        "name": "cim-graph:concept_graph",
+        "type": "External"
+      },
+      {
+        "id": "DomainCid",
+        "name": "DomainCid",
+        "type": "ValueObject"
+      },
+      {
+        "id": "Policy",
+        "name": "Policy",
+        "type": "Concept"
+      },
+      {
+        "details": {
+          "semantics": "A collection of value objects owned by an entity; shape-agnostic (sequence/set/bag). Choose an operation consistent with shape: concat for ordered sequences, union for sets, multiset-union for bags. Identity is the empty collection; laws are monoid laws (associativity, identity)."
+        },
+        "id": "ValueCollection",
+        "name": "ValueCollection",
+        "type": "Concept"
+      },
+      {
+        "details": {
+          "domain": "ipld",
+          "notes": "External domain object reference; we do not redefine CID; we reference it for usage.",
+          "reference": "ipld:cid (external)"
+        },
+        "id": "IPLD.Cid",
+        "name": "ipld:cid",
+        "type": "External"
+      },
+      {
+        "details": {
+          "definition": "Immutable domain object defined solely by its attributes; no identity beyond value; compared by structural equality; used as measurement or descriptor in the domain."
+        },
+        "id": "ValueObject",
+        "name": "ValueObject",
+        "type": "Concept"
+      },
+      {
+        "id": "DomainEntity",
+        "name": "DomainEntity",
+        "type": "Entity"
+      },
+      {
+        "id": "CommandId",
+        "name": "CommandId",
+        "type": "ValueObject"
+      },
+      {
+        "id": "QueryId",
+        "name": "QueryId",
+        "type": "ValueObject"
+      },
+      {
+        "id": "EventId",
+        "name": "EventId",
+        "type": "ValueObject"
+      },
+      {
+        "id": "AggregateTransactionId",
+        "name": "AggregateTransactionId",
+        "type": "ValueObject"
+      },
+      {
+        "id": "CorrelationId",
+        "name": "CorrelationId",
+        "type": "ValueObject"
+      },
+      {
+        "id": "CausationId",
+        "name": "CausationId",
+        "type": "ValueObject"
+      },
+      {
+        "id": "CommandAcknowledgment",
+        "name": "CommandAcknowledgment",
+        "type": "Concept"
+      },
+      {
+        "id": "QueryAcknowledgment",
+        "name": "QueryAcknowledgment",
+        "type": "Concept"
+      },
+      {
+        "id": "EventStreamSubscription",
+        "name": "EventStreamSubscription",
+        "type": "Concept"
+      },
+      {
+        "id": "DomainNode",
+        "name": "DomainNode",
+        "type": "Concept"
+      },
+      {
+        "id": "PayloadMetadata",
+        "name": "PayloadMetadata",
+        "type": "Concept"
+      },
+      {
+        "id": "DomainPayloadCodec",
+        "name": "DomainPayloadCodec",
+        "type": "Concept"
+      }
+    ]
+  },
+  "domain": {
+    "id": "cim-domain",
+    "name": "CIM Domain",
+    "organization": "Cowboy AI, LLC",
+    "purpose": "Foundational DDD primitives and formal structures for CIM",
+    "version": "0.1.0"
+  },
+  "domain_identity": {
+    "core_concepts": [
+      "schema",
+      "language",
+      "metacognition"
+    ],
+    "notes": "This domain models foundational DDD primitives and UL projections; it composes other domains via functors.",
+    "ul_concept_id": "cim_domain"
+  },
+  "entities": [
+    {
+      "details": {
+        "module": "entity"
+      },
+      "kind": "Entity",
+      "name": "Entity<T>"
+    },
+    {
+      "details": {
+        "module": "events"
+      },
+      "kind": "Entity",
+      "name": "DomainEventEnvelope"
+    }
+  ],
+  "metadata": {
+    "isomorphic_to": {
+      "ast": {
+        "root_module": "src/lib.rs",
+        "verified": true
+      },
+      "string_diagrams": {
+        "files": [
+          "doc/act/diagrams/ddd_domain_category.svg",
+          "doc/act/diagrams/aggregate_composition.svg",
+          "doc/act/diagrams/event_sourcing_fold.svg",
+          "doc/act/diagrams/cqrs_projection_functor.svg",
+          "doc/act/diagrams/saga_as_composed_aggregate.svg",
+          "doc/act/diagrams/bounded_context_functors.svg",
+          "doc/act/diagrams/topos_overview.svg",
+          "doc/act/diagrams/subobject_classifier.svg",
+          "doc/act/diagrams/guarded_command_pullback.svg",
+          "doc/act/diagrams/concept_graph.svg",
+          "doc/act/diagrams/ontology_to_qd.svg",
+          "doc/act/diagrams/entity_naming.svg",
+          "doc/act/diagrams/value_collection_monoid.svg",
+          "doc/act/diagrams/domain_objects_overview.svg",
+          "doc/act/diagrams/concept_graphs.svg",
+          "doc/act/diagrams/external_ipld_reference.svg",
+          "doc/act/diagrams/event_pipeline.svg",
+          "doc/act/diagrams/identity_envelope.svg",
+          "doc/act/diagrams/addressing.svg",
+          "doc/act/diagrams/read_path.svg"
+        ],
+        "proofs_location": "doc/act/string_diagrams.md",
+        "verified": true
+      }
+    }
+  },
+  "relationships": [],
+  "ul_projection": {
+    "file": "ul-projection.json",
+    "notes": "Run diff-first using tools/domain_graph/ul_projection to review UL changes; do not auto-overwrite.",
+    "verified": true
+  },
+  "value_objects": [
+    {
+      "details": {
+        "module": "cid",
+        "multihash": "blake3-256 (0x1e)",
+        "notes": "DomainCid supports dag-cbor, dag-json, and rarely raw for payload blocks (based on mimetype). DomainNode adds a typed KV metadata object; the top-level CID is a merkledag root containing metadata and references to the payload and invariants.",
+        "payload_codecs": [
+          "dag-cbor",
+          "dag-json",
+          "raw (rare)"
+        ],
+        "version": "1"
+      },
+      "kind": "ValueObject",
+      "name": "DomainCid"
+    },
+    {
+      "details": {
+        "module": "cid"
+      },
+      "kind": "ValueObject",
+      "name": "CidChain"
+    },
+    {
+      "details": {
+        "module": "entity"
+      },
+      "kind": "ValueObject",
+      "name": "EntityId<T>"
+    },
+    {
+      "details": {
+        "module": "vector_clock"
+      },
+      "kind": "ValueObject",
+      "name": "VectorClock"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CIM Domain project has comprehensive test coverage with 437 tests across multiple categories. All tests are now enabled and passing, including those that require NATS integration.
+The CIM Domain project has comprehensive hermetic tests with no external service dependencies. Tests are fast, deterministic, and focused on pure domain logic.
 
 ## Test Categories
 
@@ -12,35 +12,14 @@ The CIM Domain project has comprehensive test coverage with 437 tests across mul
 - **Coverage**: All core domain modules
 - **Requirements**: None (pure unit tests)
 
-### 2. Infrastructure Integration Tests (19 tests)
-- **Location**: `tests/infrastructure_tests.rs`
+### 2. Infrastructure-Oriented Tests
+- **Location**: `tests/infrastructure/`
 - **Command**: `cargo test --test infrastructure_tests`
-- **Coverage**: Event sourcing, sagas, projections
-- **Requirements**: NATS with JetStream
+- **Coverage**: CQRS flows, projections (pure, in-memory models)
 
-### 3. JetStream Event Store Tests (6 tests)
-- **Location**: `tests/jetstream_event_store_tests.rs`
-- **Command**: `cargo test --test jetstream_event_store_tests`
-- **Coverage**: Event persistence, replay, snapshots
-- **Requirements**: NATS with JetStream
+## External Services
 
-### 4. Persistence Integration Tests (7 tests)
-- **Location**: `tests/persistence_tests.rs`
-- **Command**: `cargo test --test persistence_tests`
-- **Coverage**: Repository patterns, KV store, TTL
-- **Requirements**: NATS with JetStream
-
-## NATS Requirements
-
-All integration tests require NATS with JetStream enabled:
-
-```bash
-# Start NATS with JetStream
-docker run -d -p 4222:4222 nats:latest -js
-
-# Verify NATS is running
-nc -zv localhost 4222
-```
+No external services are required. Tests must not perform network or filesystem I/O.
 
 ### Test Isolation
 
@@ -67,11 +46,10 @@ Output files:
 ### GitHub Actions Workflow
 
 The `.github/workflows/test-dashboard.yml` workflow:
-1. Sets up NATS service container
-2. Runs test capture script
-3. Uploads results as artifacts
-4. Can comment on PRs with results
-5. Provides data for dashboard display
+1. Runs the test capture script
+2. Uploads results as artifacts
+3. Optionally comments on PRs with results
+4. Provides data for dashboard display
 
 ### Dashboard
 
@@ -93,48 +71,24 @@ python3 test-server.py
 
 ## Test Metrics
 
-Current test metrics (as of last run):
-- **Total Tests**: 437
-- **Pass Rate**: 100%
-- **Execution Time**: ~15 seconds (with NATS)
+Current test metrics vary by commit; aim for fast execution and high coverage.
 
 ### Performance Characteristics
 
 - Unit tests: <1 second
-- Infrastructure tests: ~3 seconds
-- JetStream tests: ~10 seconds (due to stream operations)
-- Persistence tests: ~3 seconds
+- Infrastructure tests: ~3 seconds (pure, in-memory)
 
 ## Best Practices
 
-1. **Always run with NATS** - Many tests require it
-2. **Use specific test commands** - For faster iteration
-3. **Check test output** - Some tests log useful debugging info
-4. **Monitor test times** - Long-running tests may indicate issues
+1. **Use specific test commands** - For faster iteration
+2. **Check test output** - Some tests log useful debugging info
+3. **Monitor test times** - Long-running tests may indicate issues
 
 ## Troubleshooting
 
-### NATS Connection Errors
-
-If tests fail with connection errors:
-```bash
-# Check NATS is running
-docker ps | grep nats
-
-# Check port is available
-lsof -i :4222
-
-# Restart NATS
-docker stop nats-server
-docker run -d --name nats-server -p 4222:4222 nats:latest -js
-```
-
 ### Test Timeouts
 
-Some tests have longer timeouts for NATS operations:
-- TTL tests wait for expiration (3+ seconds)
-- Stream creation tests may take time
-- Use `--nocapture` to see progress
+Tests should execute quickly. Use `--nocapture` to see progress when debugging.
 
 ### Debugging Failed Tests
 

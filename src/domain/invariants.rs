@@ -188,9 +188,7 @@ pub struct ReferentialIntegrityInvariant {
 impl ReferentialIntegrityInvariant {
     /// Create a new referential integrity invariant
     pub fn new(source_domain: String, target_domain: String, reference_field: String) -> Self {
-        let name = format!(
-            "ref_integrity_{source_domain}_{target_domain}_{reference_field}"
-        );
+        let name = format!("ref_integrity_{source_domain}_{target_domain}_{reference_field}");
 
         Self {
             name,

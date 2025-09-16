@@ -1,5 +1,7 @@
 # Mathematical Proofs for FP Domain Model
 
+![FP Domain Overview](./fp_domain_overview.svg)
+
 ## 1. Entity as Monad
 
 ### Definition
@@ -102,7 +104,7 @@ For any `(s, i) ∈ S × Σ`:
 
 ✓ Deterministic by construction
 
-## 4. Aggregate as Mealy Machine
+## 4. Aggregate as Mealy Machine (Pure Domain)
 
 ### Theorem
 Every Aggregate implementing `MealyStateMachine` forms a valid Mealy machine.
@@ -127,7 +129,13 @@ impl MealyStateMachine for A {
 
 Therefore, Aggregate ⊆ Mealy Machines ✓
 
-## 5. Entity-Component-System as Kleisli Category
+## 5. Saga as Aggregate-of-Aggregates
+
+Sagas are aggregates whose entities are other aggregates. Causality between the root and participants is determined by Vector Clocks (no wall‑clock generation in domain). See the diagram below for causal relationships.
+
+![Saga Vector Clocks](./saga_vector_clock.svg)
+
+## 6. Entity-Component-System as Kleisli Category
 
 ### Definition
 The Kleisli category `Kl(M)` for monad `M = Entity`:

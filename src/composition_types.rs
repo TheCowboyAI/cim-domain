@@ -94,12 +94,7 @@ pub enum DomainCompositionType {
         policy_type: String,
     },
 
-    /// Workflow composition
-    Workflow {
-        /// Type of workflow
-        workflow_type: String,
-    },
-
+    // Workflow composition lives downstream (cim-domain-workflow)
     /// Composite structure (for limits/colimits)
     Composite {
         /// Type of composite
@@ -194,9 +189,7 @@ impl DomainCompositionType {
                 format!("Bounded Context: {domain}")
             }
             DomainCompositionType::Policy { policy_type } => format!("Policy: {policy_type}"),
-            DomainCompositionType::Workflow { workflow_type } => {
-                format!("Workflow: {workflow_type}")
-            }
+            // Workflow composition lives downstream
             DomainCompositionType::Composite {
                 composite_type,
                 components,
@@ -216,7 +209,7 @@ impl DomainCompositionType {
             DomainCompositionType::Query { .. } => "Query",
             DomainCompositionType::BoundedContext { .. } => "BoundedContext",
             DomainCompositionType::Policy { .. } => "Policy",
-            DomainCompositionType::Workflow { .. } => "Workflow",
+            // Workflow composition lives downstream
             DomainCompositionType::Composite { .. } => "Composite",
         }
     }
@@ -360,10 +353,7 @@ mod tests {
             domain: "Sales".to_string()
         }
         .is_entity_type());
-        assert!(!DomainCompositionType::Workflow {
-            workflow_type: "OrderFlow".to_string()
-        }
-        .is_entity_type());
+        // Workflow composition lives downstream; not classified here
     }
 
     /// Test DomainCompositionType value object classification
@@ -530,13 +520,7 @@ mod tests {
             "Policy: ReturnPolicy"
         );
 
-        assert_eq!(
-            DomainCompositionType::Workflow {
-                workflow_type: "FulfillmentFlow".to_string()
-            }
-            .display_name(),
-            "Workflow: FulfillmentFlow"
-        );
+        // Workflow composition lives downstream (cim-domain-workflow). No local variant here.
     }
 
     /// Test DomainCompositionType base type names
@@ -605,13 +589,7 @@ mod tests {
             .base_type_name(),
             "Policy"
         );
-        assert_eq!(
-            DomainCompositionType::Workflow {
-                workflow_type: "Any".to_string()
-            }
-            .base_type_name(),
-            "Workflow"
-        );
+        // Workflow composition lives downstream; not classified here
     }
 
     /// Test serialization and deserialization
@@ -672,9 +650,7 @@ mod tests {
             DomainCompositionType::Policy {
                 policy_type: "RestockingPolicy".to_string(),
             },
-            DomainCompositionType::Workflow {
-                workflow_type: "RestockingFlow".to_string(),
-            },
+            // Workflow composition lives downstream
         ];
 
         for domain_type in domain_types {

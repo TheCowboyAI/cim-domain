@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#374151" />
+    </marker>
+    <style><![CDATA[
+      .title { font-family: ui-sans-serif, system-ui; font-size: 18px; font-weight: 600; fill: #111827; }
+      .label { font-family: ui-sans-serif, system-ui; font-size: 13px; fill: #111827; }
+      .cid { fill: #f4f4f5; stroke: #71717a; stroke-width: 1.2; rx: 8; ry: 8; }
+      .vo { fill: #eef2ff; stroke: #6366f1; stroke-width: 1.2; rx: 8; ry: 8; }
+      .edge { stroke: #374151; stroke-width: 1.3; fill: none; marker-end: url(#arrow); }
+    ]]></style>
+  </defs>
+
+  <text x="16" y="28" class="title">Content Addressing</text>
+
+  <rect x="40" y="120" width="160" height="46" class="cid" />
+  <text x="52" y="148" class="label">DomainCid</text>
+
+  <rect x="240" y="120" width="180" height="46" class="vo" />
+  <text x="252" y="148" class="label">DomainNode</text>
+  <path class="edge" d="M200,143 C210,143 224,143 240,143" />
+  <text x="196" y="132" class="label">defines_node</text>
+
+  <rect x="460" y="90" width="180" height="40" class="vo" />
+  <text x="472" y="114" class="label">DomainPayloadCodec</text>
+  <path class="edge" d="M420,140 C430,128 444,118 460,110" />
+  <text x="430" y="122" class="label">uses_codec</text>
+
+  <rect x="460" y="150" width="180" height="40" class="vo" />
+  <text x="472" y="174" class="label">ValueObject (metadata)</text>
+  <path class="edge" d="M420,143 C430,150 444,156 460,160" />
+  <text x="424" y="170" class="label">has_metadata</text>
+
+  <rect x="680" y="120" width="120" height="46" class="cid" />
+  <text x="692" y="148" class="label">IPLD.Cid</text>
+  <path class="edge" d="M420,143 C480,143 600,143 680,143" />
+  <text x="540" y="132" class="label">payload_is</text>
+
+  <rect x="820" y="120" width="120" height="46" class="cid" />
+  <text x="832" y="148" class="label">ipld:cid</text>
+  <path class="edge" d="M760,143 C772,143 784,143 820,143" />
+  <text x="772" y="132" class="label">defined_by_ipld</text>
+
+  <!-- Bridge from envelope payload_cid (contextual) -->
+  <rect x="240" y="220" width="180" height="40" class="vo" />
+  <text x="252" y="244" class="label">DomainEventEnvelope</text>
+  <path class="edge" d="M330,220 C330,200 280,180 200,166" />
+  <text x="210" y="198" class="label">payload_cid</text>
+
+</svg>
+

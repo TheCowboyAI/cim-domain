@@ -13,6 +13,19 @@ use crate::composition::DomainComposition;
 use crate::errors::DomainError;
 use tokio::sync::RwLock;
 
+/// Simple concept for semantic analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Concept {
+    /// Concept name
+    pub name: String,
+    /// Text representation
+    pub text: String,
+    /// Embedding vector
+    pub embedding: Vec<f64>,
+    /// Quality dimensions for similarity
+    pub quality_dimensions: Vec<f64>,
+}
+
 /// Calculate cosine similarity between two vectors
 fn cosine_similarity(a: &[f64], b: &[f64]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
@@ -41,8 +54,8 @@ pub struct SemanticAnalyzer {
     /// Domain ontologies
     ontologies: RwLock<HashMap<String, DomainOntology>>,
 
-    /// Simple concepts for cross-domain search
-    concepts: RwLock<Vec<crate::integration::cross_domain_search::Concept>>,
+    /// Simple concepts for semantic analysis
+    concepts: RwLock<Vec<Concept>>,
 }
 
 /// An embedding of a concept in semantic space
@@ -253,19 +266,14 @@ impl SemanticAnalyzer {
     }
 
     /// Add a simple concept for cross-domain search
-    pub async fn add_concept(
-        &self,
-        concept: crate::integration::cross_domain_search::Concept,
-    ) -> Result<(), DomainError> {
+    pub async fn add_concept(&self, concept: Concept) -> Result<(), DomainError> {
         let mut concepts = self.concepts.write().await;
         concepts.push(concept);
         Ok(())
     }
 
     /// Get all concepts
-    pub async fn get_concepts(
-        &self,
-    ) -> Result<Vec<crate::integration::cross_domain_search::Concept>, DomainError> {
+    pub async fn get_concepts(&self) -> Result<Vec<Concept>, DomainError> {
         let concepts = self.concepts.read().await;
         Ok(concepts.clone())
     }
@@ -310,10 +318,7 @@ impl SemanticAnalyzer {
     }
 
     /// Create a concept from text (simplified version)
-    pub async fn create_concept_from_text(
-        &self,
-        text: &str,
-    ) -> Result<crate::integration::cross_domain_search::Concept, DomainError> {
+    pub async fn create_concept_from_text(&self, text: &str) -> Result<Concept, DomainError> {
         // In a real implementation, this would use an embedding model
         // For now, create a simple hash-based embedding
         let hash = text.bytes().fold(0u32, |acc, b| acc.wrapping_add(b as u32));
@@ -326,10 +331,12 @@ impl SemanticAnalyzer {
             ((text.len() as u32 % 100) as f64) / 100.0,
         ];
 
-        Ok(crate::integration::cross_domain_search::Concept::new(
-            text.to_string(),
-            vector,
-        ))
+        Ok(Concept {
+            name: text.to_string(), // Use text as name for now
+            text: text.to_string(),
+            embedding: vector.clone(),
+            quality_dimensions: vector,
+        })
     }
 
     /// Calculate semantic distance between concepts

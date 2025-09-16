@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#444" />
+    </marker>
+    <style><![CDATA[
+      .node { fill: #f0fdf4; stroke: #16a34a; stroke-width: 1.2; rx: 8; ry: 8; }
+      .merge { fill: #ecfeff; stroke: #0891b2; }
+      .label { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; font-size: 14px; fill: #1f2937; }
+      .small { font-size: 12px; fill: #374151; }
+      .edge { stroke: #444; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .title { font-size: 18px; font-weight: 600; }
+    ]]></style>
+  </defs>
+
+  <text x="20" y="28" class="label title">Policy Attachments — LWW Register (CRDT)</text>
+
+  <rect x="80" y="180" width="180" height="56" class="node" />
+  <text x="96" y="212" class="label">Policy: ⌀</text>
+
+  <rect x="360" y="80" width="240" height="56" class="node" />
+  <text x="376" y="112" class="label">Policy = A @ t1</text>
+
+  <rect x="360" y="280" width="240" height="56" class="node" />
+  <text x="376" y="312" class="label">Policy = B @ t2</text>
+
+  <rect x="680" y="180" width="180" height="56" class="node merge" />
+  <text x="696" y="212" class="label">Policy = max(A@t1,B@t2)</text>
+
+  <path class="edge" d="M260,208 C300,180 320,150 360,108" />
+  <text x="270" y="160" class="small">attach A@t1</text>
+
+  <path class="edge" d="M260,208 C300,236 320,266 360,308" />
+  <text x="270" y="266" class="small">attach B@t2</text>
+
+  <path class="edge" d="M600,108 C640,140 660,160 680,208" />
+  <text x="610" y="150" class="small">merge</text>
+
+  <path class="edge" d="M600,308 C640,276 660,256 680,208" />
+  <text x="610" y="290" class="small">merge</text>
+
+  <text x="80" y="380" class="small">LWW (last-write-wins) modeled as CRDT gives commutative, associative, idempotent merges for concurrent attachments.</text>
+</svg>

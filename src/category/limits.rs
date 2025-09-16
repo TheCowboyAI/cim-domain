@@ -180,9 +180,7 @@ impl Limit for Pullback {
         } else if target == self.object_b.id {
             Ok(self.p2.clone())
         } else {
-            Err(DomainError::NotFound(format!(
-                "No projection to {target}"
-            )))
+            Err(DomainError::NotFound(format!("No projection to {target}")))
         }
     }
 
@@ -334,9 +332,7 @@ impl Colimit for Pushout {
         } else if source == self.object_b.id {
             Ok(self.i2.clone())
         } else {
-            Err(DomainError::NotFound(format!(
-                "No injection from {source}"
-            )))
+            Err(DomainError::NotFound(format!("No injection from {source}")))
         }
     }
 

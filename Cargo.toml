@@ -2,13 +2,16 @@
 
 [workspace]
 members = [
-    "."
+    ".",
+    "tools/dialog_dag",
+    "tools/domain_graph",
+    "examples/domain_examples",
 ]
 resolver = "2"
 
 [package]
 name = "cim-domain"
-version = "0.7.0"
+version = "0.7.5"
 edition = "2021"
 authors = ["The Cowboy AI"]
 description = "Core DDD components and traits for CIM - Domain-Driven Design building blocks"
@@ -47,10 +50,7 @@ indexmap = "2.7"
 lru = "0.12"
 
 # Async runtime
-async-nats = { version = "0.41", features = ["service"] }
-
-# For JetStream snapshot store
-bytes = "1.5"
+# Integration dependencies removed for pure-library scope
 
 # JSON Schema generation  
 schemars = { version = "0.8", features = ["chrono", "uuid1"] }
@@ -62,6 +62,7 @@ rand = "0.8"
 proptest = "1.6"
 test-case = "3.3"
 pretty_assertions = "1.4"
+serde_yaml = "0.9"
 
 # Mocking
 mockall = "0.13"
@@ -69,9 +70,7 @@ mockall = "0.13"
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports"] }
 
-[[test]]
-name = "jetstream_event_store_tests"
-path = "tests/jetstream_event_store_tests.rs"
+## Removed JetStream/NATS-dependent tests for pure-library scope
 
 # Disabled - needs updating for new API
 # [[test]]
@@ -82,118 +81,48 @@ path = "tests/jetstream_event_store_tests.rs"
 # name = "command_handler_example"
 # path = "examples/command_handler_example.rs"
 
-[[example]]
-name = "query_handler_example"
-path = "examples/query_handler_example.rs"
+ 
 
-[[example]]
-name = "state_machine_aggregates"
-path = "examples/state_machine_aggregates.rs"
 
-[[example]]
-name = "persistence_example"
-path = "examples/persistence_example.rs"
 
-[[example]]
-name = "persistence_example_v2"
-path = "examples/persistence_example_v2.rs"
 
-[[example]]
-name = "full_persistence_example"
-path = "examples/full_persistence_example.rs"
 
-[[example]]
-name = "advanced_persistence_example"
-path = "examples/advanced_persistence_example.rs"
 
-[[example]]
-name = "integration_example"
-path = "examples/integration_example.rs"
 
-[[example]]
-name = "event_replay_example"
-path = "examples/event_replay_example.rs"
 
-[[example]]
-name = "inspect_cid"
-path = "examples/inspect_cid.rs"
 
-[[example]]
-name = "full_event_sourcing_demo"
-path = "examples/demos/full_event_sourcing_demo.rs"
 
-[[example]]
-name = "state_machine_demo"
-path = "examples/demos/state_machine_demo.rs"
 
-[[example]]
-name = "cqrs_pattern_demo"
-path = "examples/demos/cqrs_pattern_demo.rs"
 
-[[example]]
-name = "event_stream_example"
-path = "examples/event_stream_example.rs"
 
-[[example]]
-name = "bevy_integration"
-path = "examples/bevy_integration.rs"
+ 
 
-[[example]]
-name = "workflow_basics"
-path = "examples/workflow_basics.rs"
+ 
 
-[[example]]
-name = "simple_example"
-path = "examples/simple_example.rs"
+ 
 
-[[example]]
-name = "simple_persistence_example"
-path = "examples/simple_persistence_example.rs"
 
-[[example]]
-name = "command_handler_example"
-path = "examples/command_handler_example.rs"
+ 
 
-[[example]]
-name = "persistence_metrics_demo"
-path = "examples/persistence_metrics_demo.rs"
 
-[[example]]
-name = "user_story_1_component_developer"
-path = "examples/user_story_1_component_developer.rs"
+ 
 
-[[example]]
-name = "user_story_2_system_architect"
-path = "examples/user_story_2_system_architect.rs"
+ 
 
-[[example]]
-name = "user_story_3_event_stream_manager"
-path = "examples/user_story_3_event_stream_manager.rs"
 
-[[example]]
-name = "user_story_4_data_analyst"
-path = "examples/user_story_4_data_analyst.rs"
+ 
 
-[[example]]
-name = "user_story_5_integration_engineer"
-path = "examples/user_story_5_integration_engineer.rs"
+ 
 
-[[example]]
-name = "comprehensive_demo"
-path = "examples/comprehensive_demo.rs"
 
-[[example]]
-name = "comprehensive_demo_simple"
-path = "examples/comprehensive_demo_simple.rs"
+ 
 
-[[bench]]
-name = "persistence_benchmarks"
-harness = false
+## Removed persistence benchmarks for pure-library scope
 
 [features]
 default = []
-# Enable subject-based routing and permissions (requires cim-subject)
-subject-routing = []
-# Enable full feature set including all optional dependencies
+# Minimal feature set
 full = []
 test-utils = []
+act_strict = []
+domain_bdd = []

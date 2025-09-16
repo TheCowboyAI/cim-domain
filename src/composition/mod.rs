@@ -8,10 +8,9 @@
 
 pub mod comprehension_engine;
 pub mod domain_composition;
-pub mod saga_orchestration;
 pub mod topos_structure;
 
 pub use comprehension_engine::{ComprehensionEngine, Predicate, SubAggregate};
 pub use domain_composition::{CompositionStrategy, DomainComposition};
-pub use saga_orchestration::{RetryPolicy, Saga, SagaOrchestrator, SagaState, SagaStep};
+// Saga orchestration has been moved downstream (workflows live outside core)
 pub use topos_structure::{DomainTopos, InternalLogic, SubobjectClassifier};

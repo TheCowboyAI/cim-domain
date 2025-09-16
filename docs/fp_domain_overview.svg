@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" role="img" aria-label="FP Domain Overview">
+  <style>
+    .box{fill:#f8fbff;stroke:#2b6cb0;stroke-width:2}
+    .title{font:700 14px sans-serif;fill:#2b6cb0}
+    .text{font:12px sans-serif;fill:#1a202c}
+    .arrow{stroke:#4a5568;stroke-width:2;marker-end:url(#m)}
+  </style>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4a5568" />
+    </marker>
+  </defs>
+
+  <!-- Entity Monad -->
+  <rect class="box" x="20" y="30" width="200" height="80" rx="8"/>
+  <text class="title" x="35" y="52">Entity Monad</text>
+  <text class="text" x="35" y="74">pure: A → M&lt;A&gt;</text>
+  <text class="text" x="35" y="92">bind: M&lt;A&gt; × (A→M&lt;B&gt;) → M&lt;B&gt;</text>
+
+  <!-- Mealy Aggregate -->
+  <rect class="box" x="270" y="30" width="220" height="100" rx="8"/>
+  <text class="title" x="285" y="52">Aggregate (Mealy)</text>
+  <text class="text" x="285" y="74">δ: (State, Cmd) → (State, Events)</text>
+  <text class="text" x="285" y="92">apply: (State, Event) → State</text>
+
+  <!-- Domain Event -->
+  <rect class="box" x="540" y="30" width="200" height="80" rx="8"/>
+  <text class="title" x="555" y="52">DomainEvent</text>
+  <text class="text" x="555" y="74">data only (no routing/time)</text>
+
+  <!-- Vector Clock -->
+  <rect class="box" x="80" y="220" width="220" height="100" rx="8"/>
+  <text class="title" x="95" y="242">VectorClock</text>
+  <text class="text" x="95" y="264">increment(actor): VC</text>
+  <text class="text" x="95" y="282">merge(a,b): VC</text>
+  <text class="text" x="95" y="300">compare(a,b): Before/After/Concurrent</text>
+
+  <!-- Saga -->
+  <rect class="box" x="360" y="220" width="320" height="120" rx="8"/>
+  <text class="title" x="375" y="242">Saga = Aggregate-of-Aggregates</text>
+  <text class="text" x="375" y="264">root: AggregateId</text>
+  <text class="text" x="375" y="282">participants: [AggregateId]</text>
+  <text class="text" x="375" y="300">clock: VectorClock (causal order)</text>
+
+  <!-- Arrows -->
+  <line class="arrow" x1="220" y1="70" x2="270" y2="70"/>
+  <line class="arrow" x1="490" y1="70" x2="540" y2="70"/>
+  <line class="arrow" x1="300" y1="270" x2="360" y2="270"/>
+</svg>

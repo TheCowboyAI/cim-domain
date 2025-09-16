@@ -5,6 +5,38 @@ All notable changes to cim-domain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2025-09-14
+## [0.7.6] - 2025-09-15
+
+### Added
+- Dialog DAG Tools (tools/dialog_dag) to maintain `dialog-dag.json` outside the core library. Includes:
+  - `log_dialog_event`: append dialog events with proper CIDv1 derived from content (Blake3 → Multihash 0x1e → CIDv1 0x55).
+  - `merge_dialog_dag`: merge continuation files, de-duping by `cid` and preserving chronological order.
+  - `reindex_dialog_cids`: recompute CIDs and fix parent links for an existing `dialog-dag.json`.
+
+### Changed
+- CQRS Display output standardized:
+  - `CorrelationId` now displays as `correlation:<value>` (Single and Transaction).
+  - `CausationId` now displays as `causation:<uuid>`.
+  - Note: If downstream code parses previous string formats, adjust parsers accordingly.
+
+### Fixed
+- Implemented `Clone` for `TxOutput` to satisfy `TransitionOutput: Clone`. Clone semantics intentionally drop events (outputs are consumed), avoiding cloning trait objects.
+
+### Documentation
+- README: added “Dialog DAG Tools” section with quickstart usage, clarifying that tools live outside the pure library boundary.
+
+### Changed
+- Re-scoped crate as a pure domain library; no persistence, routing, or external I/O.
+- Updated AGENTS.md to import .claude rules and clarify purity and testing expectations.
+
+### Removed
+- Deleted NATS/JetStream/IPLD/subject-based examples and demos.
+- Removed all NATS- and persistence-dependent integration tests and related Cargo entries.
+
+### Documentation
+- Added repository contributor guide (AGENTS.md) tailored for pure-library usage.
+
 ## [0.7.0] - 2025-01-14
 
 ### Added

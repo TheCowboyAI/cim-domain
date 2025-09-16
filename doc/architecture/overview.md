@@ -8,30 +8,34 @@ The CIM Domain implements a sophisticated event-driven, domain-driven design tha
 
 ## Core Architecture
 
-The CIM Domain architecture consists of three key layers:
+The CIM Domain architecture in this crate is the core Domain Layer (DDD). Transport/persistence/visualization live downstream and are intentionally out of scope for this library.
 
-1. **Domain Layer (DDD)** - Business logic and domain modeling
-2. **Transport Layer (NATS)** - The ONLY allowed transport between processes
-3. **Visualization Layer (Bevy ECS)** - UI and real-time visualization
+### Functional Principles
+
+- Pure functions and immutable data by default
+- Algebraic data types for state and messages
+- Explicit state machines (Moore/Mealy)
+- Separation of effects at boundaries (ports/traits)
 
 ### Fundamental Principles
 
-- **EVERYTHING runs on ECS** (Bevy Entity Component System)
-- **Some things enhance ECS with DDD** patterns
-- **1:1 isomorphic mapping** between DDD components and ECS components
 - **Event-first design** - No CRUD operations, everything is an event
 
 ## Architectural Patterns
 
+### Sagas (Aggregate-of-Aggregates)
+
+Sagas are coordination aggregates whose participants are other aggregates (possibly from different bounded contexts). Causal ordering across participants uses vector clocks; no wall‑clock time is generated here.
+
 ### Event-Driven Architecture
 
-All state changes in the system are captured as events:
+All state changes are captured as events:
 
 - Commands return acknowledgments only (Accepted/Rejected)
-- Queries return data directly (synchronous)
+- Queries return data directly from read models (synchronous)
 - Async results delivered through event streams
-- Complete event sourcing with time-travel debugging capability
-- All events have temporal ordering with `occurred_at` timestamps
+- Event envelope payload is `Either<DomainCid, E>` (inline or CID)
+- No `occurred_at` timestamps are modeled here; identity (e.g., UUID v7) provides time ordering; physical time belongs downstream
 
 ### CQRS Pattern
 
@@ -47,7 +51,7 @@ Commands → CommandHandler → Events → EventStore
 
 - No shared state between domains
 - Cross-domain communication via Category Theory patterns
-- Subject-based routing for event distribution
+- Subject-based routing for event distribution (downstream)
 - Each domain maintains its own bounded context
 
 ### Component Architecture
@@ -55,7 +59,7 @@ Commands → CommandHandler → Events → EventStore
 The component system provides the foundation for extensibility:
 
 - Base `Component` trait provides type erasure and serialization
-- Components automatically sync across processes via NATS
+- Components can sync across processes via your chosen transport (downstream)
 - Isomorphic mapping ensures DDD components map 1:1 to ECS components
 - ComponentEvent types: Added, Updated, Removed
 
@@ -69,7 +73,7 @@ The component system provides the foundation for extensibility:
 3. Domain events generated
 4. Events persisted to EventStore
 5. CommandAck returned (Accepted/Rejected)
-6. Events published to NATS
+6. Events published via your chosen transport (downstream)
 7. Projections update read models
 ```
 
@@ -85,30 +89,20 @@ The component system provides the foundation for extensibility:
 ### Cross-Domain Communication
 
 ```
-Domain A Event → NATS → Domain Bridge → Transform → Domain B Command
+Domain A Event → Transport → Domain Bridge → Transform → Domain B Command
                   ↓
             Event Stream → Subscribers → Projections
 ```
 
 ## Technology Stack
 
-### NATS Messaging
+### Messaging Layer (downstream)
 
-**Purpose**: Distributed messaging and component synchronization
+Implemented in infrastructure crates; choose transport guarantees as needed.
 
-- Subject-based routing with wildcards
-- Guaranteed delivery with JetStream
-- Clustering support for high availability
-- Format: `context.entity.event.version`
+### (Removed) ECS/transport specifics
 
-### Bevy ECS
-
-**Purpose**: High-performance entity component system
-
-- Data-oriented design for cache efficiency
-- Parallel processing of systems
-- Flexible component composition
-- Real-time visualization support
+This core library contains no visualization, transport, or persistence details. Those concerns live downstream.
 
 ### Category Theory
 
@@ -119,28 +113,18 @@ Domain A Event → NATS → Domain Bridge → Transform → Domain B Command
 - **Natural transformations** for complex mappings
 - **Limits/Colimits** for composition
 
-### Event Sourcing with CIDs
+### Event Sourcing (downstream)
 
-**Purpose**: Immutable audit trail with cryptographic integrity
+If required, implement persistence and content addressing in infrastructure crates.
 
-- Content-addressed storage using IPLD
-- CID chains for event integrity
-- Time-travel debugging capability
-- Verifiable event history
+## Core building blocks (domain‑neutral)
 
-## Core Domain Aggregates
-
-The system implements 7 essential aggregates:
-
-| Aggregate | Purpose | Key Features |
-|-----------|---------|--------------|
-| Person | Individual users and identities | Identity management, authentication |
-| Organization | Groups, companies, collectives | Hierarchical structure, member management |
-| Agent | AI and automated entities | Capability boundaries, task execution |
-| Location | Physical and logical locations | Address management, geo-coordinates |
-| Policy | Rules and governance | Approval workflows, permissions |
-| Document | Files and content | Version control, content addressing |
-| Workflow | Business processes | State machines, orchestration |
+- AggregateRoot: boundary and invariants; emits domain events
+- DomainEntity: identity within the boundary
+- ValueObject: immutable values; compose entities and invariants
+- DomainEvent / DomainEventEnvelope / EventStream
+- Projection → ReadModel; Query → QueryResponse
+- Saga (participants: aggregates) with VectorClock
 
 ## Component Relationships
 
@@ -152,21 +136,17 @@ Entity<T> → Component → AggregateRoot
 StateMachine → Entity
 ```
 
-### Event Flow
+### Event Flow (abstract)
 
 ```
-DomainEvent → EventEnvelope → NATS → EventHandler
-                                ↓
-                          ProjectionUpdater → ReadModel
+DomainEvent → DomainEventEnvelope (Either<CID|Inline>) → EventStream
+                                                ↓
+                                          Projection → ReadModel
 ```
 
-### Integration Patterns
+### Integration patterns (downstream)
 
-```
-ServiceRegistry → DependencyInjection
-       ↓
-DomainBridge → CrossDomainRules → SemanticAnalyzer
-```
+Cross-context transport, registry, DI, and bridging live downstream and are intentionally not specified here.
 
 ## Performance Characteristics
 
@@ -181,7 +161,7 @@ DomainBridge → CrossDomainRules → SemanticAnalyzer
 ## Benefits
 
 1. **Decoupling**: Domain logic completely separated from infrastructure
-2. **Scalability**: Horizontal scaling through NATS clustering
+2. **Scalability**: Horizontal scaling through your chosen transport
 3. **Flexibility**: New domains added without changing core
 4. **Performance**: Async processing and ECS parallelism
 5. **Debugging**: Complete event history with time-travel
@@ -198,7 +178,7 @@ DomainBridge → CrossDomainRules → SemanticAnalyzer
 4. Create projections for read models
 5. Add integration tests
 
-### Cross-Domain Integration
+### Cross-Domain Integration (downstream)
 
 1. Use domain bridges for event routing
 2. Apply functors for data transformation

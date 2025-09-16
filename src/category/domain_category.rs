@@ -183,12 +183,14 @@ impl DomainCategory {
             .morphisms
             .get(first)
             .ok_or_else(|| DomainError::NotFound(format!("First morphism {first} not found")))?;
-        let second_morph = self.morphisms.get(second).ok_or_else(|| {
-            DomainError::NotFound(format!("Second morphism {second} not found"))
-        })?;
-        let result_morph = self.morphisms.get(result).ok_or_else(|| {
-            DomainError::NotFound(format!("Result morphism {result} not found"))
-        })?;
+        let second_morph = self
+            .morphisms
+            .get(second)
+            .ok_or_else(|| DomainError::NotFound(format!("Second morphism {second} not found")))?;
+        let result_morph = self
+            .morphisms
+            .get(result)
+            .ok_or_else(|| DomainError::NotFound(format!("Result morphism {result} not found")))?;
 
         // Validate composition is valid (first.target == second.source)
         if first_morph.target != second_morph.source {
@@ -224,9 +226,10 @@ impl DomainCategory {
             .morphisms
             .get(first)
             .ok_or_else(|| DomainError::NotFound(format!("First morphism {first} not found")))?;
-        let second_morph = self.morphisms.get(second).ok_or_else(|| {
-            DomainError::NotFound(format!("Second morphism {second} not found"))
-        })?;
+        let second_morph = self
+            .morphisms
+            .get(second)
+            .ok_or_else(|| DomainError::NotFound(format!("Second morphism {second} not found")))?;
 
         // Identity law: id ∘ f = f
         if let Some(id) = self.identities.get(&first_morph.source) {

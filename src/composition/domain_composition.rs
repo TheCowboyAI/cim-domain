@@ -13,7 +13,8 @@ use crate::category::limits::{Coproduct, Product, Pullback, Pushout};
 use crate::category::DomainCategory;
 use crate::errors::DomainError;
 use crate::events::DomainEvent;
-use crate::integration::domain_bridge::SerializedCommand;
+// Integration removed - infrastructure concern
+// use crate::integration::domain_bridge::SerializedCommand;
 
 /// A composition of multiple domains
 #[derive(Debug, Serialize, Deserialize)]
@@ -194,9 +195,7 @@ impl DomainComposition {
         // Verify all domains exist
         for domain in &domains {
             if !self.domains.contains_key(*domain) {
-                return Err(DomainError::NotFound(format!(
-                    "Domain {domain} not found"
-                )));
+                return Err(DomainError::NotFound(format!("Domain {domain} not found")));
             }
         }
 
@@ -215,9 +214,7 @@ impl DomainComposition {
         // Verify all domains exist
         for domain in &options {
             if !self.domains.contains_key(*domain) {
-                return Err(DomainError::NotFound(format!(
-                    "Domain {domain} not found"
-                )));
+                return Err(DomainError::NotFound(format!("Domain {domain} not found")));
             }
         }
 
@@ -279,9 +276,11 @@ impl DomainComposition {
     }
 
     /// Route a command to the appropriate domain
+    // Command routing removed - infrastructure concern
+    // Commands should be handled at the application/infrastructure layer
     pub async fn route_command(
         &self,
-        _command: SerializedCommand,
+        _command: serde_json::Value, // Placeholder - routing belongs in infrastructure
     ) -> Result<Vec<Box<dyn DomainEvent>>, DomainError> {
         // In a real implementation, this would:
         // 1. Determine target domain from command metadata
@@ -309,96 +308,69 @@ impl DomainComposition {
     }
 }
 
-/// Composition builder for fluent API
-pub struct CompositionBuilder {
-    composition: DomainComposition,
+// FP-style helpers (persistent updates)
+/// Create a new domain composition (alias for `DomainComposition::new`).
+pub fn composition(name: impl Into<String>) -> DomainComposition {
+    DomainComposition::new(name.into())
 }
 
-impl CompositionBuilder {
-    /// Create a new composition builder
-    ///
-    /// # Arguments
-    /// * `name` - Name for the domain composition
-    pub fn new(name: String) -> Self {
-        Self {
-            composition: DomainComposition::new(name),
-        }
-    }
+/// Return a new composition with the domain added.
+pub fn with_domain(
+    mut c: DomainComposition,
+    domain: DomainCategory,
+) -> Result<DomainComposition, DomainError> {
+    c.add_domain(domain)?;
+    Ok(c)
+}
 
-    /// Add a domain to the composition
-    ///
-    /// # Arguments
-    /// * `domain` - Domain category to add
-    pub fn with_domain(mut self, domain: DomainCategory) -> Result<Self, DomainError> {
-        self.composition.add_domain(domain)?;
-        Ok(self)
-    }
+/// Return a new composition with metadata set.
+pub fn with_metadata(
+    mut c: DomainComposition,
+    key: impl Into<String>,
+    value: impl Into<String>,
+) -> DomainComposition {
+    c.metadata.insert(key.into(), value.into());
+    c
+}
 
-    /// Add metadata to the composition
-    ///
-    /// # Arguments
-    /// * `key` - Metadata key
-    /// * `value` - Metadata value
-    pub fn with_metadata(mut self, key: String, value: String) -> Self {
-        self.composition.metadata.insert(key, value);
-        self
-    }
+/// Return a new composition plus the id of the created pullback.
+pub fn with_sync(
+    mut c: DomainComposition,
+    a: &str,
+    b: &str,
+    shared: &str,
+) -> Result<(DomainComposition, String), DomainError> {
+    let id = c.synchronize_domains(a, b, shared)?;
+    Ok((c, id))
+}
 
-    /// Configure domain synchronization using pullback
-    ///
-    /// # Arguments
-    /// * `domain_a` - First domain to synchronize
-    /// * `domain_b` - Second domain to synchronize
-    /// * `shared` - Shared concept between domains
-    pub fn synchronize(
-        mut self,
-        domain_a: &str,
-        domain_b: &str,
-        shared: &str,
-    ) -> Result<Self, DomainError> {
-        self.composition
-            .synchronize_domains(domain_a, domain_b, shared)?;
-        Ok(self)
-    }
+/// Return a new composition plus the id of the created product.
+pub fn with_parallel(
+    mut c: DomainComposition,
+    domains: Vec<&str>,
+) -> Result<(DomainComposition, String), DomainError> {
+    let id = c.parallel_composition(domains)?;
+    Ok((c, id))
+}
 
-    /// Configure domain merger using pushout
-    ///
-    /// # Arguments
-    /// * `domain_a` - First domain to merge
-    /// * `domain_b` - Second domain to merge
-    /// * `base` - Common base domain
-    pub fn merge(
-        mut self,
-        domain_a: &str,
-        domain_b: &str,
-        base: &str,
-    ) -> Result<Self, DomainError> {
-        self.composition.merge_domains(domain_a, domain_b, base)?;
-        Ok(self)
-    }
+/// Return a new composition plus the id of the created pushout.
+pub fn with_merge(
+    mut c: DomainComposition,
+    a: &str,
+    b: &str,
+    base: &str,
+) -> Result<(DomainComposition, String), DomainError> {
+    let id = c.merge_domains(a, b, base)?;
+    Ok((c, id))
+}
 
-    /// Configure parallel composition of domains
-    ///
-    /// # Arguments
-    /// * `domains` - List of domains to compose in parallel
-    pub fn parallel(mut self, domains: Vec<&str>) -> Result<Self, DomainError> {
-        self.composition.parallel_composition(domains)?;
-        Ok(self)
-    }
-
-    /// Configure choice composition of domains
-    ///
-    /// # Arguments
-    /// * `options` - List of domain options to choose from
-    pub fn choice(mut self, options: Vec<&str>) -> Result<Self, DomainError> {
-        self.composition.choice_composition(options)?;
-        Ok(self)
-    }
-
-    /// Build the final domain composition
-    pub fn build(self) -> DomainComposition {
-        self.composition
-    }
+/// Return a new composition plus the id of the created coproduct.
+pub fn with_choice(
+    mut c: DomainComposition,
+    options: Vec<&str>,
+) -> Result<(DomainComposition, String), DomainError> {
+    let id = c.choice_composition(options)?;
+    Ok((c, id))
 }
 
 #[cfg(test)]
@@ -406,28 +378,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_composition_builder() {
-        let order_domain = DomainCategory::new("OrderDomain".to_string());
-        let inventory_domain = DomainCategory::new("InventoryDomain".to_string());
-        let payment_domain = DomainCategory::new("PaymentDomain".to_string());
+    fn test_composition_fp_helpers() {
+        let domain_a = DomainCategory::new("DomainA".to_string());
+        let domain_b = DomainCategory::new("DomainB".to_string());
+        let domain_c = DomainCategory::new("DomainC".to_string());
 
-        let composition = CompositionBuilder::new("E-commerce".to_string())
-            .with_domain(order_domain)
-            .unwrap()
-            .with_domain(inventory_domain)
-            .unwrap()
-            .with_domain(payment_domain)
-            .unwrap()
-            .with_metadata("version".to_string(), "1.0".to_string())
-            .synchronize("OrderDomain", "InventoryDomain", "ProductCatalog")
-            .unwrap()
-            .parallel(vec!["OrderDomain", "PaymentDomain"])
-            .unwrap()
-            .build();
+        let mut comp = composition("CompositionX");
+        comp = with_domain(comp, domain_a).unwrap();
+        comp = with_domain(comp, domain_b).unwrap();
+        comp = with_domain(comp, domain_c).unwrap();
+        comp = with_metadata(comp, "version", "1.0");
+        let (comp, _sync_id) = with_sync(comp, "DomainA", "DomainB", "SharedConcept").unwrap();
+        let (comp, _par_id) = with_parallel(comp, vec!["DomainA", "DomainC"]).unwrap();
 
-        assert_eq!(composition.domains.len(), 3);
-        assert_eq!(composition.shared_structures.len(), 2);
-        assert_eq!(composition.metadata.get("version").unwrap(), "1.0");
+        assert_eq!(comp.domains.len(), 3);
+        assert_eq!(comp.shared_structures.len(), 2);
+        assert_eq!(comp.metadata.get("version").unwrap(), "1.0");
     }
 
     #[tokio::test]

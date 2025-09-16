@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" width="980" height="520">
+  <defs>
+    <style><![CDATA[
+      .agg { fill: #ecfeff; stroke: #0891b2; stroke-width: 1.2; rx: 8; ry: 8; }
+      .saga { fill: #f0fdf4; stroke: #16a34a; stroke-width: 1.2; rx: 10; ry: 10; }
+      .label { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; font-size: 14px; fill: #111827; }
+      .title { font-size: 18px; font-weight: 600; }
+      .edge { stroke: #374151; stroke-width: 1.4; fill: none; }
+    ]]></style>
+  </defs>
+
+  <text x="20" y="28" class="label title">Saga as Composed Aggregate (Product of Aggregates)</text>
+
+  <rect x="80" y="120" width="300" height="80" class="agg" />
+  <text x="100" y="166" class="label">Aggregate A</text>
+
+  <rect x="80" y="240" width="300" height="80" class="agg" />
+  <text x="100" y="286" class="label">Aggregate B</text>
+
+  <rect x="460" y="160" width="420" height="160" class="saga" />
+  <text x="480" y="200" class="label">Saga</text>
+  <text x="480" y="230" class="label">F: C_A × C_B → C_Saga</text>
+  <text x="480" y="260" class="label">Compensations: η: F ⇒ G (natural transformations)</text>
+
+  <path class="edge" d="M380,160 C410,160 430,160 460,200" />
+  <path class="edge" d="M380,280 C410,280 430,280 460,280" />
+
+  <text x="80" y="360" class="label">Composition preserves structure; saga operations commute with aggregate operations</text>
+</svg>

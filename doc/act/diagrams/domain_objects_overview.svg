@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="680" viewBox="0 0 1280 680">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#374151" />
+    </marker>
+    <style><![CDATA[
+      .title { font-family: ui-sans-serif, system-ui; font-size: 18px; font-weight: 600; fill: #111827; }
+      .label { font-family: ui-sans-serif, system-ui; font-size: 13px; fill: #111827; }
+      .container { fill: #f0f9ff; stroke: #0ea5e9; stroke-width: 1.6; rx: 12; ry: 12; }
+      .entity { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.2; rx: 8; ry: 8; }
+      .vo { fill: #eef2ff; stroke: #6366f1; stroke-width: 1.2; rx: 8; ry: 8; }
+      .cmd { fill: #fffbeb; stroke: #f59e0b; stroke-width: 1.2; rx: 8; ry: 8; }
+      .evt { fill: #fff1f2; stroke: #f43f5e; stroke-width: 1.2; rx: 8; ry: 8; }
+      .env { fill: #f5f3ff; stroke: #7c3aed; stroke-width: 1.2; rx: 8; ry: 8; }
+      .stream { fill: #f3f4f6; stroke: #6b7280; stroke-width: 1.2; rx: 8; ry: 8; }
+      .proj { fill: #faf5ff; stroke: #8b5cf6; stroke-width: 1.2; rx: 8; ry: 8; }
+      .rm { fill: #ecfdf5; stroke: #10b981; stroke-width: 1.2; rx: 8; ry: 8; }
+      .qry { fill: #ecfeff; stroke: #06b6d4; stroke-width: 1.2; rx: 8; ry: 8; }
+      .pol { fill: #f7fee7; stroke: #84cc16; stroke-width: 1.2; rx: 8; ry: 8; }
+      .sm { fill: #f1f5f9; stroke: #475569; stroke-width: 1.2; rx: 8; ry: 8; }
+      .cid { fill: #f4f4f5; stroke: #71717a; stroke-width: 1.2; rx: 8; ry: 8; }
+      .edge { stroke: #374151; stroke-width: 1.3; fill: none; marker-end: url(#arrow); }
+    ]]></style>
+  </defs>
+
+  <text x="24" y="32" class="title">Domain Overview — Command → Aggregate → Event → Envelope → Stream → Projection → Read</text>
+
+  <!-- Left: Command feeding the AggregateRoot -->
+  <rect x="80" y="200" width="140" height="46" class="cmd" />
+  <text x="94" y="228" class="label">Command</text>
+
+  <!-- Aggregate band -->
+  <g id="aggregate">
+    <rect x="300" y="140" width="360" height="220" class="container" />
+    <text x="312" y="164" class="label">AggregateRoot</text>
+    <rect x="320" y="176" width="140" height="40" class="sm" />
+    <text x="332" y="200" class="label">StateMachine</text>
+    <rect x="470" y="176" width="140" height="40" class="pol" />
+    <text x="482" y="200" class="label">Policy</text>
+    <rect x="320" y="228" width="140" height="46" class="entity" />
+    <text x="332" y="256" class="label">DomainEntity</text>
+    <rect x="470" y="228" width="140" height="46" class="entity" />
+    <text x="482" y="256" class="label">DomainEntity</text>
+  </g>
+  <path class="edge" d="M220,223 C240,223 260,223 300,223" />
+  <text x="230" y="212" class="label">handled_by</text>
+  <text x="210" y="180" class="label">causes_event</text>
+
+  <!-- Events / Envelope / Stream -->
+  <rect x="720" y="200" width="160" height="46" class="evt" />
+  <text x="732" y="228" class="label">DomainEvent</text>
+  <path class="edge" d="M660,223 C672,223 690,223 720,223" />
+  <text x="648" y="212" class="label">emits_event</text>
+
+  <rect x="920" y="160" width="200" height="46" class="env" />
+  <text x="932" y="188" class="label">DomainEventEnvelope</text>
+  <path class="edge" d="M880,223 C892,205 908,193 920,185" />
+  <text x="888" y="206" class="label">wraps_event</text>
+
+  <rect x="920" y="230" width="180" height="46" class="stream" />
+  <text x="932" y="258" class="label">EventStream</text>
+  <path class="edge" d="M1020,206 C1020,214 1020,220 1010,230" />
+  <text x="1028" y="218" class="label">appended_to</text>
+
+  <!-- Projections / Read Models / Queries -->
+  <rect x="720" y="380" width="180" height="46" class="proj" />
+  <text x="732" y="408" class="label">Projection</text>
+  <path class="edge" d="M1010,253 C940,330 860,370 810,380" />
+  <text x="900" y="330" class="label">subscribes_to</text>
+  <path class="edge" d="M900,223 C880,260 820,360 810,380" />
+  <text x="850" y="320" class="label">consumes_event</text>
+
+  <rect x="920" y="380" width="180" height="46" class="rm" />
+  <text x="932" y="408" class="label">ReadModel</text>
+  <path class="edge" d="M900,403 C910,403 920,403 920,403" />
+  <text x="896" y="392" class="label">updates_read_model</text>
+
+  <rect x="1120" y="380" width="120" height="46" class="qry" />
+  <text x="1132" y="408" class="label">Query</text>
+  <rect x="1120" y="450" width="160" height="46" class="env" />
+  <text x="1132" y="478" class="label">QueryResponse</text>
+  <path class="edge" d="M1100,403 C1080,403 1060,403 1100,403" />
+  <text x="1030" y="392" class="label">reads_from</text>
+  <path class="edge" d="M1180,403 C1180,420 1180,440 1180,450" />
+  <text x="1192" y="440" class="label">responds_with</text>
+
+  <!-- Saga coordinates aggregates -->
+  <g id="saga">
+    <rect x="80" y="420" width="200" height="120" class="container" />
+    <text x="92" y="444" class="label">Saga</text>
+    <rect x="92" y="454" width="176" height="32" class="container" />
+    <text x="100" y="474" class="label">Participant: Aggregate</text>
+    <rect x="92" y="490" width="176" height="32" class="container" />
+    <text x="100" y="510" class="label">Participant: Aggregate</text>
+    <rect x="300" y="440" width="160" height="40" class="sm" />
+    <text x="312" y="464" class="label">VectorClock</text>
+  </g>
+  <path class="edge" d="M260,430 C360,360 300,300 300,260" />
+  <text x="248" y="414" class="label">coordinates</text>
+  <path class="edge" d="M160,440 C220,360 300,220 300,220" />
+  <text x="150" y="424" class="label">has_participant</text>
+  <path class="edge" d="M300,460 C420,440 520,360 560,320" />
+  <text x="304" y="450" class="label">maintains_clock</text>
+
+  <!-- BoundedContext contains major domain objects (abstract grouping) -->
+  <rect x="24" y="80" width="1232" height="560" fill="none" stroke="#0ea5e9" stroke-width="1.2" stroke-dasharray="6 6" />
+  <text x="32" y="100" class="label">BoundedContext (contains Commands, Queries, Policies, StateMachines, Sagas, Aggregates, Projections, ReadModels, EventStreams)</text>
+</svg>

@@ -38,104 +38,35 @@ pub struct StateMachine<S: StateTransitions> {
 }
 ```
 
-## Example: Order State Machine
+## Generic Example (Domain-Neutral)
 
 ```rust
-pub enum OrderState {
-    Draft,
-    Submitted,
-    PaymentPending,
-    PaymentConfirmed,
-    Fulfilling,
-    Shipped,
-    Delivered,
-    Cancelled,
-    Refunded,
-}
-```
-
-### Valid Transitions
-- `Draft` → `Submitted`, `Cancelled`
-- `Submitted` → `PaymentPending`, `Cancelled`
-- `PaymentPending` → `PaymentConfirmed`, `Cancelled`
-- `PaymentConfirmed` → `Fulfilling`, `Refunded`
-- `Fulfilling` → `Shipped`, `Refunded`
-- `Shipped` → `Delivered`, `Refunded`
-- `Delivered` → `Refunded`
-- `Cancelled` → (terminal state)
-- `Refunded` → (terminal state)
-
-## Example: Person State Machine
-
-```rust
-pub enum PersonState {
-    Registered,
-    PendingVerification,
-    Verified,
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Lifecycle {
+    Init,
     Active,
-    Suspended,
-    Deactivated,
-    Archived,
+    Closed,
 }
-```
 
-### Valid Transitions
-- `Registered` → `PendingVerification`, `Archived`
-- `PendingVerification` → `Verified`, `Archived`
-- `Verified` → `Active`, `Archived`
-- `Active` → `Suspended`, `Deactivated`, `Archived`
-- `Suspended` → `Active`, `Deactivated`, `Archived`
-- `Deactivated` → `Active`, `Archived`
-- `Archived` → (terminal state)
-
-## Usage Pattern
-
-```rust
-// Create a new state machine
-let mut order = StateMachine::new(OrderState::Draft);
-
-// Attempt a valid transition
-match order.transition_to(OrderState::Submitted) {
-    Ok(transition) => {
-        // Transition successful, emit event
-        emit_event(OrderSubmitted {
-            order_id,
-            transition_id: transition.transition_id,
-        });
-    }
-    Err(DomainError::InvalidStateTransition { from, to }) => {
-        // Handle invalid transition
+impl cim_domain::state_machine::State for Lifecycle {
+    fn name(&self) -> &'static str {
+        match self { Self::Init => "Init", Self::Active => "Active", Self::Closed => "Closed" }
     }
 }
 
-// Check current state
-if order.is_in_state(&OrderState::PaymentPending) {
-    // Process payment
+impl cim_domain::state_machine::StateTransitions for Lifecycle {
+    fn can_transition_to(&self, target: &Self) -> bool {
+        matches!((self, target), (Self::Init, Self::Active) | (Self::Active, Self::Closed))
+    }
+    fn valid_transitions(&self) -> Vec<Self> { use Lifecycle::*; match self { Init => vec![Active], Active => vec![Closed], Closed => vec![] } }
 }
 
-// Get valid next states
-let next_states = order.valid_next_states();
+use cim_domain::state_machine::StateMachine;
+let mut sm = StateMachine::new(Lifecycle::Init);
+assert!(sm.transition_to(Lifecycle::Active).is_ok());
 ```
 
-## Integration with Event Sourcing
-
-State transitions naturally map to domain events:
-
-```rust
-// When a state transition occurs
-let transition = order.transition_to(OrderState::Shipped)?;
-
-// Generate corresponding domain event
-let event = OrderShipped {
-    order_id: self.id,
-    transition_id: transition.transition_id,
-    shipped_at: SystemTime::now(),
-    tracking_number: generate_tracking_number(),
-};
-
-// The event captures both the state change and business data
-event_store.append(event).await?;
-```
+This example demonstrates the pattern without relying on any specific domain semantics.
 
 ## Benefits
 
