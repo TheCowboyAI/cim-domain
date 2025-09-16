@@ -128,7 +128,59 @@ impl<T: Clone + Send + Sync> ReadModelStorage<T> for InMemoryReadModel<T> {
 
 #[cfg(test)]
 mod tests {
-    // Workflow query tests have been moved to cim-domain-workflow
+    // Read-path tests (pure, no IO)
+    use super::*;
+    use crate::cqrs::{self, AggregateTransactionId, Query as CqrsQuery, QueryEnvelope, QueryHandler as CqrsQueryHandler, QueryResponse};
+    use uuid::Uuid;
 
-    // Location query tests have been moved to cim-domain-location
+    #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+    struct Item { id: String, v: i32 }
+
+    #[test]
+    fn in_memory_read_model_basic_ops() {
+        let rm: InMemoryReadModel<Item> = InMemoryReadModel::new();
+        rm.insert("a".into(), Item { id: "a".into(), v: 1 });
+        rm.insert("b".into(), Item { id: "b".into(), v: 2 });
+        assert_eq!(rm.get("a").unwrap().v, 1);
+        let res = rm.query(&QueryCriteria::new().with_limit(1));
+        assert_eq!(res.len(), 1);
+        assert_eq!(rm.all().len(), 2);
+    }
+
+    #[derive(Clone, Debug)]
+    struct GetTop { n: usize }
+    impl CqrsQuery for GetTop {}
+
+    struct ItemsHandler { rm: InMemoryReadModel<Item> }
+    impl ItemsHandler { fn new(rm: InMemoryReadModel<Item>) -> Self { Self { rm } } }
+
+    impl CqrsQueryHandler<GetTop> for ItemsHandler {
+        fn handle(&self, envelope: QueryEnvelope<GetTop>) -> QueryResponse {
+            let mut items = self.rm.all();
+            items.sort_by_key(|i| i.id.clone());
+            items.truncate(envelope.query.n);
+            let result = serde_json::to_value(items).unwrap();
+            QueryResponse { query_id: *envelope.id.as_uuid(), correlation_id: envelope.identity.correlation_id, result }
+        }
+    }
+
+    #[test]
+    fn query_path_responds_with_data() {
+        // Arrange read model
+        let rm: InMemoryReadModel<Item> = InMemoryReadModel::new();
+        rm.insert("b".into(), Item { id: "b".into(), v: 2 });
+        rm.insert("a".into(), Item { id: "a".into(), v: 1 });
+
+        // Build query envelope
+        let q = GetTop { n: 1 };
+        let tx = AggregateTransactionId(Uuid::new_v4());
+        let env = QueryEnvelope::new_in_tx(q, "tester".into(), tx);
+
+        // Handle and assert
+        let handler = ItemsHandler::new(rm);
+        let resp = CqrsQueryHandler::handle(&handler, env);
+        let arr = resp.result.as_array().expect("array result");
+        assert_eq!(arr.len(), 1);
+        assert_eq!(arr[0]["id"].as_str(), Some("a"));
+    }
 }
