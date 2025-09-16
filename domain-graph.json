@@ -133,9 +133,9 @@
       {
         "commutes": true,
         "describes": [
-          "is_a",
+          "refines_concept",
           "part_of",
-          "related_to"
+          "is_partially_equivalent_to"
         ],
         "id": "concept_graph",
         "path": "doc/act/diagrams/concept_graph.svg"
@@ -173,18 +173,19 @@
           "reads_from",
           "responds_with",
           "coordinates",
-          "contains_aggregate",
-          "contains_projection",
-          "contains_read_model",
-          "contains_event_stream",
-          "contains_command",
-          "contains_query",
-          "contains_policy",
-          "contains_state_machine",
-          "contains_saga",
+          "owns_value_collection",
+          "scopes_aggregate",
+          "scopes_projection",
+          "scopes_read_model",
+          "scopes_event_stream",
+          "scopes_command",
+          "scopes_query",
+          "scopes_policy",
+          "scopes_state_machine",
+          "scopes_saga",
           "causes_event",
-          "saga_has_participant",
-          "maintains_clock"
+          "manages_participant",
+          "maintains_vector_clock"
         ],
         "id": "domain_objects_overview",
         "notes": "Overview of core domain objects and their relationships.",
@@ -197,9 +198,9 @@
           "causes_event",
           "emits_event",
           "wraps_event",
-          "payload_cid",
+          "references_payload_cid",
           "appended_to_stream",
-          "stream_contains_envelope"
+          "collects_envelope"
         ],
         "id": "event_pipeline",
         "notes": "Command→Aggregate→Event→Envelope→Stream pipeline.",
@@ -208,27 +209,27 @@
       {
         "commutes": true,
         "describes": [
-          "command_envelope_has_id",
-          "command_envelope_encloses",
-          "command_envelope_has_identity",
-          "query_envelope_has_id",
-          "query_envelope_encloses",
-          "query_envelope_has_identity",
-          "identity_has_correlation_id",
-          "identity_has_causation_id",
-          "identity_has_command_message_id",
-          "identity_has_query_message_id",
-          "identity_has_event_message_id",
-          "envelope_has_event_id",
-          "envelope_has_aggregate_id",
-          "envelope_has_correlation_id",
-          "envelope_has_causation_id",
-          "envelope_has_payload_metadata",
-          "correlates_command_envelope_to_event_envelope",
-          "correlates_query_envelope_to_event_envelope",
-          "precedes_event_envelope",
-          "command_acknowledged_by",
-          "query_acknowledged_by"
+          "identified_by_command_id",
+          "encloses_command",
+          "command_carries_identity",
+          "identified_by_query_id",
+          "encloses_query",
+          "query_carries_identity",
+          "provides_correlation_id",
+          "provides_causation_id",
+          "provides_command_message_id",
+          "provides_query_message_id",
+          "provides_event_id",
+          "identifies_event",
+          "identifies_aggregate",
+          "correlates_with",
+          "was_caused_by",
+          "describes_payload",
+          "command_correlates_to_event",
+          "query_correlates_to_event",
+          "precedes_envelope",
+          "acknowledged_by_command",
+          "acknowledged_by_query"
         ],
         "id": "identity_envelope",
         "notes": "MessageIdentity and envelope fields; correlation/causation/temporal.",
@@ -238,11 +239,10 @@
         "commutes": true,
         "describes": [
           "domain_cid_defines_node",
-          "domain_node_uses_codec",
-          "domain_node_payload_is",
-          "domain_node_has_metadata",
-          "defined_by_ipld",
-          "payload_cid"
+          "uses_payload_codec",
+          "payload_is",
+          "annotated_by_metadata",
+          "defined_by_ipld"
         ],
         "id": "addressing",
         "notes": "Content addressing: DomainCid, DomainNode, IPLD.Cid, codec, metadata.",
@@ -284,8 +284,8 @@
     "interpretation": true,
     "morphisms": [
       {
-        "id": "is_a",
-        "name": "IsA",
+        "id": "refines_concept",
+        "name": "RefinesConcept",
         "source": "Concept",
         "target": "Concept",
         "type": "ConceptRelationship"
@@ -298,8 +298,8 @@
         "type": "ConceptRelationship"
       },
       {
-        "id": "related_to",
-        "name": "RelatedTo",
+        "id": "is_partially_equivalent_to",
+        "name": "IsPartiallyEquivalentTo",
         "source": "Concept",
         "target": "Concept",
         "type": "ConceptRelationship"
@@ -312,8 +312,8 @@
         "type": "NamingRelationship"
       },
       {
-        "id": "has_values",
-        "name": "HasValues",
+        "id": "owns_value_collection",
+        "name": "OwnsValueCollection",
         "notes": "Entities own collections of value objects as part of their state",
         "source": "DomainEntity",
         "target": "ValueCollection",
@@ -416,8 +416,8 @@
         "type": "Envelope"
       },
       {
-        "id": "payload_cid",
-        "name": "PayloadCid",
+        "id": "references_payload_cid",
+        "name": "ReferencesPayloadCid",
         "notes": "Envelope payload may be content-addressed (CID).",
         "source": "DomainEventEnvelope",
         "target": "DomainCid",
@@ -448,33 +448,33 @@
         "type": "Coordination"
       },
       {
-        "id": "contains_aggregate",
-        "name": "Contains",
-        "notes": "BoundedContext contains aggregates.",
+        "id": "scopes_aggregate",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes aggregates.",
         "source": "BoundedContext",
         "target": "AggregateRoot",
         "type": "Containment"
       },
       {
-        "id": "contains_projection",
-        "name": "Contains",
-        "notes": "BoundedContext contains projections.",
+        "id": "scopes_projection",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes projections.",
         "source": "BoundedContext",
         "target": "Projection",
         "type": "Containment"
       },
       {
-        "id": "contains_read_model",
-        "name": "Contains",
-        "notes": "BoundedContext contains read models.",
+        "id": "scopes_read_model",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes read models.",
         "source": "BoundedContext",
         "target": "ReadModel",
         "type": "Containment"
       },
       {
-        "id": "contains_event_stream",
-        "name": "Contains",
-        "notes": "BoundedContext contains event streams.",
+        "id": "scopes_event_stream",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes event streams.",
         "source": "BoundedContext",
         "target": "EventStream",
         "type": "Containment"
@@ -488,31 +488,31 @@
         "type": "Causation"
       },
       {
-        "id": "saga_has_participant",
-        "name": "HasParticipant",
-        "notes": "Saga is a collection of participant aggregates.",
+        "id": "manages_participant",
+        "name": "ManagesParticipant",
+        "notes": "Saga manages participant aggregates.",
         "source": "Saga",
         "target": "AggregateRoot",
         "type": "Containment"
       },
       {
-        "id": "maintains_clock",
-        "name": "MaintainsClock",
+        "id": "maintains_vector_clock",
+        "name": "MaintainsVectorClock",
         "notes": "Saga maintains a vector clock for causal ordering across participants.",
         "source": "Saga",
         "target": "VectorClock",
         "type": "CausalityTracking"
       },
       {
-        "id": "command_envelope_has_id",
-        "name": "HasCommandId",
-        "notes": "CommandEnvelope carries a CommandId",
+        "id": "identified_by_command_id",
+        "name": "IdentifiedBy",
+        "notes": "CommandEnvelope is identified by CommandId",
         "source": "CommandEnvelope",
         "target": "CommandId",
         "type": "Identity"
       },
       {
-        "id": "command_envelope_encloses",
+        "id": "encloses_command",
         "name": "Encloses",
         "notes": "CommandEnvelope encloses a Command",
         "source": "CommandEnvelope",
@@ -520,23 +520,23 @@
         "type": "Envelope"
       },
       {
-        "id": "command_envelope_has_identity",
-        "name": "HasIdentity",
+        "id": "command_carries_identity",
+        "name": "CarriesIdentity",
         "notes": "CommandEnvelope includes MessageIdentity for correlation/causation",
         "source": "CommandEnvelope",
         "target": "MessageIdentity",
         "type": "Identity"
       },
       {
-        "id": "query_envelope_has_id",
-        "name": "HasQueryId",
-        "notes": "QueryEnvelope carries a QueryId",
+        "id": "identified_by_query_id",
+        "name": "IdentifiedBy",
+        "notes": "QueryEnvelope is identified by QueryId",
         "source": "QueryEnvelope",
         "target": "QueryId",
         "type": "Identity"
       },
       {
-        "id": "query_envelope_encloses",
+        "id": "encloses_query",
         "name": "Encloses",
         "notes": "QueryEnvelope encloses a Query",
         "source": "QueryEnvelope",
@@ -544,103 +544,103 @@
         "type": "Envelope"
       },
       {
-        "id": "query_envelope_has_identity",
-        "name": "HasIdentity",
+        "id": "query_carries_identity",
+        "name": "CarriesIdentity",
         "notes": "QueryEnvelope includes MessageIdentity for correlation/causation",
         "source": "QueryEnvelope",
         "target": "MessageIdentity",
         "type": "Identity"
       },
       {
-        "id": "identity_has_correlation_id",
-        "name": "HasCorrelationId",
-        "notes": "MessageIdentity has a CorrelationId",
+        "id": "provides_correlation_id",
+        "name": "ProvidesCorrelationId",
+        "notes": "MessageIdentity provides a CorrelationId",
         "source": "MessageIdentity",
         "target": "CorrelationId",
         "type": "Identity"
       },
       {
-        "id": "identity_has_causation_id",
-        "name": "HasCausationId",
-        "notes": "MessageIdentity has a CausationId",
+        "id": "provides_causation_id",
+        "name": "ProvidesCausationId",
+        "notes": "MessageIdentity provides a CausationId",
         "source": "MessageIdentity",
         "target": "CausationId",
         "type": "Identity"
       },
       {
-        "id": "identity_has_command_message_id",
-        "name": "HasCommandMessageId",
+        "id": "provides_command_message_id",
+        "name": "ProvidesCommandMessageId",
         "notes": "MessageIdentity can carry a command message id (context-dependent)",
         "source": "MessageIdentity",
         "target": "CommandId",
         "type": "Identity"
       },
       {
-        "id": "identity_has_query_message_id",
-        "name": "HasQueryMessageId",
+        "id": "provides_query_message_id",
+        "name": "ProvidesQueryMessageId",
         "notes": "MessageIdentity can carry a query message id (context-dependent)",
         "source": "MessageIdentity",
         "target": "QueryId",
         "type": "Identity"
       },
       {
-        "id": "identity_has_event_message_id",
-        "name": "HasEventMessageId",
+        "id": "provides_event_id",
+        "name": "ProvidesEventId",
         "notes": "MessageIdentity can carry an event id (context-dependent)",
         "source": "MessageIdentity",
         "target": "EventId",
         "type": "Identity"
       },
       {
-        "id": "envelope_has_event_id",
-        "name": "HasEventId",
+        "id": "identifies_event",
+        "name": "IdentifiesEvent",
         "notes": "DomainEventEnvelope carries an EventId",
         "source": "DomainEventEnvelope",
         "target": "EventId",
         "type": "Identity"
       },
       {
-        "id": "envelope_has_aggregate_id",
-        "name": "HasAggregateId",
+        "id": "identifies_aggregate",
+        "name": "IdentifiesAggregate",
         "notes": "DomainEventEnvelope duplicates the aggregate id for post-persist access",
         "source": "DomainEventEnvelope",
         "target": "EntityId",
         "type": "Identity"
       },
       {
-        "id": "envelope_has_correlation_id",
-        "name": "HasCorrelationId",
+        "id": "correlates_with",
+        "name": "CorrelatesWith",
         "notes": "DomainEventEnvelope carries a CorrelationId",
         "source": "DomainEventEnvelope",
         "target": "CorrelationId",
         "type": "Identity"
       },
       {
-        "id": "envelope_has_causation_id",
-        "name": "HasCausationId",
+        "id": "was_caused_by",
+        "name": "WasCausedBy",
         "notes": "DomainEventEnvelope carries a CausationId",
         "source": "DomainEventEnvelope",
         "target": "CausationId",
         "type": "Identity"
       },
       {
-        "id": "envelope_has_payload_metadata",
-        "name": "HasPayloadMetadata",
+        "id": "describes_payload",
+        "name": "DescribesPayload",
         "notes": "Envelope includes PayloadMetadata describing the payload",
         "source": "DomainEventEnvelope",
         "target": "PayloadMetadata",
         "type": "Metadata"
       },
       {
-        "id": "domain_node_uses_codec",
-        "name": "UsesCodec",
+        "id": "uses_payload_codec",
+        "name": "UsesPayloadCodec",
         "notes": "DomainNode payload is encoded with a DomainPayloadCodec",
         "source": "DomainNode",
         "target": "DomainPayloadCodec",
         "type": "Annotation"
       },
       {
-        "id": "domain_node_payload_is",
+        "id": "payload_is",
         "name": "PayloadIs",
         "notes": "DomainNode references an IPLD payload CID",
         "source": "DomainNode",
@@ -648,8 +648,8 @@
         "type": "Reference"
       },
       {
-        "id": "domain_node_has_metadata",
-        "name": "HasMetadata",
+        "id": "annotated_by_metadata",
+        "name": "AnnotatedByMetadata",
         "notes": "DomainNode has typed metadata values",
         "source": "DomainNode",
         "target": "ValueObject",
@@ -664,7 +664,7 @@
         "type": "Definition"
       },
       {
-        "id": "command_acknowledged_by",
+        "id": "acknowledged_by_command",
         "name": "AcknowledgedBy",
         "notes": "Commands are acknowledged by CommandAcknowledgment",
         "source": "Command",
@@ -672,7 +672,7 @@
         "type": "Acknowledgment"
       },
       {
-        "id": "query_acknowledged_by",
+        "id": "acknowledged_by_query",
         "name": "AcknowledgedBy",
         "notes": "Queries are acknowledged by QueryAcknowledgment",
         "source": "Query",
@@ -680,15 +680,15 @@
         "type": "Acknowledgment"
       },
       {
-        "id": "stream_contains_envelope",
-        "name": "Contains",
-        "notes": "EventStream contains DomainEventEnvelopes appended to it",
+        "id": "collects_envelope",
+        "name": "CollectsEnvelope",
+        "notes": "EventStream collects DomainEventEnvelopes appended to it",
         "source": "EventStream",
         "target": "DomainEventEnvelope",
         "type": "Containment"
       },
       {
-        "id": "correlates_command_envelope_to_event_envelope",
+        "id": "command_correlates_to_event",
         "name": "CorrelatesTo",
         "notes": "CommandEnvelope correlates to resulting DomainEventEnvelopes (via correlation id)",
         "source": "CommandEnvelope",
@@ -696,7 +696,7 @@
         "type": "Correlation"
       },
       {
-        "id": "correlates_query_envelope_to_event_envelope",
+        "id": "query_correlates_to_event",
         "name": "CorrelatesTo",
         "notes": "QueryEnvelope correlates to DomainEventEnvelopes (via correlation id)",
         "source": "QueryEnvelope",
@@ -704,7 +704,7 @@
         "type": "Correlation"
       },
       {
-        "id": "precedes_event_envelope",
+        "id": "precedes_envelope",
         "name": "Precedes",
         "notes": "Event envelopes are partially ordered by EventId v7 (time order)",
         "source": "DomainEventEnvelope",
@@ -712,41 +712,41 @@
         "type": "Temporal"
       },
       {
-        "id": "contains_command",
-        "name": "Contains",
-        "notes": "BoundedContext contains commands",
+        "id": "scopes_command",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes commands",
         "source": "BoundedContext",
         "target": "Command",
         "type": "Containment"
       },
       {
-        "id": "contains_query",
-        "name": "Contains",
-        "notes": "BoundedContext contains queries",
+        "id": "scopes_query",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes queries",
         "source": "BoundedContext",
         "target": "Query",
         "type": "Containment"
       },
       {
-        "id": "contains_policy",
-        "name": "Contains",
-        "notes": "BoundedContext contains policies",
+        "id": "scopes_policy",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes policies",
         "source": "BoundedContext",
         "target": "Policy",
         "type": "Containment"
       },
       {
-        "id": "contains_state_machine",
-        "name": "Contains",
-        "notes": "BoundedContext contains state machines",
+        "id": "scopes_state_machine",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes state machines",
         "source": "BoundedContext",
         "target": "StateMachine",
         "type": "Containment"
       },
       {
-        "id": "contains_saga",
-        "name": "Contains",
-        "notes": "BoundedContext contains sagas",
+        "id": "scopes_saga",
+        "name": "Scopes",
+        "notes": "BoundedContext scopes sagas",
         "source": "BoundedContext",
         "target": "Saga",
         "type": "Containment"

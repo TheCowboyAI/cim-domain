@@ -1092,6 +1092,23 @@
           "log insights aggregate_scoped_constraints and morphism_naming_policy"
         ]
       }
+    },
+    {
+      "cid": "bafkr4idll6mcbhbb7gav4shpi2xxus3fmqkifl4ocjsza62jaxzddkgr64",
+      "content": {
+        "event_id": "2b31482c-fab8-464e-b9e7-eeb04202ebac",
+        "i_understood": "Renamed generic morphisms to directional, meaningful verbs; updated diagram coverage; generated UL diff; no write",
+        "parent_cid": "bafkr4ieuoqsthvabsjtbvnls6fq2p2vzilznmdhlxdcr6vpfumma2xmaqa",
+        "timestamp": 1758063461,
+        "type": "assistant",
+        "user_said": "Apply morphism naming policy to lens; UL diff",
+        "what_i_did": [
+          "patch domain-graph morphism ids/names",
+          "update diagrams describes lists",
+          "validate graph",
+          "ul_projection diff"
+        ]
+      }
     }
   ],
   "insights": [
@@ -1482,5 +1499,5 @@
       ]
     }
   ],
-  "total_events": 64
+  "total_events": 65
 }
