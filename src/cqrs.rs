@@ -830,4 +830,16 @@ mod tests {
         assert_eq!(ack.status, CommandStatus::Accepted);
         assert_eq!(*handler.accepted_count.borrow(), 1);
     }
+
+    #[test]
+    fn event_id_is_monotonic_non_decreasing_by_bytes() {
+        // Generate a short sequence of EventIds and assert pairwise non-decreasing by bytes
+        let mut ids: Vec<EventId> = Vec::new();
+        for _ in 0..12 { ids.push(EventId::new()); }
+        for w in ids.windows(2) {
+            let a = (w[0].0).as_bytes();
+            let b = (w[1].0).as_bytes();
+            assert!(a <= b, "EventId must be non-decreasing: {:?} <= {:?}", a, b);
+        }
+    }
 }

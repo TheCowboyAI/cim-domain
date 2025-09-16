@@ -184,6 +184,8 @@ impl<E: DomainEvent> DomainEventEnvelope<E> {
 mod tests {
     use super::*;
     use serde::{Deserialize, Serialize};
+    use crate::cqrs::{MessageFactory, CorrelationId, CausationId, EventId};
+    use crate::markers::CommandMarker;
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
     struct TestEvent {
@@ -237,5 +239,32 @@ mod tests {
         assert_eq!(env.causation_id, back.causation_id);
         assert_eq!(env.payload_metadata.source, back.payload_metadata.source);
         assert!(back.payload.right().is_some());
+    }
+
+    #[test]
+    fn identity_propagates_from_message_identity() {
+        // Create a root command identity and propagate to an event envelope
+        let cmd_uuid = uuid::Uuid::new_v4();
+        let ident = MessageFactory::create_root_command(cmd_uuid);
+
+        #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+        struct Ev { id: uuid::Uuid }
+        impl DomainEvent for Ev {
+            fn aggregate_id(&self) -> uuid::Uuid { self.id }
+            fn event_type(&self) -> &'static str { "Ev" }
+            fn version(&self) -> &'static str { "v1" }
+        }
+
+        let ev = Ev { id: uuid::Uuid::new_v4() };
+        let env = DomainEventEnvelope::inline(
+            EventId::new(),
+            ev,
+            ident.correlation_id,
+            ident.causation_id,
+            PayloadMetadata { source: "tests".into(), version: "v1".into(), properties: Default::default() },
+        );
+
+        assert_eq!(env.correlation_id, ident.correlation_id);
+        assert_eq!(env.causation_id, ident.causation_id);
     }
 }
