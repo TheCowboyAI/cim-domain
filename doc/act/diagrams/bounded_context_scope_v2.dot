@@ -1,0 +1,35 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "AggregateRoot" [label="AggregateRoot
+(Trait)", color="#0ea5e9", fillcolor="lightblue"];
+  "BoundedContext" [label="BoundedContext
+(Context)", color="#374151", fillcolor="#ffffff"];
+  "Command" [label="Command
+(Command)", color="#f59e0b", fillcolor="#fffbeb"];
+  "EventStream" [label="EventStream
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Policy" [label="Policy
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Projection" [label="Projection
+(Projection)", color="#8b5cf6", fillcolor="#faf5ff"];
+  "Query" [label="Query
+(Query)", color="#f59e0b", fillcolor="#fffbeb"];
+  "ReadModel" [label="ReadModel
+(ReadModel)", color="#8b5cf6", fillcolor="#faf5ff"];
+  "Saga" [label="Saga
+(Aggregate)", color="#0ea5e9", fillcolor="lightblue"];
+  "StateMachine" [label="StateMachine
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "BoundedContext" -> "AggregateRoot" [label="scopes_aggregate", color="#475569", style="dashed"];
+  "BoundedContext" -> "Projection" [label="scopes_projection", color="#475569", style="dashed"];
+  "BoundedContext" -> "ReadModel" [label="scopes_read_model", color="#475569", style="dashed"];
+  "BoundedContext" -> "EventStream" [label="scopes_event_stream", color="#475569", style="dashed"];
+  "BoundedContext" -> "Command" [label="scopes_command", color="#475569", style="dashed"];
+  "BoundedContext" -> "Query" [label="scopes_query", color="#475569", style="dashed"];
+  "BoundedContext" -> "Policy" [label="scopes_policy", color="#475569", style="dashed"];
+  "BoundedContext" -> "StateMachine" [label="scopes_state_machine", color="#475569", style="dashed"];
+  "BoundedContext" -> "Saga" [label="scopes_saga", color="#475569", style="dashed"];
+}

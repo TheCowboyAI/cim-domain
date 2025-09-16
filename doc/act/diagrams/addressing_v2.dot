@@ -1,0 +1,21 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainCid" [label="DomainCid
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainNode" [label="DomainNode
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainPayloadCodec" [label="DomainPayloadCodec
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "IPLD.Cid" [label="ipld:cid
+(External)", color="#374151", fillcolor="#ffffff"];
+  "ValueObject" [label="ValueObject
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "DomainCid" -> "IPLD.Cid" [label="defined_by_ipld", color="#374151", style="solid"];
+  "DomainNode" -> "DomainPayloadCodec" [label="uses_payload_codec", color="#374151", style="solid"];
+  "DomainNode" -> "IPLD.Cid" [label="payload_is", color="#374151", style="solid"];
+  "DomainNode" -> "ValueObject" [label="annotated_by_metadata", color="#374151", style="solid"];
+  "DomainCid" -> "DomainNode" [label="domain_cid_defines_node", color="#374151", style="solid"];
+}

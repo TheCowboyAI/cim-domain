@@ -1,0 +1,55 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "CausationId" [label="CausationId
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "Command" [label="Command
+(Command)", color="#f59e0b", fillcolor="#fffbeb"];
+  "CommandAcknowledgment" [label="CommandAcknowledgment
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "CommandEnvelope" [label="CommandEnvelope
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "CommandId" [label="CommandId
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "CorrelationId" [label="CorrelationId
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainEventEnvelope" [label="DomainEventEnvelope
+(Event)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "EntityId" [label="EntityId<T>
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "EventId" [label="EventId
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "MessageIdentity" [label="MessageIdentity
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "PayloadMetadata" [label="PayloadMetadata
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Query" [label="Query
+(Query)", color="#f59e0b", fillcolor="#fffbeb"];
+  "QueryAcknowledgment" [label="QueryAcknowledgment
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "QueryEnvelope" [label="QueryEnvelope
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "QueryId" [label="QueryId
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+
+  "CommandEnvelope" -> "CommandId" [label="identified_by_command_id", color="#0ea5e9", style="dashed"];
+  "CommandEnvelope" -> "Command" [label="encloses_command", color="#7c3aed", style="solid"];
+  "CommandEnvelope" -> "MessageIdentity" [label="command_carries_identity", color="#0ea5e9", style="dashed"];
+  "QueryEnvelope" -> "QueryId" [label="identified_by_query_id", color="#0ea5e9", style="dashed"];
+  "QueryEnvelope" -> "Query" [label="encloses_query", color="#7c3aed", style="solid"];
+  "QueryEnvelope" -> "MessageIdentity" [label="query_carries_identity", color="#0ea5e9", style="dashed"];
+  "MessageIdentity" -> "CorrelationId" [label="provides_correlation_id", color="#0ea5e9", style="dashed"];
+  "MessageIdentity" -> "CausationId" [label="provides_causation_id", color="#0ea5e9", style="dashed"];
+  "MessageIdentity" -> "EventId" [label="provides_event_id", color="#0ea5e9", style="dashed"];
+  "DomainEventEnvelope" -> "EventId" [label="identifies_event", color="#0ea5e9", style="dashed"];
+  "DomainEventEnvelope" -> "EntityId" [label="identifies_aggregate", color="#0ea5e9", style="dashed"];
+  "DomainEventEnvelope" -> "CorrelationId" [label="correlates_with", color="#0ea5e9", style="dashed"];
+  "DomainEventEnvelope" -> "CausationId" [label="was_caused_by", color="#0ea5e9", style="dashed"];
+  "DomainEventEnvelope" -> "PayloadMetadata" [label="describes_payload", color="#374151", style="solid"];
+  "Command" -> "CommandAcknowledgment" [label="acknowledged_by_command", color="#374151", style="solid"];
+  "Query" -> "QueryAcknowledgment" [label="acknowledged_by_query", color="#374151", style="solid"];
+  "CommandEnvelope" -> "DomainEventEnvelope" [label="command_correlates_to_event", color="#374151", style="solid"];
+  "QueryEnvelope" -> "DomainEventEnvelope" [label="query_correlates_to_event", color="#374151", style="solid"];
+  "DomainEventEnvelope" -> "DomainEventEnvelope" [label="precedes_envelope", color="#ef4444", style="dotted"];
+}

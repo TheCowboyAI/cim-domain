@@ -1,0 +1,25 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "AggregateRoot" [label="AggregateRoot
+(Trait)", color="#0ea5e9", fillcolor="lightblue"];
+  "Command" [label="Command
+(Command)", color="#f59e0b", fillcolor="#fffbeb"];
+  "DomainCid" [label="DomainCid
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainEvent" [label="DomainEvent
+(Event)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainEventEnvelope" [label="DomainEventEnvelope
+(Event)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "EventStream" [label="EventStream
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "Command" -> "AggregateRoot" [label="handled_by", color="#374151", style="solid"];
+  "AggregateRoot" -> "DomainEvent" [label="emits_event", color="#374151", style="solid"];
+  "DomainEventEnvelope" -> "EventStream" [label="appended_to_stream", color="#374151", style="solid"];
+  "DomainEventEnvelope" -> "DomainEvent" [label="wraps_event", color="#7c3aed", style="solid"];
+  "DomainEventEnvelope" -> "DomainCid" [label="references_payload_cid", color="#374151", style="solid"];
+  "Command" -> "DomainEvent" [label="causes_event", color="#ef4444", style="dotted"];
+  "EventStream" -> "DomainEventEnvelope" [label="collects_envelope", color="#475569", style="dashed"];
+}

@@ -1,0 +1,23 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainEvent" [label="DomainEvent
+(Event)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "EventStream" [label="EventStream
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Projection" [label="Projection
+(Projection)", color="#8b5cf6", fillcolor="#faf5ff"];
+  "Query" [label="Query
+(Query)", color="#f59e0b", fillcolor="#fffbeb"];
+  "QueryResponse" [label="QueryResponse
+(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "ReadModel" [label="ReadModel
+(ReadModel)", color="#8b5cf6", fillcolor="#faf5ff"];
+
+  "Projection" -> "ReadModel" [label="updates_read_model", color="#8b5cf6", style="solid"];
+  "Projection" -> "DomainEvent" [label="consumes_event", color="#10b981", style="solid"];
+  "Projection" -> "EventStream" [label="subscribes_to_stream", color="#10b981", style="solid"];
+  "Query" -> "ReadModel" [label="reads_from", color="#374151", style="solid"];
+  "Query" -> "QueryResponse" [label="responds_with", color="#374151", style="solid"];
+}
