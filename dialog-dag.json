@@ -1109,6 +1109,40 @@
           "ul_projection diff"
         ]
       }
+    },
+    {
+      "cid": "bafkr4idqhpfqo5yqtrgygaemft7ek7jkpmacv3aytdlj77hy3dofjcbiz4",
+      "content": {
+        "event_id": "d0324f25-eb44-4b05-a412-ab4c89a60673",
+        "i_understood": "Added Minimal Proof Bar (L0-L3) in AGENTS.md; logged insight; keep proofs lightweight and focused",
+        "parent_cid": "bafkr4idll6mcbhbb7gav4shpi2xxus3fmqkifl4ocjsza62jaxzddkgr64",
+        "timestamp": 1758063793,
+        "type": "assistant",
+        "user_said": "Adopt pragmatic proof policy",
+        "what_i_did": [
+          "update AGENTS.md with Minimal Proof Bar",
+          "log insight pragmatic_proof_policy"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ihuhm4qayfmofylzi64v5on24y4nfn5dqgkh2p7g4xjg4oawcmhpu",
+      "content": {
+        "event_id": "734065be-56d5-4366-85f6-a752f4c10bda",
+        "i_understood": "Added naming policy tests and code export checks; renamed morphisms in graph to UL-aligned verbs; validated and generated UL diff",
+        "parent_cid": "bafkr4idqhpfqo5yqtrgygaemft7ek7jkpmacv3aytdlj77hy3dofjcbiz4",
+        "timestamp": 1758063960,
+        "type": "assistant",
+        "user_said": "Enforce 3-way alignment with tests and lens renames",
+        "what_i_did": [
+          "add tests/ul_naming_policy_tests.rs",
+          "add tests/ul_code_exports_alignment_tests.rs",
+          "rename morphisms in domain-graph",
+          "update diagrams describes",
+          "validate",
+          "ul_projection diff"
+        ]
+      }
     }
   ],
   "insights": [
@@ -1497,7 +1531,31 @@
         "ddd",
         "ul"
       ]
+    },
+    {
+      "details": "Balance rigor and velocity. Use levels: L0 (unit tests), L1 (invariants/specs + property tests), L2 (one string diagram per core law/flow), L3 (formal write-up by exception). Defaults: core flows L1+L2; local behaviors L1. Stop when tests pass, diagrams commute, and UL diff is reviewed. Avoid long formalizations unless explicitly requested.",
+      "id": "pragmatic_proof_policy",
+      "summary": "Minimal proof bar: L0/L1/L2/L3; choose smallest proof that reduces risk",
+      "tags": [
+        "policy",
+        "proof",
+        "testing",
+        "act",
+        "ul"
+      ]
+    },
+    {
+      "details": "Guardrails: (1) Lens morphism naming policy enforced; (2) Diagram coverage validator; (3) UL naming tests ban generic morphisms and check preferred verbs; (4) Code export test ensures key UL objects are re-exported. Domain-graph + UL serve as memory. Any change in one requires synchronized updates and a UL diff-first review.",
+      "id": "three_way_alignment_policy",
+      "summary": "3-way alignment: code, docs/diagrams, and UL naming must match",
+      "tags": [
+        "policy",
+        "alignment",
+        "ul",
+        "act",
+        "testing"
+      ]
     }
   ],
-  "total_events": 65
+  "total_events": 67
 }

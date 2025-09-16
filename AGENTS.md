@@ -82,6 +82,18 @@ Note: This crate is a pure library. It contains no persistence, routing, or exte
 - Proof:
   - Add unit/property tests for invariants; string diagrams can illustrate the policy/aggregate law, not each edge.
 
+## Minimal Proof Bar (Pragmatic Proofs)
+- We balance rigor with velocity. Use the smallest proof that meaningfully reduces risk.
+- Levels (pick the lowest that fits):
+  - L0: Unit tests + examples (fast sanity for simple value objects/helpers).
+  - L1: Invariants/Specifications + property tests (collections, identities, ranges, causality).
+  - L2: One string diagram for the end‑to‑end flow or law (e.g., event pipeline, projection law).
+  - L3: Formal write‑up only when policy dictates (rare for core lib).
+- Defaults for this repo:
+  - Core flows (command→aggregate→event→envelope→stream, read path): L1 + one L2 diagram.
+  - Local behaviors (CID, envelopes, identities): L1.
+- Stop when: tests green, diagram(s) commute, UL diff reviewed. Avoid multi‑page formalizations unless explicitly requested.
+
 ## Applied Category Theory (ACT) Expert — Codex
 - Persona spec in `doc/act/act_rules_codex.md`.
 - Responsibilities:
