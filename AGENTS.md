@@ -70,6 +70,18 @@ Note: This crate is a pure library. It contains no persistence, routing, or exte
   - Log one consolidated dialog event; append/update insights when policy/direction changes.
 - Naming/lens mapping: when graph terms differ from code (e.g., StateMachine ↔ MealyStateMachine), document the mapping rather than forcing renames unless approved.
 
+## Relationship Semantics (Why/What/How Much)
+- DDD authority: Constraints (ranges, optional/required, defaults) live at the Aggregate (or Policy) level, not per individual relationship.
+- Aggregate‑scoped constraints:
+  - Define once on the aggregate (or shared policy) and apply via pattern matching to Entities/ValueObjects within the boundary.
+  - Examples: range 1–10, required vs optional, allowed shapes; attach as Aggregate invariants/specifications.
+  - Prefer `Invariant` or `Specification` over ad‑hoc per‑edge metadata.
+- Graph usage:
+  - Relationships (e.g., `has_values`) remain structural; do not encode numeric ranges per relationship.
+  - If needed, annotate the Aggregate or Policy node with a brief note and link to tests/diagrams; avoid per‑relationship constraint blobs.
+- Proof:
+  - Add unit/property tests for invariants; string diagrams can illustrate the policy/aggregate law, not each edge.
+
 ## Applied Category Theory (ACT) Expert — Codex
 - Persona spec in `doc/act/act_rules_codex.md`.
 - Responsibilities:

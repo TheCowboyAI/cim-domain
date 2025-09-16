@@ -1060,6 +1060,38 @@
           "no write"
         ]
       }
+    },
+    {
+      "cid": "bafkr4icjgjy3yzhkawafnz2mj6wzsc2xlwb67zksi5cqy4bb3ibdbtimae",
+      "content": {
+        "event_id": "2d70115c-23d0-4522-9d8f-c9da1d5913ca",
+        "i_understood": "Removed relationship_semantics_schema from graph; updated AGENTS.md to encode constraints at Aggregate/Policy via Invariants/Specifications; acknowledged anti-pattern; no code changes",
+        "parent_cid": "bafkr4icf5uq6s2j24iisqdk2zvvufwhg3vgpbhl4tbfcik7amd6k35bzk4",
+        "timestamp": 1758062143,
+        "type": "assistant",
+        "user_said": "Correct constraint modeling to aggregate scope; revert per-relationship schema",
+        "what_i_did": [
+          "revert domain-graph metadata change",
+          "update AGENTS.md instructions",
+          "log policy insight aggregate_scoped_constraints"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ieuoqsthvabsjtbvnls6fq2p2vzilznmdhlxdcr6vpfumma2xmaqa",
+      "content": {
+        "event_id": "1c6d45a8-fef1-48ea-959f-05ccab070be1",
+        "i_understood": "Explained anti-pattern; removed per-relationship constraints; added morphism naming policy with concrete renames and process; will prepare UL diff upon approval",
+        "parent_cid": "bafkr4icjgjy3yzhkawafnz2mj6wzsc2xlwb67zksi5cqy4bb3ibdbtimae",
+        "timestamp": 1758062583,
+        "type": "assistant",
+        "user_said": "Addressed naming critique; proposed morphism naming policy",
+        "what_i_did": [
+          "update AGENTS.md DDD constraints",
+          "add doc/ul/morphism_naming_policy.md",
+          "log insights aggregate_scoped_constraints and morphism_naming_policy"
+        ]
+      }
     }
   ],
   "insights": [
@@ -1424,7 +1456,31 @@
         "act",
         "ul"
       ]
+    },
+    {
+      "details": "DDD policy: optional/required/ranges/defaults/constants are defined once on the Aggregate (or Policy) and applied to entities/value objects via pattern matching. Relationship edges remain structural (no per-edge range blobs). Encode constraints as Invariants/Specifications with tests and diagrams at the aggregate/policy level.",
+      "id": "aggregate_scoped_constraints",
+      "summary": "Value constraints are aggregate-scoped; apply via pattern matching, not per-relationship",
+      "tags": [
+        "policy",
+        "ddd",
+        "constraints",
+        "aggregate",
+        "invariants"
+      ]
+    },
+    {
+      "details": "Adopt DDD+ACT naming: directional verbs (provides_*, acts_as_*_for, wraps, projects_to, updates, subscribes_to, consumes, appends_to, governs, constrains, coordinates, addresses_*_by_*, identifies_*, correlates_with, precedes). Use refines_concept or is_partially_equivalent_to for concept alignment. Use scopes_* for BoundedContext containment. See doc/ul/morphism_naming_policy.md. Plan: propose lens renames + diagram updates via UL diff for review.",
+      "id": "morphism_naming_policy",
+      "summary": "Morphism naming: avoid 'has_*'/'is_a'; use directional, meaningful verbs",
+      "tags": [
+        "policy",
+        "naming",
+        "act",
+        "ddd",
+        "ul"
+      ]
     }
   ],
-  "total_events": 62
+  "total_events": 64
 }
