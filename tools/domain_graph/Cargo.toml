@@ -27,3 +27,11 @@ path = "src/bin/add_morphism.rs"
 [[bin]]
 name = "ul_narrative"
 path = "src/bin/ul_narrative.rs"
+
+[[bin]]
+name = "ul_dot"
+path = "src/bin/ul_dot.rs"
+
+[[bin]]
+name = "add_diagram"
+path = "src/bin/add_diagram.rs"
