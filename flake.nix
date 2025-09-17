@@ -134,6 +134,7 @@
             tokei
             git
             jq
+            graphviz
             
             # Testing tools
             cargo-nextest
@@ -166,6 +167,7 @@
             echo "  cargo bench       - Run benchmarks"
             echo "  cargo clippy      - Run linter"
             echo "  cargo fmt         - Format code"
+            echo "  dot -Tsvg doc/act/diagrams/*.dot -O  - Render DOT to SVG"
             echo "  cargo nextest run - Run tests with nextest"
             echo "  cargo tarpaulin   - Generate test coverage report"
             echo "  cargo llvm-cov    - Generate LLVM coverage report"
@@ -194,6 +196,7 @@
               cargo-tarpaulin
               cargo-llvm-cov
               grcov
+              graphviz
               
               # Testing tools
               cargo-nextest
