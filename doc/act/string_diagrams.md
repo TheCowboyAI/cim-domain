@@ -37,6 +37,17 @@ See: doc/act/diagrams/cqrs_projection_functor.svg
 See: doc/act/diagrams/causation_correlation_commutation.svg
 
 - Correlation preserved across causation chain; causation set to prior message_id
+- Verified in `tests/envelope_identity_tests.rs` (root → follow-up command chain)
+
+## Identity Envelope (Command → Event)
+
+See: doc/act/diagrams/identity_envelope_v2.dot.svg
+
+- Root envelopes created with `CommandEnvelope::new(_)/new_in_tx` establish the correlation/cause pair carried through follow-up commands and queries.
+- `DomainEventEnvelope::inline` mirrors the identity, capturing `event_id`, `aggregate_id`, correlation, and causation before optionally swapping payloads for a CID.
+- Event IDs (`EventId::new`) are UUID v7, providing a monotone timestamp surface for downstream ordering proofs.
+- Ack/response artifacts (`CommandAcknowledgment`, `QueryAcknowledgment`, `QueryResponse`) are checked to reflect the originating envelope identity before emitting downstream projections.
+- Regression: `tests/envelope_identity_tests.rs` exercises the entire chain (root command → follow-up command/query → acknowledgments → event envelope) and the inline→CID transition.
 
 ## Saga as Composed Aggregate
 

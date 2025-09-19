@@ -1,0 +1,19 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "AggregateRoot" [label="AggregateRoot
+(Trait)", color="#0ea5e9", fillcolor="lightblue"];
+  "Policy" [label="Policy
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Saga" [label="Saga
+(Aggregate)", color="#0ea5e9", fillcolor="lightblue"];
+  "StateMachine" [label="StateMachine
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "AggregateRoot" -> "StateMachine" [label="governed_by", color="#374151", style="solid"];
+  "AggregateRoot" -> "Policy" [label="constrained_by_policy", color="#374151", style="solid"];
+  "Saga" -> "AggregateRoot" [label="coordinates", color="#374151", style="solid"];
+  "Saga" -> "AggregateRoot" [label="manages_participant", color="#475569", style="dashed"];
+  "Saga" -> "VectorClock" [label="maintains_vector_clock", color="#374151", style="solid"];
+}

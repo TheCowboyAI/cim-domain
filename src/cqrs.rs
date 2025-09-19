@@ -32,8 +32,10 @@ pub enum CorrelationId {
 impl fmt::Display for CorrelationId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CorrelationId::Single(id) => write!(f, "correlation:{}", id),
-            CorrelationId::Transaction(tx) => write!(f, "correlation:{}", tx.0),
+            CorrelationId::Single(id) => write!(f, "correlation:{id}"),
+            CorrelationId::Transaction(AggregateTransactionId(tx)) => {
+                write!(f, "correlation:{tx}")
+            }
         }
     }
 }
@@ -46,7 +48,8 @@ pub struct CausationId(pub Uuid);
 
 impl fmt::Display for CausationId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "causation:{}", self.0)
+        let Self(id) = self;
+        write!(f, "causation:{id}")
     }
 }
 
@@ -157,8 +160,11 @@ impl MessageFactory {
 /// Message identity for tracking message metadata
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct MessageIdentity {
+    /// Correlation identifier shared across a causality chain (command/query/event)
     pub correlation_id: CorrelationId,
+    /// Identifier of the immediate cause that produced this message
     pub causation_id: CausationId,
+    /// Identifier of this message instance (command/query) within the chain
     pub message_id: Uuid,
 }
 
@@ -835,7 +841,9 @@ mod tests {
     fn event_id_is_monotonic_non_decreasing_by_bytes() {
         // Generate a short sequence of EventIds and assert pairwise non-decreasing by bytes
         let mut ids: Vec<EventId> = Vec::new();
-        for _ in 0..12 { ids.push(EventId::new()); }
+        for _ in 0..12 {
+            ids.push(EventId::new());
+        }
         for w in ids.windows(2) {
             let a = (w[0].0).as_bytes();
             let b = (w[1].0).as_bytes();

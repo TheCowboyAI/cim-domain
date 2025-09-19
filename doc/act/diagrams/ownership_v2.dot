@@ -1,0 +1,12 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainEntity" [label="DomainEntity
+(Entity)", color="#2563eb", fillcolor="#eff6ff"];
+  "ValueCollection" [label="ValueCollection
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "DomainEntity" -> "ValueCollection" [label="owns_value_collection", color="#475569", style="dashed"];
+  "ValueCollection" -> "ValueCollection" [label="concat_collections", color="#374151", style="solid"];
+}
