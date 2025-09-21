@@ -2139,6 +2139,38 @@
           "adjust README and flake"
         ]
       }
+    },
+    {
+      "cid": "bafkr4igxnbinfpanxtu22fdbsgxfoprlw6sdramwrlczpwldjctxq2qcba",
+      "content": {
+        "event_id": "177912ae-c3a7-4045-83ac-28f1415b8082",
+        "i_understood": "Tagged 0.7.8 changes, regenerated docs/tests, and pushed to origin/main",
+        "parent_cid": "bafkr4ibwmlwymsqpu567m7q62m6g4iwz4u3c62gifmozswrlnmvoier4vi",
+        "timestamp": 1758487075,
+        "type": "assistant",
+        "user_said": "Committed and pushed release prep",
+        "what_i_did": [
+          "git add -A",
+          "git commit -m chore: prepare 0.7.8 release",
+          "git push origin main"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4iahd2r6h6t3xrsbkdbm3g2w2anjz6754caqjfaguwzc6pmmraokpm",
+      "content": {
+        "event_id": "3e849af9-04ca-4fa2-8d4c-94115bc784b7",
+        "i_understood": "Tagged 0.7.8 changes, regenerated docs/tests, and pushed to origin/main",
+        "parent_cid": "bafkr4idgmac4smvsvkt7kon7amfmnmldqaxawsc2w5cx3twvrrkjbclthm",
+        "timestamp": 1758487082,
+        "type": "assistant",
+        "user_said": "Committed and pushed release prep",
+        "what_i_did": [
+          "git add -A",
+          "git commit -m chore: prepare 0.7.8 release",
+          "git push origin main"
+        ]
+      }
     }
   ],
   "insights": [
@@ -2600,5 +2632,5 @@
       ]
     }
   ],
-  "total_events": 124
+  "total_events": 126
 }
