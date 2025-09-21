@@ -71,6 +71,7 @@ See: doc/act/diagrams/subject_algebra_v2.dot.svg
 
 - `Subject` is the free monoid over validated `SubjectSegment` tokens with concatenation as the operation and `Subject::root()` as the identity.
 - `SubjectPattern` extends the algebra with `*` (single segment) and a terminal `>` (multi-segment) wildcard captured via `SubjectPatternSegment`.
+- Law: `concat(concat(s1, s2), s3) = concat(s1, concat(s2, s3))` and `concat(root, s) = s = concat(s, root)`.
 - Regression: `tests/subject_algebra_tests.rs` exercises associativity/identity, wildcard semantics, and validation; unit tests in `src/subject.rs` cover the internal constructors.
 
 ## Domain Path Algebra (Hierarchical Namespace)
@@ -79,6 +80,7 @@ See: doc/act/diagrams/domain_path_algebra_v2.dot.svg
 
 - `DomainPath` models the canonical `cim.domain.<bounded_context>.<facet>.<name>` namespace; `DomainPath::root()` (`cim.domain`) acts as the monoid identity and concatenation composes additional facets.
 - `DomainPathSegment` captures validated dotted tokens; `DomainArtifactKind` annotates known facets (command, aggregate, value, etc.) rendered as path segments.
+- Law: `concat(concat(p_bc, p_facet), p_name) = concat(p_bc, concat(p_facet, p_name))` with `root` as the two-sided identity.
 - Regression: `tests/domain_path_algebra_tests.rs` validates prefix enforcement, helpers (`command`, `value`), and monoid laws; module tests in `src/domain_path.rs` exercise accessors and builders.
 
 ## Domain Algebra Overview (Path ⇄ Subject ⇄ Persistence)

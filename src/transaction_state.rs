@@ -9,6 +9,7 @@
 use crate::state_machine::{MealyStateTransitions, State, TransitionInput, TransitionOutput};
 use crate::DomainEvent;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// States for a generic transaction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -127,8 +128,44 @@ impl MealyStateTransitions for TransactionState {
         }
     }
 
-    fn transition_output(&self, _target: &Self, _input: &Self::Input) -> Self::Output {
-        TxOutput::default()
+    fn transition_output(&self, target: &Self, input: &Self::Input) -> Self::Output {
+        use TransactionInput as I;
+        use TransactionState as S;
+        let mut output = TxOutput::default();
+        let event_type = match (*self, target, input) {
+            (S::Idle, S::Started, I::Start) => Some("TransactionStarted"),
+            (S::Started, S::Applied, I::ValidateOk) => Some("TransactionValidated"),
+            (S::Started, S::Failed, I::ValidateFail) => Some("TransactionValidationFailed"),
+            (S::Applied, S::Committed, I::Commit) => Some("TransactionCommitted"),
+            (S::Started, S::Cancelled, I::Cancel) => Some("TransactionCancelled"),
+            (S::Applied, S::Cancelled, I::Cancel) => Some("TransactionCancelledAfterApply"),
+            _ => None,
+        };
+        if let Some(kind) = event_type {
+            output.events.push(Box::new(TransactionEvent::new(kind)));
+        }
+        output
+    }
+}
+
+#[derive(Debug)]
+struct TransactionEvent {
+    kind: &'static str,
+}
+
+impl TransactionEvent {
+    fn new(kind: &'static str) -> Self {
+        Self { kind }
+    }
+}
+
+impl DomainEvent for TransactionEvent {
+    fn aggregate_id(&self) -> Uuid {
+        Uuid::nil()
+    }
+
+    fn event_type(&self) -> &'static str {
+        self.kind
     }
 }
 
@@ -195,10 +232,10 @@ mod tests {
 
     #[test]
     fn test_transition_output_default() {
-        // Output is default (no events)
         let out = TransactionState::Started
             .transition_output(&TransactionState::Applied, &TransactionInput::ValidateOk);
-        assert!(out.events.is_empty());
+        assert_eq!(out.events.len(), 1);
+        assert_eq!(out.events[0].event_type(), "TransactionValidated");
     }
 
     #[test]

@@ -1974,6 +1974,171 @@
           "cargo run -q -p domain_graph_tools --bin ul_projection"
         ]
       }
+    },
+    {
+      "cid": "bafkr4ifnjozxx2qkwmygkmlfesfxpwxwvmk3olqupizijywrw6kaalvf3u",
+      "content": {
+        "event_id": "9c3ab4f4-db5a-4bfe-8969-079174d169f2",
+        "i_understood": "Fulfilled request to push latest work to origin/main",
+        "parent_cid": "bafkr4iedrxo6xahit6nqdsea6klum5lt4qzpudj4gy2jjfd44vo3uxtn6i",
+        "timestamp": 1758466601,
+        "type": "assistant",
+        "user_said": "Committed local changes, merged remote main, and pushed main branch.",
+        "what_i_did": [
+          "git add -A",
+          "git commit",
+          "git pull --no-rebase",
+          "resolved merge conflicts",
+          "git commit",
+          "git push"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ic7ieptzj67iks5qokaaqnlhh7ai3hl2mttivoe642itpnmxnxkwe",
+      "content": {
+        "event_id": "e80f3958-ce05-4c98-a8b0-9499279c5e6f",
+        "i_understood": "Tarpaulin coverage blocked by ptrace restrictions; shared workaround",
+        "parent_cid": "bafkr4ifnjozxx2qkwmygkmlfesfxpwxwvmk3olqupizijywrw6kaalvf3u",
+        "timestamp": 1758470108,
+        "type": "assistant",
+        "user_said": "Attempted to measure coverage; sandbox denied ptrace",
+        "what_i_did": [
+          "cargo tarpaulin --workspace --all-features --out Json (timeout)",
+          "cargo tarpaulin --workspace --all-features --out Json (EPERM)",
+          "jq inspect dialog-dag"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4idfnpoa42t2ulaedo3nmfjksx64mewsuhxf7yldjvnsrhpazgnugq",
+      "content": {
+        "event_id": "163742c1-3184-4a2f-a9ba-e5608dc4af2f",
+        "i_understood": "Explained state_machine_lens mapping references nonexistent TDD file",
+        "parent_cid": "bafkr4ifnjozxx2qkwmygkmlfesfxpwxwvmk3olqupizijywrw6kaalvf3u",
+        "timestamp": 1758472806,
+        "type": "assistant",
+        "user_said": "Investigated missing tests/transaction_state.rs",
+        "what_i_did": [
+          "ls tests",
+          "git rev-list --all -- tests/transaction_state.rs",
+          "sed doc/qa/features/index.yaml",
+          "nl src/transaction_state.rs"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4if4dcqv63crl4nhfee5yandtsojewrs4qd32cjcteyikxwrxaojc4",
+      "content": {
+        "event_id": "ae99dfe1-e77d-4ba5-a7d6-76a946a7e0d1",
+        "i_understood": "Pointed feature to existing TDD/BDD assets",
+        "parent_cid": "bafkr4ifnjozxx2qkwmygkmlfesfxpwxwvmk3olqupizijywrw6kaalvf3u",
+        "timestamp": 1758475148,
+        "type": "assistant",
+        "user_said": "Updated state_machine_lens QA mapping",
+        "what_i_did": [
+          "edit doc/qa/features/index.yaml"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ibf5vmwsezxxbnaya2kdsdquwvh367k7x2izbdqi75io55fio2fiq",
+      "content": {
+        "event_id": "e48b57eb-7667-4a2b-8fe0-18a1ccf0d8c8",
+        "i_understood": "Created Markdown summary of cargo test targets and totals",
+        "parent_cid": "bafkr4if4dcqv63crl4nhfee5yandtsojewrs4qd32cjcteyikxwrxaojc4",
+        "timestamp": 1758481861,
+        "type": "assistant",
+        "user_said": "Generated consolidated test inventory report",
+        "what_i_did": [
+          "cargo test --workspace --all-targets --all-features -- --list",
+          "perl aggregation scripts",
+          "wrote doc/testing/test_report.md"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ihbtcw5um6mpp3apprviezah7nyvampr3haievultli6wycj6jlqm",
+      "content": {
+        "event_id": "49fda53e-7665-44f2-bf0e-9bcf2e1fbff5",
+        "i_understood": "Cleaned temporary coverage artifacts",
+        "parent_cid": "bafkr4if4dcqv63crl4nhfee5yandtsojewrs4qd32cjcteyikxwrxaojc4",
+        "timestamp": 1758481885,
+        "type": "assistant",
+        "user_said": "Removed leftover LLVM coverage profraw files",
+        "what_i_did": [
+          "find . -name '*.profraw' -print0 | xargs -0 rm -f"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4idgmac4smvsvkt7kon7amfmnmldqaxawsc2w5cx3twvrrkjbclthm",
+      "content": {
+        "event_id": "24d6c93e-4bf1-4726-be49-30a115558571",
+        "i_understood": "Documented laws and created tests so subject/domain path diagrams commute under ACT",
+        "parent_cid": "bafkr4ihbtcw5um6mpp3apprviezah7nyvampr3haievultli6wycj6jlqm",
+        "timestamp": 1758484354,
+        "type": "assistant",
+        "user_said": "Formalised ACT monoid diagrams and added commutation proofs",
+        "what_i_did": [
+          "edit doc/act/string_diagrams.md",
+          "add tests/act_diagram_commutation_tests.rs",
+          "update doc/qa/features/index.yaml",
+          "cargo test --features act_strict -- tests::act"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4igze45sowdsen7ved4e3tdf4ewksibdicqsq7qs4s4hgj7makyvua",
+      "content": {
+        "event_id": "3527d0a5-39da-478a-a909-52cc43813f55",
+        "i_understood": "Updated transaction state outputs to emit deterministic events and asserted full event streams in BDD scenarios",
+        "parent_cid": "bafkr4idgmac4smvsvkt7kon7amfmnmldqaxawsc2w5cx3twvrrkjbclthm",
+        "timestamp": 1758484900,
+        "type": "assistant",
+        "user_said": "Extended BDD coverage to exercise every transaction event",
+        "what_i_did": [
+          "edit src/transaction_state.rs",
+          "edit examples/domain_examples/tests/bdd_transaction_state.rs",
+          "edit doc/qa/features/transaction_state.feature",
+          "cargo test -p cim-domain-examples --test bdd_transaction_state",
+          "cargo test --all-targets --all-features"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ie7jodizm5rxf334whcda5g24kd23or42b3r5cllq5yu5z6gm2nkq",
+      "content": {
+        "event_id": "8cd7a721-1a05-437d-9678-f6b535e34230",
+        "i_understood": "Kept domain_graph/dialog_dag tools out of release builds and documented new invocation commands",
+        "parent_cid": "bafkr4idgmac4smvsvkt7kon7amfmnmldqaxawsc2w5cx3twvrrkjbclthm",
+        "timestamp": 1758486344,
+        "type": "assistant",
+        "user_said": "Scoped tool crates to development use",
+        "what_i_did": [
+          "edit Cargo.toml",
+          "update docs to use manifest-path",
+          "update flake.nix",
+          "added scripts/update_test_report.sh"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ibwmlwymsqpu567m7q62m6g4iwz4u3c62gifmozswrlnmvoier4vi",
+      "content": {
+        "event_id": "2cd2ef31-844f-429b-9c61-a7a49422bc8d",
+        "i_understood": "Updated crate/flake versions, changelog, and documentation to reflect v0.7.8",
+        "parent_cid": "bafkr4idgmac4smvsvkt7kon7amfmnmldqaxawsc2w5cx3twvrrkjbclthm",
+        "timestamp": 1758486920,
+        "type": "assistant",
+        "user_said": "Bump version to 0.7.8",
+        "what_i_did": [
+          "set package version",
+          "cargo generate-lockfile",
+          "update changelog",
+          "adjust README and flake"
+        ]
+      }
     }
   ],
   "insights": [
@@ -2435,5 +2600,5 @@
       ]
     }
   ],
-  "total_events": 114
+  "total_events": 124
 }

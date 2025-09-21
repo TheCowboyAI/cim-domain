@@ -89,18 +89,22 @@ features:
     file: doc/act/diagrams/subject_algebra_v2.dot.svg
     tests:
       - tests/subject_algebra_tests.rs
+      - tests/act_diagram_commutation_tests.rs
     tdd:
       - src/subject.rs
       - tests/subject_algebra_tests.rs
+      - tests/act_diagram_commutation_tests.rs
 
   - id: domain_path_algebra
     kind: doc
     file: doc/act/diagrams/domain_path_algebra_v2.dot.svg
     tests:
       - tests/domain_path_algebra_tests.rs
+      - tests/act_diagram_commutation_tests.rs
     tdd:
       - src/domain_path.rs
       - tests/domain_path_algebra_tests.rs
+      - tests/act_diagram_commutation_tests.rs
 
   - id: domain_algebra_overview
     kind: doc
@@ -109,6 +113,7 @@ features:
       - tests/subject_algebra_tests.rs
       - tests/domain_path_algebra_tests.rs
       - tests/cid_content_addressing_tests.rs
+      - tests/act_diagram_commutation_tests.rs
     tdd:
       - src/subject.rs
       - src/domain_path.rs
@@ -139,8 +144,6 @@ features:
     kind: doc
     file: doc/ul/domain_objects_catalog.md
     tests:
-      - src/state_machine.rs
-      - tests/transaction_state.rs
+      - examples/domain_examples/tests/bdd_transaction_state.rs
     tdd:
-      - src/state_machine.rs
-      - tests/transaction_state.rs
+      - src/transaction_state.rs

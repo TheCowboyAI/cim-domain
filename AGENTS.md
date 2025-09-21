@@ -14,7 +14,7 @@
   - Log insight: `cargo run -q -p dialog_dag_tools --bin log_insight -- --file dialog-dag.json --id <id> --summary "..." --details "..." --tags tag1,tag2 [--source <cid>]`
   - Convenience: `scripts/chat_event.sh`, `scripts/chat_insight.sh`
 - UL Projection duty:
-  - After changing `domain-graph.json`, produce a UL diff first: `cargo run -q -p domain_graph_tools --bin ul_projection` (writes `ul-projection.diff.json`).
+  - After changing `domain-graph.json`, produce a UL diff first: `cargo run --manifest-path tools/domain_graph/Cargo.toml --quiet --bin ul_projection` (writes `ul-projection.diff.json`).
   - Do NOT overwrite `ul-projection.json` automatically; only update with `--write` after review/approval, and log a dialog event referencing the diff.
   - Keep UL coherent with `domain_identity` and update insights when policies change.
 

@@ -1,4 +1,6 @@
-use cim_domain::{MealyStateTransitions, TransactionInput as I, TransactionState as S};
+use cim_domain::{
+    DomainEvent, MealyStateTransitions, TransactionInput as I, TransactionState as S,
+};
 
 const FEATURE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -8,7 +10,7 @@ const FEATURE: &str = include_str!(concat!(
 #[derive(Debug, Clone)]
 struct World {
     state: S,
-    events: Vec<&'static str>,
+    events: Vec<String>,
     last_transition_valid: Option<bool>,
 }
 impl Default for World {
@@ -24,10 +26,18 @@ impl Default for World {
 fn apply(world: &mut World, input: I) {
     let targets = world.state.valid_transitions(&input);
     if let Some(next) = targets.first().cloned() {
-        let _out = world.state.transition_output(&next, &input);
+        let out = world.state.transition_output(&next, &input);
+        for event in out.events.iter() {
+            world
+                .events
+                .push(DomainEvent::event_type(event.as_ref()).to_string());
+        }
         world.state = next;
         world.last_transition_valid = Some(true);
     } else {
+        world
+            .events
+            .push("TransactionTransitionRejected".to_string());
         world.last_transition_valid = Some(false);
     }
 }
@@ -56,12 +66,40 @@ fn bdd_transaction_state_feature() {
                     assert_eq!(world.state, S::Cancelled);
                 } else if line.starts_with("Then state is Failed") {
                     assert_eq!(world.state, S::Failed);
-                } else if line.starts_with("And Expect Event Stream is empty") {
-                    assert!(world.events.is_empty());
+                } else if let Some(rest) = line.strip_prefix("And Expect Event Stream is ") {
+                    let rest = rest.trim();
+                    if rest.eq_ignore_ascii_case("empty") {
+                        assert!(
+                            world.events.is_empty(),
+                            "expected empty stream, got {:?}",
+                            world.events
+                        );
+                    } else {
+                        let expected = parse_event_list(rest);
+                        assert_eq!(world.events, expected, "event stream mismatch");
+                    }
                 } else if line.starts_with("Then transition is invalid") {
                     assert_eq!(world.last_transition_valid, Some(false));
                 }
             }
         }
     }
+}
+
+fn parse_event_list(expr: &str) -> Vec<String> {
+    let trimmed = expr.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+    let inner = trimmed
+        .strip_prefix('[')
+        .and_then(|s| s.strip_suffix(']'))
+        .expect("event list must be wrapped in [ ]");
+    if inner.trim().is_empty() {
+        return Vec::new();
+    }
+    inner
+        .split(',')
+        .map(|item| item.trim().trim_matches('"').to_string())
+        .collect()
 }

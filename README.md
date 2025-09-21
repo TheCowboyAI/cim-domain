@@ -76,7 +76,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cim-domain = "0.7.5"
+cim-domain = "0.7.8"
 ```
 
 ## Usage
