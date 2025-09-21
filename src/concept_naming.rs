@@ -1,4 +1,4 @@
-// Copyright 2025 Cowboy AI, LLC.
+// Copyright (c) 2025 - Cowboy AI, LLC.
 
 //! Concept Naming — suggest UL concepts for entities from values/features
 //!

@@ -1,4 +1,4 @@
-<!-- Copyright 2025 Cowboy AI, LLC. -->
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
 
 # Persistence Patterns in CIM Domain
 

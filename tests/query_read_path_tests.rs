@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cim_domain::domain_path::DomainPath;
 use cim_domain::projections::Projection;
 use cim_domain::{

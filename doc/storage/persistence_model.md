@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # CIM Domain Persistence Model – Implementation Notes for cim-ipld
 
 *Last updated: $(date -I)*

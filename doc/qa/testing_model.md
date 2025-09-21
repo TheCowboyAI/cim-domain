@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Testing Model: Unit + BDD (Gherkin) with Expected Event Streams
 
 This repository uses a two‑level testing strategy:

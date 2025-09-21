@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 //! Domain-level data structures describing bucket and index semantics for content addressing.
 
 use std::collections::VecDeque;

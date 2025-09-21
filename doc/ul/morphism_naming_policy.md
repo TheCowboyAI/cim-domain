@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Morphism Naming Policy (DDD + ACT)
 
 Goal: Every morphism name should carry domain meaning, be directional, and reflect a verifiable law. Avoid generic or container verbs like "has_*", "is_a", or unspecified "related_to".

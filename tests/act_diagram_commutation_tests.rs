@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 mod tests {
     pub mod act {
         use cim_domain::domain_path::{DomainArtifactKind, DomainPath};

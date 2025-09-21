@@ -1,4 +1,4 @@
-// Copyright 2025 Cowboy AI, LLC.
+// Copyright (c) 2025 - Cowboy AI, LLC.
 
 //! Limits and colimits for domain composition
 //!

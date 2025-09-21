@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cim_domain::{classify_object, CoreConceptId as C};
 use serde::Deserialize;
 

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cim_domain::{
     DomainEvent, MealyStateTransitions, TransactionInput as I, TransactionState as S,
 };

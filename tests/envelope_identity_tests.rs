@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use std::collections::HashMap;
 
 use cim_domain::{

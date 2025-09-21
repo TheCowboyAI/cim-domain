@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # String Diagrams for FP Domain Model
 
 ![FP Domain Overview](./fp_domain_overview.svg)

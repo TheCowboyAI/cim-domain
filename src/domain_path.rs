@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 //! DomainPath algebra for hierarchical domain object addressing.
 //!
 //! Domain paths follow the canonical dotted hierarchy: `cim.domain.<bounded_context>

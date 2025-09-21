@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 //! Subject algebra (value object) for composable domain addressing.
 //!
 //! Subjects form a free monoid over validated segments with concatenation as the

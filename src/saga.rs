@@ -1,4 +1,4 @@
-// Copyright 2025 Cowboy AI, LLC.
+// Copyright (c) 2025 - Cowboy AI, LLC.
 
 //! Saga as Aggregate-of-Aggregates (pure, FP-oriented)
 //!

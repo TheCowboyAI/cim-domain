@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cid::Cid;
 use multihash::Multihash;
 use serde::{Deserialize, Serialize};

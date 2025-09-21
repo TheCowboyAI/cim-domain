@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 //! Domain examples and BDD tests exercising cim-domain primitives.
 //!
 //! This crate is not the core library — it depends on `cim-domain` and

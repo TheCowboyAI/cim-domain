@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cim_domain::DomainEvent;
 
 pub fn event_types(events: &[Box<dyn DomainEvent>]) -> Vec<String> {

@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Rewritten Examples Summary
 
 Date: 2025-01-18

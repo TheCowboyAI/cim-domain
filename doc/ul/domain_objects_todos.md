@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Domain Objects — Incremental TODOs (Proof‑First)
 
 Guiding loop: target one thing → make it work → improve it → prove it.

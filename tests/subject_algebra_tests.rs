@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cim_domain::subject::{Subject, SubjectError, SubjectPattern, SubjectSegment};
 
 #[test]

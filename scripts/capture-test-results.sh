@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2025 Cowboy AI, LLC.
+# Copyright (c) 2025 - Cowboy AI, LLC.
 
 # Script to capture test results for CI/CD dashboard
 # This script runs tests and generates a JSON report with metrics

@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 ---
 name: Feature request
 about: Suggest an idea for this project

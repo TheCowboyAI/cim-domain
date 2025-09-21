@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Domain Objects Catalog (UL‑Aligned)
 
 This catalog enumerates the union of Domain Objects defined in code and in the category lens (domain‑graph.json), with a short purpose statement and alignment to the Ubiquitous Language (UL). UL concept ids follow the projection slug rule (lowercased name; spaces/specials → '_'). Items marked "external" are references to other domains. Items marked "conceptual" denote lens‑level constructs without a concrete core type.

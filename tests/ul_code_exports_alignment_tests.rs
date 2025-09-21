@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 // Verifies that key UL-aligned objects are exported at the crate root
 use cim_domain as cd;
 

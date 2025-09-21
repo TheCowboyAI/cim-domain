@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Domain Algebra Diagram Catalog
 
 Below is an index of the key DOT diagrams, each rendered inline for quick review. The generation script produces SVGs alongside the DOT sources using Graphviz (`dot -Tsvg`).

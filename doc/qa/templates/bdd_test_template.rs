@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 //! Template: BDD test for a domain feature.
 //! Copy into `tests/bdd_<feature>.rs` and adjust step handling.
 

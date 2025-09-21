@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use uuid::Uuid;
 use std::thread;
 use std::time::Duration;

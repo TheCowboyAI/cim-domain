@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Dialog DAG Tools
 
 Utilities for maintaining `dialog-dag.json` outside the pure `cim-domain` library.

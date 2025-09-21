@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use serde_json::Value;
 use std::collections::HashSet;
 use std::fs;

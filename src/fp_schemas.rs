@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 // FP-aligned JSON Schema implementations for domain types
 //
 // This module provides JsonSchema implementations that reflect our FP model:

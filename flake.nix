@@ -1,4 +1,4 @@
-# Copyright 2025 Cowboy AI, LLC.
+# Copyright (c) 2025 - Cowboy AI, LLC.
 
 {
   description = "CIM Domain - Core DDD components and traits for CIM";

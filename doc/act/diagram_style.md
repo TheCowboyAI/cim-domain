@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Diagram Style (CIM Domain)
 
 Goals: readable, consistent, minimal crossings, grouped by concept.

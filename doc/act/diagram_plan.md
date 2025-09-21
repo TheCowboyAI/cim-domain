@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Diagram Plan (Minimal, UL-Aligned)
 
 Goal: replace ad-hoc diagrams with a small, high-value set that reads like English, uses UL-aligned morphism IDs as labels, and keeps validator coverage simple.

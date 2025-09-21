@@ -54,7 +54,7 @@ Note: This crate is a pure library. It contains no persistence, routing, or exte
 - Library purity: Do not add persistence, routing, or external I/O. No network/storage deps in this crate.
 - Architectural guardrails: Event-driven thinking (no CRUD), domain isolation, proof-first DDD/CQRS APIs; infrastructure belongs downstream.
 - Repository context: This is a foundational `cim-domain` library for instantiating domains; keep API stable and minimal.
-- Copyright rule: See `.claude/rules/copyright-validation.md` for company notice policy.
+- Copyright rule: Run `scripts/copyright_validator.sh --staged` before committing to ensure headers are present.
 - Security: Never commit secrets. Keep feature flags minimal and library-scoped (e.g., `test-utils`); avoid infra toggles here. Use `RUST_BACKTRACE=1` when debugging.
 
 ## Interactive SDLC (Incremental, Proof‑First)

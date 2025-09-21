@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Contributing to CIM-Domain
 
 Thank you for your interest in contributing to CIM-Domain! We welcome contributions from the community.
@@ -129,4 +131,4 @@ Feel free to open an issue for questions or join our community discussions.
 By contributing, you agree that your contributions will be licensed under the MIT License.
 
 ---
-Copyright 2025 Cowboy AI, LLC. 
+Copyright (c) 2025 - Cowboy AI, LLC. 

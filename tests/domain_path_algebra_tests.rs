@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 use cim_domain::{DomainArtifactKind, DomainPath, DomainPathError};
 
 #[test]

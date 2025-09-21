@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 //! Shared BDD helpers for integration tests.
 //! Keep this file pure and dependency‑free.
 

@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # CIM Domain — String and Commutative Diagrams
 
 This document provides categorical string/commutative diagrams for the current domain and records the laws/conditions under which they commute. SVG diagrams are stored under `doc/act/diagrams/` and referenced from `domain-graph.json`. If a diagram fails to commute, the conditions and required modifications are stated.

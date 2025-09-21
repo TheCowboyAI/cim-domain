@@ -1,4 +1,4 @@
-// Copyright 2025 Cowboy AI, LLC.
+// Copyright (c) 2025 - Cowboy AI, LLC.
 
 //! OrgChart domain model: Project aggregate combining Organization, People,
 //! Locations, and Policies into a cohesive aggregate. Pure, event-based API.

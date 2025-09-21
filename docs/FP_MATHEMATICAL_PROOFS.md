@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Mathematical Proofs for FP Domain Model
 
 ![FP Domain Overview](./fp_domain_overview.svg)

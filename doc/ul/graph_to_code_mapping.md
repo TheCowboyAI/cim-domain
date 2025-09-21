@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2025 - Cowboy AI, LLC. -->
+
 # Graph ↔ Code Mapping (Lens Naming)
 
 Purpose: document term mappings between the category lens (domain-graph.json) and code identifiers so we keep UL and AST coherent without forcing churn when names differ.

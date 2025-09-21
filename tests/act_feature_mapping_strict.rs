@@ -1,3 +1,5 @@
+// Copyright (c) 2025 - Cowboy AI, LLC.
+
 #![cfg(feature = "act_strict")]
 use std::collections::{HashMap, HashSet};
 use std::fs;
