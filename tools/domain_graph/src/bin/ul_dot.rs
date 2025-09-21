@@ -4,20 +4,47 @@ use std::fs;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
-struct Obj { id: String, name: String, #[serde(rename = "type")] kind: String }
+struct Obj {
+    id: String,
+    name: String,
+    #[serde(rename = "type")]
+    kind: String,
+}
 #[derive(Debug, Deserialize, Clone)]
-struct Morph { id: String, name: String, source: String, target: String, #[serde(rename = "type")] kind: String }
+struct Morph {
+    id: String,
+    source: String,
+    target: String,
+    #[serde(rename = "type")]
+    kind: String,
+}
 #[derive(Debug, Deserialize)]
-struct Diagram { id: String, describes: Option<Vec<String>> }
+struct Diagram {
+    id: String,
+    describes: Option<Vec<String>>,
+}
 #[derive(Debug, Deserialize)]
-struct Category { objects: Vec<Obj>, morphisms: Vec<Morph>, diagrams: Vec<Diagram> }
+struct Category {
+    objects: Vec<Obj>,
+    morphisms: Vec<Morph>,
+    diagrams: Vec<Diagram>,
+}
 #[derive(Debug, Deserialize)]
-struct Graph { category: Category }
+struct Graph {
+    category: Category,
+}
 
-fn parse_args() -> (String, Option<String>, Option<BTreeSet<String>>, Option<String>) {
+fn parse_args() -> (
+    String,
+    Option<String>,
+    Option<BTreeSet<String>>,
+    Option<String>,
+) {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let mut path = "domain-graph.json".to_string();
-    if !args.is_empty() && !args[0].starts_with("--") { path = args.remove(0); }
+    if !args.is_empty() && !args[0].starts_with("--") {
+        path = args.remove(0);
+    }
     let mut diagram: Option<String> = None;
     let mut include: Option<BTreeSet<String>> = None;
     let mut out: Option<String> = None;
@@ -27,12 +54,16 @@ fn parse_args() -> (String, Option<String>, Option<BTreeSet<String>>, Option<Str
             "--diagram" => diagram = it.next(),
             "--include" => {
                 if let Some(csv) = it.next() {
-                    let set = csv.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                    let set = csv
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
                     include = Some(set);
                 }
             }
             "--out" => out = it.next(),
-            other => panic!("unknown arg: {}", other),
+            other => panic!("unknown arg: {other}"),
         }
     }
     (path, diagram, include, out)
@@ -91,16 +122,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let mut objs: BTreeMap<String, Obj> = BTreeMap::new();
     for o in &g.category.objects {
-        if used.contains(&o.id) { objs.insert(o.id.clone(), o.clone()); }
+        if used.contains(&o.id) {
+            objs.insert(o.id.clone(), o.clone());
+        }
     }
 
     let mut dot = String::new();
-    dot.push_str("digraph UL {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=Helvetica];\n\n");
+    dot.push_str(
+        "digraph UL {\n  rankdir=LR;\n  node [shape=box, style=filled, fontname=Helvetica];\n\n",
+    );
 
     // Nodes
     for (id, o) in &objs {
         let (stroke, fill) = node_style(&o.kind);
-        dot.push_str(&format!("  \"{}\" [label=\"{}\n({})\", color=\"{}\", fillcolor=\"{}\"];\n", id, o.name, o.kind, stroke, fill));
+        dot.push_str(&format!(
+            "  \"{}\" [label=\"{}\n({})\", color=\"{}\", fillcolor=\"{}\"];\n",
+            id, o.name, o.kind, stroke, fill
+        ));
     }
     dot.push('\n');
 
@@ -119,8 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = out {
         fs::write(path, dot)?;
     } else {
-        print!("{}", dot);
+        print!("{dot}");
     }
     Ok(())
 }
-

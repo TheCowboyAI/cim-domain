@@ -14,3 +14,133 @@ features:
       - tests/act_category_graph_tests.rs
     tdd:
       - tests/act_category_graph_tests.rs
+
+  - id: dialog_insights
+    kind: doc
+    file: dialog-dag.json
+    tests:
+      - tests/insights_policy_tests.rs
+    tdd:
+      - tests/insights_policy_tests.rs
+
+  - id: ul_export_alignment
+    kind: doc
+    file: doc/ul/graph_to_code_mapping.md
+    tests:
+      - tests/ul_code_exports_alignment_tests.rs
+    tdd:
+      - tests/ul_code_exports_alignment_tests.rs
+
+  - id: ul_naming_policy
+    kind: doc
+    file: doc/ul/morphism_naming_policy.md
+    tests:
+      - tests/ul_naming_policy_tests.rs
+    tdd:
+      - tests/ul_naming_policy_tests.rs
+
+  - id: value_collection_monoid
+    kind: doc
+    file: doc/act/string_diagrams.md
+    tests:
+      - tests/value_collection_monoid_tests.rs
+    tdd:
+      - tests/value_collection_monoid_tests.rs
+
+  - id: concept_graph_alignment
+    kind: doc
+    file: doc/act/diagrams/concept_graph_v2.dot
+    tests:
+      - examples/domain_examples/tests/cim_concepts_load.rs
+      - examples/domain_examples/tests/classify_core_concepts_from_graph.rs
+      - examples/domain_examples/tests/naming_suggestion.rs
+    tdd:
+      - examples/domain_examples/tests/cim_concepts_load.rs
+      - examples/domain_examples/tests/classify_core_concepts_from_graph.rs
+      - examples/domain_examples/tests/naming_suggestion.rs
+
+  - id: identity_envelope
+    kind: doc
+    file: doc/act/diagrams/identity_envelope_v2.dot.svg
+    tests:
+      - tests/envelope_identity_tests.rs
+    tdd:
+      - tests/envelope_identity_tests.rs
+
+  - id: domain_node_addressing
+    kind: doc
+    file: doc/act/diagrams/addressing_v2.dot.svg
+    tests:
+      - tests/cid_content_addressing_tests.rs
+    tdd:
+      - tests/cid_content_addressing_tests.rs
+
+  - id: bucket_index_addressing
+    kind: doc
+    file: doc/act/diagrams/content_addressing_buckets_v2.dot.svg
+    tests:
+      - tests/cid_content_addressing_tests.rs
+    tdd:
+      - src/object_store.rs
+      - tests/cid_content_addressing_tests.rs
+
+  - id: subject_algebra
+    kind: doc
+    file: doc/act/diagrams/subject_algebra_v2.dot.svg
+    tests:
+      - tests/subject_algebra_tests.rs
+    tdd:
+      - src/subject.rs
+      - tests/subject_algebra_tests.rs
+
+  - id: domain_path_algebra
+    kind: doc
+    file: doc/act/diagrams/domain_path_algebra_v2.dot.svg
+    tests:
+      - tests/domain_path_algebra_tests.rs
+    tdd:
+      - src/domain_path.rs
+      - tests/domain_path_algebra_tests.rs
+
+  - id: domain_algebra_overview
+    kind: doc
+    file: doc/act/diagrams/domain_algebra_overview_v2.dot.svg
+    tests:
+      - tests/subject_algebra_tests.rs
+      - tests/domain_path_algebra_tests.rs
+      - tests/cid_content_addressing_tests.rs
+    tdd:
+      - src/subject.rs
+      - src/domain_path.rs
+      - src/object_store.rs
+
+  - id: aggregate_entity_value_algebra
+    kind: doc
+    file: doc/act/diagrams/aggregate_entity_value_v2.dot.svg
+    tests:
+      - tests/value_collection_monoid_tests.rs
+      - tests/domain_invariant_tests.rs
+    tdd:
+      - src/entity.rs
+      - src/domain/value_objects.rs
+      - src/domain/invariants.rs
+
+  - id: cqrs_projection_read_path
+    kind: doc
+    file: doc/act/diagrams/cqrs_projection_functor.svg
+    tests:
+      - tests/query_read_path_tests.rs
+      - src/projections/mod.rs
+    tdd:
+      - src/projections/mod.rs
+      - tests/query_read_path_tests.rs
+
+  - id: state_machine_lens
+    kind: doc
+    file: doc/ul/domain_objects_catalog.md
+    tests:
+      - src/state_machine.rs
+      - tests/transaction_state.rs
+    tdd:
+      - src/state_machine.rs
+      - tests/transaction_state.rs

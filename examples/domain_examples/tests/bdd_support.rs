@@ -7,7 +7,11 @@ pub fn event_types(events: &[Box<dyn DomainEvent>]) -> Vec<String> {
 pub fn assert_event_types(events: &[Box<dyn DomainEvent>], expected: &[&str]) {
     let got = event_types(events);
     let exp: Vec<String> = expected.iter().map(|s| s.to_string()).collect();
-    assert_eq!(got, exp, "event types mismatch: got={:?} expected={:?}", got, exp);
+    assert_eq!(
+        got, exp,
+        "event types mismatch: got={:?} expected={:?}",
+        got, exp
+    );
 }
 
 pub trait ExpectEvents {
@@ -15,6 +19,7 @@ pub trait ExpectEvents {
 }
 
 impl ExpectEvents for Vec<Box<dyn DomainEvent>> {
-    fn expect_types(&self, expected: &[&str]) { assert_event_types(self, expected) }
+    fn expect_types(&self, expected: &[&str]) {
+        assert_event_types(self, expected)
+    }
 }
-

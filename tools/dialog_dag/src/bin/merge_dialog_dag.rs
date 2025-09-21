@@ -4,9 +4,7 @@ use std::env;
 use std::fs;
 
 fn usage() -> ! {
-    eprintln!(
-        "Usage: merge_dialog_dag <main_dialog_dag.json> <continuation.json>"
-    );
+    eprintln!("Usage: merge_dialog_dag <main_dialog_dag.json> <continuation.json>");
     std::process::exit(2)
 }
 
@@ -51,13 +49,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or(0)
     });
 
-    for ev in new_events { main_events.push(ev); }
+    for ev in new_events {
+        main_events.push(ev);
+    }
 
     // Merge key insights
     let mut insights: Vec<String> = main_json["key_insights"]
         .as_array()
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
-        .unwrap_or_else(Vec::new);
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
     let mut insight_set: HashSet<String> = insights.iter().cloned().collect();
 
     for key in ["key_insights", "key_insights_continued"].iter() {
@@ -72,7 +76,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if !insights.is_empty() { main_json["key_insights"] = json!(insights); }
+    if !insights.is_empty() {
+        main_json["key_insights"] = json!(insights);
+    }
 
     // Write back merged events and update totals
     main_json["events"] = json!(main_events);

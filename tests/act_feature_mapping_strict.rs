@@ -4,9 +4,18 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Debug)]
-struct FeatureRec { id: String, kind: String, file: String, tests: Vec<String>, tdd: Vec<String> }
+struct FeatureRec {
+    id: String,
+    kind: String,
+    file: String,
+    tests: Vec<String>,
+    tdd: Vec<String>,
+}
 #[derive(Debug)]
-struct FeatureIndex { map: HashMap<String, Vec<String>>, recs: Vec<FeatureRec> }
+struct FeatureIndex {
+    map: HashMap<String, Vec<String>>,
+    recs: Vec<FeatureRec>,
+}
 
 fn load_feature_index(path: &str) -> FeatureIndex {
     let data = fs::read_to_string(path).expect("read feature index");
@@ -32,13 +41,29 @@ fn load_feature_index(path: &str) -> FeatureIndex {
         let empty_tests = Vec::new();
         let tests_v = f["tests"].as_sequence().unwrap_or(&empty_tests);
         let mut tests = vec![];
-        for t in tests_v { if let Some(s) = t.as_str() { tests.push(s.to_string()); } }
+        for t in tests_v {
+            if let Some(s) = t.as_str() {
+                tests.push(s.to_string());
+            }
+        }
         let empty_tdd = Vec::new();
         let tdd_v = f["tdd"].as_sequence().unwrap_or(&empty_tdd);
         let mut tdd = vec![];
-        for t in tdd_v { if let Some(s) = t.as_str() { tdd.push(s.to_string()); } }
-        for t in &tests { map.entry(t.clone()).or_default().push(id.clone()); }
-        recs.push(FeatureRec { id, kind, file, tests, tdd });
+        for t in tdd_v {
+            if let Some(s) = t.as_str() {
+                tdd.push(s.to_string());
+            }
+        }
+        for t in &tests {
+            map.entry(t.clone()).or_default().push(id.clone());
+        }
+        recs.push(FeatureRec {
+            id,
+            kind,
+            file,
+            tests,
+            tdd,
+        });
     }
     FeatureIndex { map, recs }
 }
@@ -49,11 +74,18 @@ fn collect_integration_test_files(root: &Path) -> Vec<String> {
         if let Ok(rd) = fs::read_dir(dir) {
             for e in rd.flatten() {
                 let p = e.path();
-                if p.is_dir() { walk(&p, out); }
-                else if p.extension().and_then(|x| x.to_str()) == Some("rs") {
+                if p.is_dir() {
+                    walk(&p, out);
+                } else if p.extension().and_then(|x| x.to_str()) == Some("rs") {
                     // Skip helpers
-                    if p.file_name().and_then(|x| x.to_str()) == Some("bdd_support.rs") { continue; }
-                    if p.file_name().and_then(|x| x.to_str()) == Some("act_feature_mapping_strict.rs") { continue; }
+                    if p.file_name().and_then(|x| x.to_str()) == Some("bdd_support.rs") {
+                        continue;
+                    }
+                    if p.file_name().and_then(|x| x.to_str())
+                        == Some("act_feature_mapping_strict.rs")
+                    {
+                        continue;
+                    }
                     out.push(p.display().to_string());
                 }
             }
@@ -70,13 +102,21 @@ fn every_integration_test_is_mapped_to_a_feature() {
     // scan root tests and examples/domain_examples/tests
     let mut files = vec![];
     files.extend(collect_integration_test_files(Path::new("tests")));
-    files.extend(collect_integration_test_files(Path::new("examples/domain_examples/tests")));
+    files.extend(collect_integration_test_files(Path::new(
+        "examples/domain_examples/tests",
+    )));
     let known: HashSet<&String> = idx.map.keys().collect();
     let mut missing: Vec<String> = vec![];
     for f in files {
-        if !known.contains(&f) { missing.push(f); }
+        if !known.contains(&f) {
+            missing.push(f);
+        }
     }
-    assert!(missing.is_empty(), "Integration tests missing feature mapping: {:?}", missing);
+    assert!(
+        missing.is_empty(),
+        "Integration tests missing feature mapping: {:?}",
+        missing
+    );
 }
 
 #[test]

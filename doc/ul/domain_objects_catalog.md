@@ -35,6 +35,7 @@ This catalog enumerates the union of Domain Objects defined in code and in the c
 ## Policies & State Machines
 - Policy — Pure constraints and guards applied to Aggregates. UL: `policy`.
 - StateMachine — Lens term for aggregate behavior; maps to code trait MealyStateMachine. UL: `statemachine` (maps → `formal_domain::MealyStateMachine`).
+  - Test coverage: `src/state_machine.rs` (unit tests), `tests/transaction_state.rs` (transaction Mealy machine), `docs/FP_MATHEMATICAL_PROOFS.md` (§3) for the formal mapping.
 
 ## Collections & Values
 - ValueObject — Immutable, compared by value; descriptors in the domain. UL: `valueobject`.
@@ -64,4 +65,3 @@ Alignment Sources
 - Graph: `domain-graph.json:category.objects` and morphisms
 - Code: `src/cqrs.rs`, `src/events.rs`, `src/cid.rs`, `src/formal_domain.rs`, `src/projections/`
 - UL: `ul-projection.json` (review `ul-projection.diff.json` for pending additions)
-

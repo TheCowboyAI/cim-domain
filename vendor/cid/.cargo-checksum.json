@@ -1,0 +1,16 @@
+{
+  "files": {
+    "CHANGELOG.md": "ffffcaf2021201af5f64f0429de833e95d71916df38c1878ee3085fd0d572849",
+    "Cargo.toml": "08953777c593dc62e8eb839fdc59bec63048cb3f0923b3159eb7c229d0ddc2d3",
+    "README.md": "e7e51b59cc864f877e446bd70a068d4be14b2eeff23e739d5db11fde8defe83e",
+    "RELEASE.md": "5b3949051738e875fcf474c793e50a8fa72cab85ad2e140664675f4062d79dd9",
+    "src/arb.rs": "d1c3013780edc03dfc8d3ef7b04f43b2ea6f3db7c4bf2e872bdbcbe3750dbecc",
+    "src/cid.rs": "812536342d93015e8d920e570b4370b1e3416236584c0f2c97a03de464afa205",
+    "src/error.rs": "5fcdd62ed16e9f4fa893363ec7317e3dd789828072798c60cb17308c69a549e7",
+    "src/lib.rs": "f929e57aa37ff5db38481a767c9925cb02fd75e9cf9461a9f376810aac498838",
+    "src/serde.rs": "ac721953dfbf259c5ea079191bb3fc33aff2ed6855ef921360b61745a72b3111",
+    "src/version.rs": "451c2d3af9233413dee6f66e91b117c3415391f5d2c178cb45f19d429bacb160",
+    "tests/lib.rs": "28e1ce7e09574742595b9f8e0ffee1ed831056b2c78a0f47648c73ed37b15aaf"
+  },
+  "package": "3147d8272e8fa0ccd29ce51194dd98f79ddfb8191ba9e3409884e751798acf3a"
+}

@@ -11,15 +11,25 @@ use crate::concepts::Concept;
 /// The immutable set of core cognitive concepts
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum CoreConceptId {
+    /// How agents gather sensory input from the environment.
     Perception,
+    /// How agents focus mental resources on relevant signals.
     Attention,
+    /// How agents retain and recall information across time.
     Memory,
+    /// How agents organize knowledge structures and patterns.
     Schema,
+    /// How agents reason through challenges to reach outcomes.
     ProblemSolving,
+    /// How agents weigh alternatives and select a course of action.
     DecisionMaking,
+    /// How agents encode, decode, and exchange meaning.
     Language,
+    /// How agents' judgments are shaped by systematic thinking shortcuts.
     CognitiveBias,
+    /// How agents reflect on and regulate their own cognition.
     Metacognition,
+    /// How agents' cognitive abilities evolve and mature over time.
     CognitiveDevelopment,
 }
 
@@ -62,11 +72,18 @@ pub fn core_concepts() -> Vec<Concept> {
     use CoreConceptId::*;
     let mut v = Vec::new();
     for id in [
-        Perception, Attention, Memory, Schema, ProblemSolving, DecisionMaking, Language,
-        CognitiveBias, Metacognition, CognitiveDevelopment,
+        Perception,
+        Attention,
+        Memory,
+        Schema,
+        ProblemSolving,
+        DecisionMaking,
+        Language,
+        CognitiveBias,
+        Metacognition,
+        CognitiveDevelopment,
     ] {
         v.push(Concept::new(id.id(), id.name()));
     }
     v
 }
-

@@ -51,15 +51,30 @@ pub struct Concept {
 impl Concept {
     /// Create a new concept with an id and name
     pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
-        Self { id: id.into(), name: name.into(), description: None, synonyms: BTreeSet::new(), tags: BTreeSet::new() }
+        Self {
+            id: id.into(),
+            name: name.into(),
+            description: None,
+            synonyms: BTreeSet::new(),
+            tags: BTreeSet::new(),
+        }
     }
 
     /// Set/replace description
-    pub fn with_description(mut self, desc: impl Into<String>) -> Self { self.description = Some(desc.into()); self }
+    pub fn with_description(mut self, desc: impl Into<String>) -> Self {
+        self.description = Some(desc.into());
+        self
+    }
     /// Add a synonym
-    pub fn add_synonym(mut self, syn: impl Into<String>) -> Self { self.synonyms.insert(syn.into()); self }
+    pub fn add_synonym(mut self, syn: impl Into<String>) -> Self {
+        self.synonyms.insert(syn.into());
+        self
+    }
     /// Add a tag
-    pub fn add_tag(mut self, tag: impl Into<String>) -> Self { self.tags.insert(tag.into()); self }
+    pub fn add_tag(mut self, tag: impl Into<String>) -> Self {
+        self.tags.insert(tag.into());
+        self
+    }
 }
 
 impl DomainConcept for Concept {}
@@ -84,17 +99,35 @@ pub struct ConceptGraph {
 
 impl ConceptGraph {
     /// Create empty concept graph
-    pub fn new() -> Self { Self { nodes: BTreeMap::new(), edges: BTreeSet::new() } }
+    pub fn new() -> Self {
+        Self {
+            nodes: BTreeMap::new(),
+            edges: BTreeSet::new(),
+        }
+    }
 
     /// Insert or update a concept
-    pub fn upsert_concept(&mut self, c: Concept) { self.nodes.insert(c.id.clone(), c); }
+    pub fn upsert_concept(&mut self, c: Concept) {
+        self.nodes.insert(c.id.clone(), c);
+    }
 
     /// Get a concept by id
-    pub fn concept(&self, id: &str) -> Option<&Concept> { self.nodes.get(id) }
+    pub fn concept(&self, id: &str) -> Option<&Concept> {
+        self.nodes.get(id)
+    }
 
     /// Add a relationship edge
-    pub fn relate(&mut self, from: impl Into<String>, to: impl Into<String>, rel: ConceptRelationshipType) {
-        self.edges.insert(ConceptEdge { from: from.into(), to: to.into(), rel });
+    pub fn relate(
+        &mut self,
+        from: impl Into<String>,
+        to: impl Into<String>,
+        rel: ConceptRelationshipType,
+    ) {
+        self.edges.insert(ConceptEdge {
+            from: from.into(),
+            to: to.into(),
+            rel,
+        });
     }
 
     /// Outgoing neighbors by relationship type
@@ -108,22 +141,29 @@ impl ConceptGraph {
 
     /// Check if a path exists from `from` to `to` following any relationship types
     pub fn path_exists(&self, from: &str, to: &str, max_depth: usize) -> bool {
-        if from == to { return true; }
+        if from == to {
+            return true;
+        }
         let mut visited: BTreeSet<String> = BTreeSet::new();
         let mut q: VecDeque<(String, usize)> = VecDeque::new();
         q.push_back((from.to_string(), 0));
         while let Some((cur, d)) = q.pop_front() {
-            if d >= max_depth { continue; }
-            if !visited.insert(cur.clone()) { continue; }
+            if d >= max_depth {
+                continue;
+            }
+            if !visited.insert(cur.clone()) {
+                continue;
+            }
             for e in self.edges.iter().filter(|e| e.from == cur) {
-                if e.to == to { return true; }
+                if e.to == to {
+                    return true;
+                }
                 q.push_back((e.to.clone(), d + 1));
             }
         }
         false
     }
 }
-
 
 /// Marker trait for types that declare their Concept id in the Ubiquitous Language
 pub trait HasConcept {

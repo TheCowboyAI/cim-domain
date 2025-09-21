@@ -1,0 +1,11 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainNode" [label="DomainNode
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainPayloadType" [label="DomainPayloadType
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "DomainNode" -> "DomainPayloadType" [label="annotated_by_payload_type", color="#374151", style="solid"];
+}

@@ -1,6 +1,8 @@
 # Rust
 target/
 **/*.rs.bk
+!vendor/**/target/
+!vendor/**/target/**
 
 # IDE
 .idea/
@@ -31,3 +33,6 @@ lcov.info
 # Secrets (never commit)
 secrets/
 *.api.key
+
+# Always keep vendored crate sources (override global ignores)
+!vendor/**

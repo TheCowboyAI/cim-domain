@@ -354,13 +354,13 @@ impl Default for InternalLogic {
 impl std::fmt::Display for LogicalFormula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LogicalFormula::Atom(s) => write!(f, "{}", s),
-            LogicalFormula::And(a, b) => write!(f, "({} ∧ {})", a, b),
-            LogicalFormula::Or(a, b) => write!(f, "({} ∨ {})", a, b),
-            LogicalFormula::Implies(a, b) => write!(f, "({} → {})", a, b),
-            LogicalFormula::Not(a) => write!(f, "¬{}", a),
-            LogicalFormula::ForAll(x, formula) => write!(f, "∀{}.{}", x, formula),
-            LogicalFormula::Exists(x, formula) => write!(f, "∃{}.{}", x, formula),
+            LogicalFormula::Atom(s) => write!(f, "{s}"),
+            LogicalFormula::And(a, b) => write!(f, "({a} ∧ {b})"),
+            LogicalFormula::Or(a, b) => write!(f, "({a} ∨ {b})"),
+            LogicalFormula::Implies(a, b) => write!(f, "({a} → {b})"),
+            LogicalFormula::Not(a) => write!(f, "¬{a}"),
+            LogicalFormula::ForAll(x, formula) => write!(f, "∀{x}.{formula}"),
+            LogicalFormula::Exists(x, formula) => write!(f, "∃{x}.{formula}"),
         }
     }
 }

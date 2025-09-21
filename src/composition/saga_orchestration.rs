@@ -16,13 +16,13 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::category::DomainCategory;
-use std::any::TypeId;
 use crate::entity::{AggregateRoot, EntityId};
 use crate::errors::DomainError;
 use crate::events::DomainEvent;
 use crate::state_machine::{
     MealyMachine, MealyStateTransitions, State, TransitionInput, TransitionOutput,
 };
+use std::any::TypeId;
 
 /// Type-erased identifier for a concrete command type used by a saga transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -112,7 +112,7 @@ pub enum SagaState {
 
     /// Currently executing
     Running {
-    /// The transition currently being executed
+        /// The transition currently being executed
         current_step: String,
         /// Transitions that have been successfully completed
         completed_steps: Vec<String>,

@@ -67,7 +67,7 @@ pub enum TransactionInput {
 
 impl TransitionInput for TransactionInput {
     fn description(&self) -> String {
-        format!("{:?}", self)
+        format!("{self:?}")
     }
 }
 
@@ -175,8 +175,14 @@ mod tests {
         use TransactionState as S;
 
         assert_eq!(S::Idle.valid_transitions(&I::Start), vec![S::Started]);
-        assert_eq!(S::Started.valid_transitions(&I::ValidateOk), vec![S::Applied]);
-        assert_eq!(S::Started.valid_transitions(&I::ValidateFail), vec![S::Failed]);
+        assert_eq!(
+            S::Started.valid_transitions(&I::ValidateOk),
+            vec![S::Applied]
+        );
+        assert_eq!(
+            S::Started.valid_transitions(&I::ValidateFail),
+            vec![S::Failed]
+        );
         assert_eq!(S::Applied.valid_transitions(&I::Commit), vec![S::Committed]);
 
         // Cancel can be from Started or Applied
@@ -200,8 +206,12 @@ mod tests {
         #[derive(Debug)]
         struct E(uuid::Uuid);
         impl DomainEvent for E {
-            fn aggregate_id(&self) -> uuid::Uuid { self.0 }
-            fn event_type(&self) -> &'static str { "E" }
+            fn aggregate_id(&self) -> uuid::Uuid {
+                self.0
+            }
+            fn event_type(&self) -> &'static str {
+                "E"
+            }
         }
         let evt: Box<dyn DomainEvent> = Box::new(E(uuid::Uuid::new_v4()));
         let original = TxOutput { events: vec![evt] };

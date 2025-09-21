@@ -1,0 +1,23 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainEvent" [label="DomainEvent\n(Event)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "BucketLog" [label="BucketLog\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "BucketEntry" [label="BucketEntry\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "CidIndexEntry" [label="CidIndexEntry\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "MoveHistoryEntry" [label="MoveHistoryEntry\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainCid" [label="DomainCid\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "EventId" [label="EventId\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+
+  "DomainEvent" -> "BucketLog" [label="appends_payload_cid", color="#374151", style="solid"];
+  "BucketLog" -> "BucketEntry" [label="yields_entry", color="#374151", style="solid"];
+  "BucketEntry" -> "DomainCid" [label="records_cid", color="#374151", style="solid"];
+  "BucketEntry" -> "BucketLog" [label="previous_tail", color="#475569", style="dashed"];
+
+  "DomainEvent" -> "CidIndexEntry" [label="updates_index", color="#374151", style="solid"];
+  "CidIndexEntry" -> "DomainCid" [label="indexes_cid", color="#374151", style="solid"];
+  "CidIndexEntry" -> "BucketLog" [label="locates_bucket", color="#374151", style="solid"];
+  "CidIndexEntry" -> "MoveHistoryEntry" [label="records_move", color="#374151", style="solid"];
+  "MoveHistoryEntry" -> "EventId" [label="caused_by", color="#374151", style="solid"];
+}

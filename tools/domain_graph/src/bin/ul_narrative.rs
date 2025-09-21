@@ -4,13 +4,27 @@ use std::fs;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct Morphism { id: String, name: String, source: String, target: String, #[serde(rename="type")] kind: String }
+struct Morphism {
+    id: String,
+    source: String,
+    target: String,
+    #[serde(rename = "type")]
+    kind: String,
+}
 #[derive(Debug, Deserialize)]
-struct Diagram { id: String, describes: Option<Vec<String>> }
+struct Diagram {
+    id: String,
+    describes: Option<Vec<String>>,
+}
 #[derive(Debug, Deserialize)]
-struct Category { morphisms: Vec<Morphism>, diagrams: Vec<Diagram> }
+struct Category {
+    morphisms: Vec<Morphism>,
+    diagrams: Vec<Diagram>,
+}
 #[derive(Debug, Deserialize)]
-struct Graph { category: Category }
+struct Graph {
+    category: Category,
+}
 
 fn phrase(id: &str) -> &'static str {
     match id {
@@ -77,23 +91,30 @@ fn phrase(id: &str) -> &'static str {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::env::args().nth(1).unwrap_or_else(|| "domain-graph.json".to_string());
+    let path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "domain-graph.json".to_string());
     let raw = fs::read_to_string(&path)?;
     let g: Graph = serde_json::from_str(&raw)?;
 
     // Build index for quick lookup
     let mut by_id: BTreeMap<String, &Morphism> = BTreeMap::new();
-    for m in &g.category.morphisms { by_id.insert(m.id.clone(), m); }
+    for m in &g.category.morphisms {
+        by_id.insert(m.id.clone(), m);
+    }
 
     // Emit grouped by diagram if available
     println!("# UL Narrative\n");
     for d in &g.category.diagrams {
         if let Some(describes) = &d.describes {
-            println!("## Diagram: {}", d.id);
+            let diag_id = &d.id;
+            println!("## Diagram: {diag_id}");
             for id in describes {
                 if let Some(m) = by_id.get(id) {
                     let verb = phrase(&m.id);
-                    println!("- {} {} {}", m.source, verb, m.target);
+                    let source = &m.source;
+                    let target = &m.target;
+                    println!("- {source} {verb} {target}");
                 }
             }
             println!();
@@ -101,19 +122,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Also print any morphisms not covered by a diagram
-    let covered: std::collections::HashSet<&str> = g.category.diagrams.iter()
-        .flat_map(|d| d.describes.as_ref().map(|v| v.iter().map(|s| s.as_str()).collect::<Vec<_>>()).unwrap_or_default())
+    let covered: std::collections::HashSet<&str> = g
+        .category
+        .diagrams
+        .iter()
+        .flat_map(|d| {
+            d.describes
+                .as_ref()
+                .map(|v| v.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+                .unwrap_or_default()
+        })
         .collect();
-    let mut uncovered: Vec<&Morphism> = g.category.morphisms.iter().filter(|m| !covered.contains(m.id.as_str())).collect();
+    let mut uncovered: Vec<&Morphism> = g
+        .category
+        .morphisms
+        .iter()
+        .filter(|m| !covered.contains(m.id.as_str()))
+        .collect();
     if !uncovered.is_empty() {
         println!("## Not Covered by Diagrams:");
         uncovered.sort_by_key(|m| m.id.clone());
         for m in uncovered {
             let verb = phrase(&m.id);
-            println!("- {} {} {} (type: {})", m.source, verb, m.target, m.kind);
+            let source = &m.source;
+            let target = &m.target;
+            let kind = &m.kind;
+            println!("- {source} {verb} {target} (type: {kind})");
         }
     }
 
     Ok(())
 }
-

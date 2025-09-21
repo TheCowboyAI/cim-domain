@@ -135,8 +135,12 @@ mod tests {
     #[derive(Debug)]
     struct TestEvent(Uuid);
     impl DomainEvent for TestEvent {
-        fn aggregate_id(&self) -> Uuid { self.0 }
-        fn event_type(&self) -> &'static str { "TestEvent" }
+        fn aggregate_id(&self) -> Uuid {
+            self.0
+        }
+        fn event_type(&self) -> &'static str {
+            "TestEvent"
+        }
     }
 
     #[test]
@@ -165,16 +169,25 @@ mod tests {
     }
     impl AggregateRoot for SimpleAggregate {
         type Id = crate::entity::EntityId<crate::entity::AggregateMarker>;
-        fn id(&self) -> Self::Id { self.id }
-        fn version(&self) -> u64 { self.version }
-        fn increment_version(&mut self) { self.version += 1; }
+        fn id(&self) -> Self::Id {
+            self.id
+        }
+        fn version(&self) -> u64 {
+            self.version
+        }
+        fn increment_version(&mut self) {
+            self.version += 1;
+        }
     }
 
     #[test]
     fn test_in_memory_repository_save_and_load() {
         type AId = crate::entity::EntityId<crate::entity::AggregateMarker>;
         let repo: InMemoryRepository<SimpleAggregate> = InMemoryRepository::new();
-        let agg = SimpleAggregate { id: AId::new(), version: 0 };
+        let agg = SimpleAggregate {
+            id: AId::new(),
+            version: 0,
+        };
 
         // Save, then load
         repo.save(&agg).unwrap();

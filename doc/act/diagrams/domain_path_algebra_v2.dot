@@ -1,0 +1,39 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainPath" [label="DomainPath\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainPathSegment" [label="DomainPathSegment\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "BoundedContext" [label="BoundedContext\n(Context)", color="#2563eb", fillcolor="#eff6ff"];
+  "DomainArtifactKind" [label="DomainArtifactKind\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "AggregateRoot" [label="AggregateRoot\n(Trait)", color="#0ea5e9", fillcolor="lightblue"];
+  "Command" [label="Command\n(Command)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "DomainEvent" [label="DomainEvent\n(Event)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "Policy" [label="Policy\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Projection" [label="Projection\n(Projection)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "Query" [label="Query\n(Query)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "ReadModel" [label="ReadModel\n(ReadModel)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "Saga" [label="Saga\n(Aggregate)", color="#0ea5e9", fillcolor="lightblue"];
+  "StateMachine" [label="StateMachine\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainEntity" [label="DomainEntity\n(Entity)", color="#2563eb", fillcolor="#eff6ff"];
+  "ValueObject" [label="ValueObject\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "ValueCollection" [label="ValueCollection\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "DomainPath" -> "DomainPathSegment" [label="composes_with_segment", color="#374151", style="solid"];
+  "DomainPath" -> "DomainPath" [label="concatenates_with_path", color="#374151", style="solid"];
+  "DomainPath" -> "BoundedContext" [label="addresses_context", color="#374151", style="solid"];
+  "DomainPath" -> "DomainArtifactKind" [label="identifies_facet", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "DomainPathSegment" [label="renders_as_segment", color="#475569", style="dashed"];
+  "DomainArtifactKind" -> "AggregateRoot" [label="facet_aggregate", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "Command" [label="facet_command", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "DomainEvent" [label="facet_event", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "Policy" [label="facet_policy", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "Projection" [label="facet_projection", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "Query" [label="facet_query", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "ReadModel" [label="facet_read_model", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "Saga" [label="facet_saga", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "StateMachine" [label="facet_state_machine", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "DomainEntity" [label="facet_entity", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "ValueObject" [label="facet_value", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "ValueCollection" [label="facet_items", color="#374151", style="solid"];
+}

@@ -66,8 +66,19 @@ pub struct ProjectAggregate {
 
 impl ProjectAggregate {
     /// Create a new Project in Proposed state
-    pub fn new(id: EntityId<ProjectMarker>, org: EntityId<OrganizationMarker>, location: EntityId<LocationMarker>) -> Self {
-        Self { id, state: ProjectState::Proposed, org, location, members: vec![], policies: vec![] }
+    pub fn new(
+        id: EntityId<ProjectMarker>,
+        org: EntityId<OrganizationMarker>,
+        location: EntityId<LocationMarker>,
+    ) -> Self {
+        Self {
+            id,
+            state: ProjectState::Proposed,
+            org,
+            location,
+            members: vec![],
+            policies: vec![],
+        }
     }
 }
 
@@ -109,19 +120,19 @@ pub enum ProjectEvent {
         location: EntityId<LocationMarker>,
     },
     /// Emitted when project is activated
-    ProjectActivated { 
+    ProjectActivated {
         /// Project identity
-        project_id: EntityId<ProjectMarker> 
+        project_id: EntityId<ProjectMarker>,
     },
     /// Emitted when project is completed
-    ProjectCompleted { 
+    ProjectCompleted {
         /// Project identity
-        project_id: EntityId<ProjectMarker> 
+        project_id: EntityId<ProjectMarker>,
     },
     /// Emitted when project is cancelled
-    ProjectCancelled { 
+    ProjectCancelled {
         /// Project identity
-        project_id: EntityId<ProjectMarker> 
+        project_id: EntityId<ProjectMarker>,
     },
     /// Emitted when a member is added
     MemberAdded {
@@ -133,11 +144,11 @@ pub enum ProjectEvent {
         role: String,
     },
     /// Emitted when a policy is attached
-    PolicyAttached { 
+    PolicyAttached {
         /// Project identity
-        project_id: EntityId<ProjectMarker>, 
+        project_id: EntityId<ProjectMarker>,
         /// Attached policy
-        policy: PolicyVO 
+        policy: PolicyVO,
     },
 }
 
@@ -166,39 +177,68 @@ impl DomainEvent for ProjectEvent {
 
 impl ProjectAggregate {
     /// Handle a command and return resulting events; updates self.
-    pub fn handle(&mut self, cmd: ProjectCommand) -> Result<Vec<Box<dyn DomainEvent>>, DomainError> {
+    pub fn handle(
+        &mut self,
+        cmd: ProjectCommand,
+    ) -> Result<Vec<Box<dyn DomainEvent>>, DomainError> {
         use ProjectCommand::*;
         match (self.state, cmd) {
             (ProjectState::Proposed, Activate) => {
                 self.state = ProjectState::Active;
-                Ok(vec![Box::new(ProjectEvent::ProjectActivated { project_id: self.id })])
+                Ok(vec![Box::new(ProjectEvent::ProjectActivated {
+                    project_id: self.id,
+                })])
             }
             (ProjectState::Proposed, AddMember { person, role }) => {
                 self.members.push((person, role.clone()));
-                Ok(vec![Box::new(ProjectEvent::MemberAdded { project_id: self.id, person, role })])
+                Ok(vec![Box::new(ProjectEvent::MemberAdded {
+                    project_id: self.id,
+                    person,
+                    role,
+                })])
             }
             (ProjectState::Proposed, AttachPolicy { policy }) => {
                 self.policies.push(policy.clone());
-                Ok(vec![Box::new(ProjectEvent::PolicyAttached { project_id: self.id, policy })])
+                Ok(vec![Box::new(ProjectEvent::PolicyAttached {
+                    project_id: self.id,
+                    policy,
+                })])
             }
             (ProjectState::Active, AddMember { person, role }) => {
                 self.members.push((person, role.clone()));
-                Ok(vec![Box::new(ProjectEvent::MemberAdded { project_id: self.id, person, role })])
+                Ok(vec![Box::new(ProjectEvent::MemberAdded {
+                    project_id: self.id,
+                    person,
+                    role,
+                })])
             }
             (ProjectState::Active, AttachPolicy { policy }) => {
                 self.policies.push(policy.clone());
-                Ok(vec![Box::new(ProjectEvent::PolicyAttached { project_id: self.id, policy })])
+                Ok(vec![Box::new(ProjectEvent::PolicyAttached {
+                    project_id: self.id,
+                    policy,
+                })])
             }
             (ProjectState::Active, Complete) => {
                 self.state = ProjectState::Completed;
-                Ok(vec![Box::new(ProjectEvent::ProjectCompleted { project_id: self.id })])
+                Ok(vec![Box::new(ProjectEvent::ProjectCompleted {
+                    project_id: self.id,
+                })])
             }
             (ProjectState::Proposed, Cancel) | (ProjectState::Active, Cancel) => {
                 self.state = ProjectState::Cancelled;
-                Ok(vec![Box::new(ProjectEvent::ProjectCancelled { project_id: self.id })])
+                Ok(vec![Box::new(ProjectEvent::ProjectCancelled {
+                    project_id: self.id,
+                })])
             }
             // Invalid transitions
-            (_, Activate) | (_, Complete) | (_, Cancel) | (_, AddMember { .. }) | (_, AttachPolicy { .. }) => Err(DomainError::InvalidOperation { reason: "Invalid command in current state".into() }),
+            (_, Activate)
+            | (_, Complete)
+            | (_, Cancel)
+            | (_, AddMember { .. })
+            | (_, AttachPolicy { .. }) => Err(DomainError::InvalidOperation {
+                reason: "Invalid command in current state".into(),
+            }),
         }
     }
 }
@@ -216,9 +256,20 @@ mod tests {
 
         // Add member and policy in Proposed
         let person = EntityId::<PersonMarker>::new();
-        let evs1 = p.handle(ProjectCommand::AddMember { person, role: "Lead".into() }).unwrap();
+        let evs1 = p
+            .handle(ProjectCommand::AddMember {
+                person,
+                role: "Lead".into(),
+            })
+            .unwrap();
         assert_eq!(evs1[0].event_type(), "MemberAdded");
-        let evs2 = p.handle(ProjectCommand::AttachPolicy { policy: PolicyVO { name: "Safety".into() } }).unwrap();
+        let evs2 = p
+            .handle(ProjectCommand::AttachPolicy {
+                policy: PolicyVO {
+                    name: "Safety".into(),
+                },
+            })
+            .unwrap();
         assert_eq!(evs2[0].event_type(), "PolicyAttached");
 
         // Activate

@@ -31,12 +31,72 @@ See: doc/act/diagrams/cqrs_projection_functor.svg
 
 - Projection P maps events to read model updates; functoriality P(e2 ∘ e1) = P(e2) ∘ P(e1)
 - Queries read from ReadModel producing QueryResponse
+- Regression: `tests/query_read_path_tests.rs` proves projections handle/clear events and query handlers respond using the in-memory read model; unit tests in `src/projections/mod.rs` cover the projection trait directly.
 
 ## Causation/Correlation Commutation
 
 See: doc/act/diagrams/causation_correlation_commutation.svg
 
 - Correlation preserved across causation chain; causation set to prior message_id
+- Verified in `tests/envelope_identity_tests.rs` (root → follow-up command chain)
+
+## Identity Envelope (Command → Event)
+
+See: doc/act/diagrams/identity_envelope_v2.dot.svg
+
+- Root envelopes created with `CommandEnvelope::new(_)/new_in_tx` establish the correlation/cause pair carried through follow-up commands and queries.
+- `DomainEventEnvelope::inline` mirrors the identity, capturing `event_id`, `aggregate_id`, correlation, and causation before optionally swapping payloads for a CID.
+- Event IDs (`EventId::new`) are UUID v7, providing a monotone timestamp surface for downstream ordering proofs.
+- Ack/response artifacts (`CommandAcknowledgment`, `QueryAcknowledgment`, `QueryResponse`) are checked to reflect the originating envelope identity before emitting downstream projections.
+- Regression: `tests/envelope_identity_tests.rs` exercises the entire chain (root command → follow-up command/query → acknowledgments → event envelope) and the inline→CID transition.
+
+## Content Addressing (DomainNode)
+
+See: doc/act/diagrams/addressing_v2.dot.svg
+
+- `DomainNode::from_payload` captures payload metadata, codec, and content type, returning both a metadata envelope and a root `DomainCid` scoped to `domain-node`.
+- CID chains (`CidChain::new/verify_chain`) thread previous/current pairs to preserve causality.
+- Regression: `tests/cid_content_addressing_tests.rs` asserts that DomainCID/DomainNode metadata is stable, chain verification works, and `generate_cid` hashes serialized payloads.
+
+## Content Addressing Buckets & Index
+
+See: doc/act/diagrams/content_addressing_buckets_v2.dot.svg
+
+- `BucketLog::append` records an append-only tail of `BucketEntry` values, each capturing the new `DomainCid`, the prior tail, and a bucket-local sequence number.
+- `CidIndexEntry::new` mirrors the bucket append, storing the current bucket identifier, subject hint, and payload parent while leaving a trail of `MoveHistoryEntry` rows keyed by the originating `EventId`.
+- Regression: `tests/cid_content_addressing_tests.rs` covers sequence growth (`BucketLog`), move bookkeeping (`CidIndexEntry::record_move`), and ensures the index mirrors the append semantics implemented in `src/object_store.rs`.
+
+## Subject Algebra (Free Monoid)
+
+See: doc/act/diagrams/subject_algebra_v2.dot.svg
+
+- `Subject` is the free monoid over validated `SubjectSegment` tokens with concatenation as the operation and `Subject::root()` as the identity.
+- `SubjectPattern` extends the algebra with `*` (single segment) and a terminal `>` (multi-segment) wildcard captured via `SubjectPatternSegment`.
+- Regression: `tests/subject_algebra_tests.rs` exercises associativity/identity, wildcard semantics, and validation; unit tests in `src/subject.rs` cover the internal constructors.
+
+## Domain Path Algebra (Hierarchical Namespace)
+
+See: doc/act/diagrams/domain_path_algebra_v2.dot.svg
+
+- `DomainPath` models the canonical `cim.domain.<bounded_context>.<facet>.<name>` namespace; `DomainPath::root()` (`cim.domain`) acts as the monoid identity and concatenation composes additional facets.
+- `DomainPathSegment` captures validated dotted tokens; `DomainArtifactKind` annotates known facets (command, aggregate, value, etc.) rendered as path segments.
+- Regression: `tests/domain_path_algebra_tests.rs` validates prefix enforcement, helpers (`command`, `value`), and monoid laws; module tests in `src/domain_path.rs` exercise accessors and builders.
+
+## Domain Algebra Overview (Path ⇄ Subject ⇄ Persistence)
+
+See: doc/act/diagrams/domain_algebra_overview_v2.dot.svg
+
+- `DomainPath` introduces the canonical naming hierarchy, `Subject` captures routing algebra, and the content-addressing objects (`BucketLog`, `CidIndexEntry`, `DomainCid`) show how persisted state is addressed.
+- Morphisms reuse the existing diagrams: domain paths compose from segments, subjects form a free monoid, and persistence indices map CIDs into buckets with `EventId`-tracked move history.
+- Regression: union of `tests/subject_algebra_tests.rs`, `tests/domain_path_algebra_tests.rs`, and `tests/cid_content_addressing_tests.rs` keeps each algebra slice and their intersections honest.
+
+## Aggregate, Entity & Value Composition
+
+See: doc/act/diagrams/aggregate_entity_value_v2.dot.svg
+
+- `AggregateRoot` contains domain entities, is governed by state machines, constrained by policies, and emits events; policies define the `DomainInvariant`s an aggregate must enforce.
+- `DomainEntity` owns `ValueCollection`s, which in turn contain immutable `ValueObject`s representing state; invariant violations surface as structured `InvariantViolation` value objects.
+- Regression: entity/ID semantics are doc-tested in `src/entity.rs`, value object collections are proved in `tests/value_collection_monoid_tests.rs`, and invariant workflows are exercised in `tests/domain_invariant_tests.rs`.
 
 ## Saga as Composed Aggregate
 
@@ -90,7 +150,7 @@ See: doc/act/diagrams/value_collection_monoid.svg
   - Set: operation = union; identity = ∅
   - Bag/Multiset: operation = multiset-union; identity = ∅
 - Laws: In all cases, (ValueCollection, ⊕, ∅) forms a monoid (associative; identity element).
-- Diagram coverage: concat_collections morphism documents the chosen ⊕. Tests validate associativity and identity for Vec (concat) and BTreeSet (union).
+- Diagram coverage: concat_collections morphism documents the chosen ⊕. Regression: `tests/value_collection_monoid_tests.rs` validates associativity/identity for Vec concatenation and BTreeSet union.
 
 ## Concept Graphs: CIM vs Domain
 

@@ -3,30 +3,14 @@
     "added": [
       {
         "core_concepts": [
-          "memory",
+          "language",
+          "metacognition",
           "schema"
         ],
-        "name": "AggregateTransactionId",
-        "object_id": "AggregateTransactionId",
-        "type": "ValueObject",
-        "ul_concept_id": "aggregatetransactionid"
-      },
-      {
-        "core_concepts": [],
-        "name": "cim-graph:concept_graph",
-        "object_id": "CIM.Graph",
-        "type": "External",
-        "ul_concept_id": "cimgraphconceptgraph"
-      },
-      {
-        "core_concepts": [
-          "memory",
-          "schema"
-        ],
-        "name": "CausationId",
-        "object_id": "CausationId",
-        "type": "ValueObject",
-        "ul_concept_id": "causationid"
+        "name": "DomainArtifactKind",
+        "object_id": "DomainArtifactKind",
+        "type": "Concept",
+        "ul_concept_id": "domainartifactkind"
       },
       {
         "core_concepts": [
@@ -34,243 +18,94 @@
           "metacognition",
           "schema"
         ],
-        "name": "CommandAcknowledgment",
-        "object_id": "CommandAcknowledgment",
+        "name": "DomainInvariant",
+        "object_id": "DomainInvariant",
         "type": "Concept",
-        "ul_concept_id": "commandacknowledgment"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "CommandEnvelope",
-        "object_id": "CommandEnvelope",
-        "type": "Concept",
-        "ul_concept_id": "commandenvelope"
+        "ul_concept_id": "domaininvariant"
       },
       {
         "core_concepts": [
           "memory",
           "schema"
         ],
-        "name": "CommandId",
-        "object_id": "CommandId",
+        "name": "DomainPath",
+        "object_id": "DomainPath",
         "type": "ValueObject",
-        "ul_concept_id": "commandid"
+        "ul_concept_id": "domainpath"
       },
       {
         "core_concepts": [
           "memory",
           "schema"
         ],
-        "name": "CorrelationId",
-        "object_id": "CorrelationId",
+        "name": "DomainPathSegment",
+        "object_id": "DomainPathSegment",
         "type": "ValueObject",
-        "ul_concept_id": "correlationid"
+        "ul_concept_id": "domainpathsegment"
+      },
+      {
+        "core_concepts": [
+          "language",
+          "metacognition",
+          "schema"
+        ],
+        "name": "DomainPayloadType",
+        "object_id": "DomainPayloadType",
+        "type": "Concept",
+        "ul_concept_id": "domainpayloadtype"
       },
       {
         "core_concepts": [
           "memory",
           "schema"
         ],
-        "name": "DomainCid",
-        "object_id": "DomainCid",
+        "name": "InvariantViolation",
+        "object_id": "InvariantViolation",
         "type": "ValueObject",
-        "ul_concept_id": "domaincid"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "DomainNode",
-        "object_id": "DomainNode",
-        "type": "Concept",
-        "ul_concept_id": "domainnode"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "DomainPayloadCodec",
-        "object_id": "DomainPayloadCodec",
-        "type": "Concept",
-        "ul_concept_id": "domainpayloadcodec"
+        "ul_concept_id": "invariantviolation"
       },
       {
         "core_concepts": [
           "memory",
           "schema"
         ],
-        "name": "EventId",
-        "object_id": "EventId",
+        "name": "Subject",
+        "object_id": "Subject",
         "type": "ValueObject",
-        "ul_concept_id": "eventid"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "EventStreamSubscription",
-        "object_id": "EventStreamSubscription",
-        "type": "Concept",
-        "ul_concept_id": "eventstreamsubscription"
-      },
-      {
-        "core_concepts": [],
-        "name": "ipld:cid",
-        "object_id": "IPLD.Cid",
-        "type": "External",
-        "ul_concept_id": "ipldcid"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "MessageIdentity",
-        "object_id": "MessageIdentity",
-        "type": "Concept",
-        "ul_concept_id": "messageidentity"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "PayloadMetadata",
-        "object_id": "PayloadMetadata",
-        "type": "Concept",
-        "ul_concept_id": "payloadmetadata"
-      },
-      {
-        "core_concepts": [
-          "decision_making",
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "Policy",
-        "object_id": "Policy",
-        "type": "Concept",
-        "ul_concept_id": "policy"
-      },
-      {
-        "core_concepts": [],
-        "name": "Query",
-        "object_id": "Query",
-        "type": "Query",
-        "ul_concept_id": "query"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "QueryAcknowledgment",
-        "object_id": "QueryAcknowledgment",
-        "type": "Concept",
-        "ul_concept_id": "queryacknowledgment"
-      },
-      {
-        "core_concepts": [
-          "language",
-          "metacognition",
-          "schema"
-        ],
-        "name": "QueryEnvelope",
-        "object_id": "QueryEnvelope",
-        "type": "Concept",
-        "ul_concept_id": "queryenvelope"
+        "ul_concept_id": "subject"
       },
       {
         "core_concepts": [
           "memory",
           "schema"
         ],
-        "name": "QueryId",
-        "object_id": "QueryId",
+        "name": "SubjectPattern",
+        "object_id": "SubjectPattern",
         "type": "ValueObject",
-        "ul_concept_id": "queryid"
+        "ul_concept_id": "subjectpattern"
       },
       {
         "core_concepts": [
-          "decision_making",
-          "problem_solving",
+          "memory",
           "schema"
         ],
-        "name": "Saga",
-        "object_id": "Saga",
-        "type": "Aggregate",
-        "ul_concept_id": "saga"
+        "name": "SubjectPatternSegment",
+        "object_id": "SubjectPatternSegment",
+        "type": "ValueObject",
+        "ul_concept_id": "subjectpatternsegment"
       },
       {
         "core_concepts": [
-          "language",
-          "metacognition",
+          "memory",
           "schema"
         ],
-        "name": "ValueCollection",
-        "object_id": "ValueCollection",
-        "type": "Concept",
-        "ul_concept_id": "valuecollection"
+        "name": "SubjectSegment",
+        "object_id": "SubjectSegment",
+        "type": "ValueObject",
+        "ul_concept_id": "subjectsegment"
       }
     ],
-    "modified": [
-      {
-        "after": {
-          "core_concepts": [
-            "language",
-            "memory"
-          ],
-          "name": "DomainEventEnvelope",
-          "object_id": "DomainEventEnvelope",
-          "type": "Event",
-          "ul_concept_id": "domaineventenvelope"
-        },
-        "before": {
-          "core_concepts": [
-            "cognitive_development",
-            "memory",
-            "schema"
-          ],
-          "name": "DomainEventEnvelope",
-          "object_id": "DomainEventEnvelope",
-          "type": "Entity",
-          "ul_concept_id": "domaineventenvelope"
-        },
-        "object_id": "DomainEventEnvelope"
-      }
-    ],
-    "removed": [
-      {
-        "core_concepts": [],
-        "name": "ConceptSpace",
-        "object_id": "ConceptSpace",
-        "type": "ConceptGraph",
-        "ul_concept_id": "conceptspace"
-      },
-      {
-        "core_concepts": [
-          "decision_making",
-          "problem_solving",
-          "schema"
-        ],
-        "name": "SagaAggregate",
-        "object_id": "SagaAggregate",
-        "type": "Aggregate",
-        "ul_concept_id": "sagaaggregate"
-      }
-    ]
+    "modified": [],
+    "removed": []
   }
 }

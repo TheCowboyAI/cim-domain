@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
@@ -7,11 +7,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Debug, Deserialize)]
-struct Obj { id: String, name: String, #[serde(rename = "type")] kind: String }
+struct Obj {
+    id: String,
+    name: String,
+    #[serde(rename = "type")]
+    kind: String,
+}
 #[derive(Debug, Deserialize)]
-struct Category { objects: Vec<Obj> }
+struct Category {
+    objects: Vec<Obj>,
+}
 #[derive(Debug, Deserialize)]
-struct Graph { category: Category }
+struct Graph {
+    category: Category,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct Row {
@@ -25,7 +34,15 @@ struct Row {
 
 fn slug(name: &str) -> String {
     name.chars()
-        .flat_map(|c| if c.is_ascii_alphanumeric() { Some(c.to_ascii_lowercase()) } else if c.is_whitespace() || c == '<' || c == '>' { Some('_') } else { None })
+        .flat_map(|c| {
+            if c.is_ascii_alphanumeric() {
+                Some(c.to_ascii_lowercase())
+            } else if c.is_whitespace() || c == '<' || c == '>' {
+                Some('_')
+            } else {
+                None
+            }
+        })
         .collect::<String>()
 }
 
@@ -35,10 +52,20 @@ fn parse_args() -> (String, String, bool) {
     let mut write = false;
     let mut paths: Vec<String> = Vec::new();
     for a in args {
-        if a == "--write" { write = true; } else { paths.push(a); }
+        if a == "--write" {
+            write = true;
+        } else {
+            paths.push(a);
+        }
     }
-    let graph_path = paths.get(0).cloned().unwrap_or_else(|| "domain-graph.json".to_string());
-    let out_path = paths.get(1).cloned().unwrap_or_else(|| "ul-projection.json".to_string());
+    let graph_path = paths
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "domain-graph.json".to_string());
+    let out_path = paths
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| "ul-projection.json".to_string());
     (graph_path, out_path, write)
 }
 
@@ -64,21 +91,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for o in g.category.objects {
         let core: Vec<String> = classify_object(&o.kind, &o.name)
             .into_iter()
-            .map(|c| match c {
-                CoreConceptId::Perception => "perception",
-                CoreConceptId::Attention => "attention",
-                CoreConceptId::Memory => "memory",
-                CoreConceptId::Schema => "schema",
-                CoreConceptId::ProblemSolving => "problem_solving",
-                CoreConceptId::DecisionMaking => "decision_making",
-                CoreConceptId::Language => "language",
-                CoreConceptId::CognitiveBias => "cognitive_bias",
-                CoreConceptId::Metacognition => "metacognition",
-                CoreConceptId::CognitiveDevelopment => "cognitive_development",
-            }.to_string())
+            .map(|c| {
+                match c {
+                    CoreConceptId::Perception => "perception",
+                    CoreConceptId::Attention => "attention",
+                    CoreConceptId::Memory => "memory",
+                    CoreConceptId::Schema => "schema",
+                    CoreConceptId::ProblemSolving => "problem_solving",
+                    CoreConceptId::DecisionMaking => "decision_making",
+                    CoreConceptId::Language => "language",
+                    CoreConceptId::CognitiveBias => "cognitive_bias",
+                    CoreConceptId::Metacognition => "metacognition",
+                    CoreConceptId::CognitiveDevelopment => "cognitive_development",
+                }
+                .to_string()
+            })
             .collect();
         let ul_id = slug(&o.name);
-        new_rows.push(Row { object_id: o.id, name: o.name, kind: o.kind, ul_concept_id: ul_id, core_concepts: core });
+        new_rows.push(Row {
+            object_id: o.id,
+            name: o.name,
+            kind: o.kind,
+            ul_concept_id: ul_id,
+            core_concepts: core,
+        });
     }
 
     // If not writing, produce a diff against existing file (if present)
@@ -110,7 +146,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     None => added.push(after.clone()),
                     Some(before) => {
                         if before != after {
-                            modified.push(json!({ "object_id": id, "before": before, "after": after }));
+                            modified
+                                .push(json!({ "object_id": id, "before": before, "after": after }));
                         }
                     }
                 }

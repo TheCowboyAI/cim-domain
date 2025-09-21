@@ -194,6 +194,109 @@
     },
     {
       "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "Subject",
+      "object_id": "Subject",
+      "type": "ValueObject",
+      "ul_concept_id": "subject"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "SubjectSegment",
+      "object_id": "SubjectSegment",
+      "type": "ValueObject",
+      "ul_concept_id": "subjectsegment"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "SubjectPattern",
+      "object_id": "SubjectPattern",
+      "type": "ValueObject",
+      "ul_concept_id": "subjectpattern"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "SubjectPatternSegment",
+      "object_id": "SubjectPatternSegment",
+      "type": "ValueObject",
+      "ul_concept_id": "subjectpatternsegment"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "DomainPath",
+      "object_id": "DomainPath",
+      "type": "ValueObject",
+      "ul_concept_id": "domainpath"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "DomainPathSegment",
+      "object_id": "DomainPathSegment",
+      "type": "ValueObject",
+      "ul_concept_id": "domainpathsegment"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language",
+        "metacognition"
+      ],
+      "name": "DomainArtifactKind",
+      "object_id": "DomainArtifactKind",
+      "type": "Concept",
+      "ul_concept_id": "domainartifactkind"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language",
+        "metacognition"
+      ],
+      "name": "DomainPayloadCodec",
+      "object_id": "DomainPayloadCodec",
+      "type": "Concept",
+      "ul_concept_id": "domainpayloadcodec"
+    },
+    {
+      "core_concepts": [
+        "schema",
+        "language",
+        "metacognition"
+      ],
+      "name": "DomainInvariant",
+      "object_id": "DomainInvariant",
+      "type": "Concept",
+      "ul_concept_id": "domaininvariant"
+    },
+    {
+      "core_concepts": [
+        "memory",
+        "schema"
+      ],
+      "name": "InvariantViolation",
+      "object_id": "InvariantViolation",
+      "type": "ValueObject",
+      "ul_concept_id": "invariantviolation"
+    },
+    {
+      "core_concepts": [
         "schema",
         "decision_making",
         "language",
@@ -365,10 +468,10 @@
         "language",
         "metacognition"
       ],
-      "name": "DomainPayloadCodec",
-      "object_id": "DomainPayloadCodec",
+      "name": "DomainPayloadType",
+      "object_id": "DomainPayloadType",
       "type": "Concept",
-      "ul_concept_id": "domainpayloadcodec"
+      "ul_concept_id": "domainpayloadtype"
     }
   ]
 }

@@ -18,24 +18,70 @@ pub fn classify_object(object_type: &str, object_name: &str) -> BTreeSet<C> {
 
     // Baseline by high-level type
     match t.as_str() {
-        "valueobject" => { r.insert(C::Memory); r.insert(C::Schema); }
-        "entity" => { r.insert(C::Memory); r.insert(C::Schema); r.insert(C::CognitiveDevelopment); }
-        "aggregate" => { r.insert(C::ProblemSolving); r.insert(C::DecisionMaking); r.insert(C::Schema); }
-        "event" => { r.insert(C::Memory); r.insert(C::Language); }
-        "command" => { r.insert(C::Attention); r.insert(C::DecisionMaking); r.insert(C::Language); }
-        "concept" => { r.insert(C::Schema); r.insert(C::Language); r.insert(C::Metacognition); }
-        "projection" | "readmodel" => { r.insert(C::Memory); r.insert(C::Language); r.insert(C::Schema); }
-        "context" => { r.insert(C::Schema); r.insert(C::Language); }
+        "valueobject" => {
+            r.insert(C::Memory);
+            r.insert(C::Schema);
+        }
+        "entity" => {
+            r.insert(C::Memory);
+            r.insert(C::Schema);
+            r.insert(C::CognitiveDevelopment);
+        }
+        "aggregate" => {
+            r.insert(C::ProblemSolving);
+            r.insert(C::DecisionMaking);
+            r.insert(C::Schema);
+        }
+        "event" => {
+            r.insert(C::Memory);
+            r.insert(C::Language);
+        }
+        "command" => {
+            r.insert(C::Attention);
+            r.insert(C::DecisionMaking);
+            r.insert(C::Language);
+        }
+        "concept" => {
+            r.insert(C::Schema);
+            r.insert(C::Language);
+            r.insert(C::Metacognition);
+        }
+        "projection" | "readmodel" => {
+            r.insert(C::Memory);
+            r.insert(C::Language);
+            r.insert(C::Schema);
+        }
+        "context" => {
+            r.insert(C::Schema);
+            r.insert(C::Language);
+        }
         _ => {}
     }
 
     // Name-specific tweaks that align to UL (no domain-specifics like Money)
-    if name.contains("state_machine") || name == "statemachine" { r.insert(C::ProblemSolving); }
-    if name.contains("policy") { r.insert(C::DecisionMaking); r.insert(C::Metacognition); }
-    if name.contains("event_stream") { r.insert(C::Memory); r.insert(C::Language); }
-    if name.contains("boundedcontext") || name.contains("bounded_context") { r.insert(C::Schema); r.insert(C::Language); }
-    if name == "entityid<t>" || name == "queryresponse" { r.insert(C::Memory); r.insert(C::Schema); }
-    if name == "conceptgraph" { r.insert(C::Schema); r.insert(C::Language); }
+    if name.contains("state_machine") || name == "statemachine" {
+        r.insert(C::ProblemSolving);
+    }
+    if name.contains("policy") {
+        r.insert(C::DecisionMaking);
+        r.insert(C::Metacognition);
+    }
+    if name.contains("event_stream") {
+        r.insert(C::Memory);
+        r.insert(C::Language);
+    }
+    if name.contains("boundedcontext") || name.contains("bounded_context") {
+        r.insert(C::Schema);
+        r.insert(C::Language);
+    }
+    if name == "entityid<t>" || name == "queryresponse" {
+        r.insert(C::Memory);
+        r.insert(C::Schema);
+    }
+    if name == "conceptgraph" {
+        r.insert(C::Schema);
+        r.insert(C::Language);
+    }
 
     r
 }

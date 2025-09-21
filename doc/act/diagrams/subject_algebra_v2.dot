@@ -1,0 +1,15 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "Subject" [label="Subject\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "SubjectSegment" [label="SubjectSegment\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "SubjectPattern" [label="SubjectPattern\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "SubjectPatternSegment" [label="SubjectPatternSegment\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+
+  "Subject" -> "SubjectSegment" [label="composes_with_segment", color="#374151", style="solid"];
+  "Subject" -> "Subject" [label="concatenates_with", color="#374151", style="solid"];
+  "SubjectPattern" -> "Subject" [label="matches_subject", color="#374151", style="solid"];
+  "SubjectPattern" -> "SubjectPatternSegment" [label="composes_with_pattern_segment", color="#374151", style="solid"];
+  "SubjectPatternSegment" -> "SubjectSegment" [label="references_literal_segment", color="#475569", style="dashed"];
+}

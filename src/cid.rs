@@ -117,7 +117,7 @@ impl FromStr for DomainCid {
 // =========================================================================
 
 /// Supported payload codecs for domain nodes
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum DomainPayloadCodec {
     /// IPLD raw block (rare; only for specific mimetypes)
     Raw,
@@ -143,9 +143,13 @@ impl DomainPayloadCodec {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "v")]
 pub enum MetaVal {
+    /// Arbitrary UTF-8 text value
     Str(String),
+    /// 64-bit signed integer
     I64(i64),
+    /// 64-bit floating-point number
     F64(f64),
+    /// Boolean flag
     Bool(bool),
     /// Reference to another CID (string form)
     Cid(String),
@@ -160,6 +164,12 @@ pub struct DomainNode {
     pub payload_cid: CidImpl,
     /// Payload codec hint
     pub payload_codec: DomainPayloadCodec,
+    /// Domain type of the payload (Event/Aggregate/ValueObject/Document/Raw)
+    ///
+    /// Backward compatibility: allow deserialization when field is missing by
+    /// defaulting to Document.
+    #[serde(default = "default_content_type_for_node")]
+    pub payload_type: ContentType,
 }
 
 impl DomainNode {
@@ -167,12 +177,18 @@ impl DomainNode {
     pub fn from_payload(
         payload_bytes: &[u8],
         payload_codec: DomainPayloadCodec,
+        payload_type: ContentType,
         metadata: std::collections::BTreeMap<String, MetaVal>,
     ) -> (Self, DomainCid) {
         let hash_bytes = blake3::hash(payload_bytes);
         let mh = Multihash::wrap(0x1e, hash_bytes.as_bytes()).expect("create multihash");
         let payload_cid = CidImpl::new_v1(payload_codec.code(), mh);
-        let node = DomainNode { metadata, payload_cid, payload_codec };
+        let node = DomainNode {
+            metadata,
+            payload_cid,
+            payload_codec,
+            payload_type,
+        };
         // Serialize node metadata deterministically to derive a root CID
         let node_bytes = serde_json::to_vec(&node).expect("serialize domain node");
         let node_hash = blake3::hash(&node_bytes);
@@ -182,6 +198,10 @@ impl DomainNode {
             .with_domain("domain-node".to_string());
         (node, dcid)
     }
+}
+
+fn default_content_type_for_node() -> ContentType {
+    ContentType::Document
 }
 
 /// CID chain for event causality
@@ -241,7 +261,7 @@ pub fn generate_cid<T: Serialize>(
     content_type: ContentType,
 ) -> Result<DomainCid, String> {
     let bytes =
-        serde_json::to_vec(object).map_err(|e| format!("Failed to serialize object: {}", e))?;
+        serde_json::to_vec(object).map_err(|e| format!("Failed to serialize object: {e}"))?;
     Ok(DomainCid::from_content(&bytes, content_type))
 }
 
@@ -262,7 +282,7 @@ impl ValueObject for CidChain {}
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
-    use std::str::FromStr as _;
+    use std::str::FromStr;
 
     #[test]
     fn test_domain_cid_creation() {
@@ -325,11 +345,21 @@ mod tests {
         let payload = br#"{ "example": true }"#;
         let mut meta1 = BTreeMap::new();
         meta1.insert("schema".to_string(), MetaVal::Str("v1".to_string()));
-        let (_node1, root1) = DomainNode::from_payload(payload, DomainPayloadCodec::DagJson, meta1);
+        let (_node1, root1) = DomainNode::from_payload(
+            payload,
+            DomainPayloadCodec::DagJson,
+            ContentType::Document,
+            meta1,
+        );
 
         let mut meta2 = BTreeMap::new();
         meta2.insert("schema".to_string(), MetaVal::Str("v2".to_string()));
-        let (_node2, root2) = DomainNode::from_payload(payload, DomainPayloadCodec::DagJson, meta2);
+        let (_node2, root2) = DomainNode::from_payload(
+            payload,
+            DomainPayloadCodec::DagJson,
+            ContentType::Document,
+            meta2,
+        );
 
         assert_ne!(root1.inner().to_string(), root2.inner().to_string());
     }
@@ -338,7 +368,8 @@ mod tests {
     fn test_domain_node_payload_codec_annotation() {
         let payload = b"bytes";
         let meta = BTreeMap::new();
-        let (node, _root) = DomainNode::from_payload(payload, DomainPayloadCodec::Raw, meta);
+        let (node, _root) =
+            DomainNode::from_payload(payload, DomainPayloadCodec::Raw, ContentType::Raw, meta);
         assert!(matches!(node.payload_codec, DomainPayloadCodec::Raw));
     }
 
@@ -348,14 +379,30 @@ mod tests {
         let meta = BTreeMap::new();
 
         // DagCbor
-        let (node_cbor, root_cbor) = DomainNode::from_payload(payload, DomainPayloadCodec::DagCbor, meta.clone());
-        assert_eq!(node_cbor.payload_cid.codec(), DomainPayloadCodec::DagCbor.code());
+        let (node_cbor, root_cbor) = DomainNode::from_payload(
+            payload,
+            DomainPayloadCodec::DagCbor,
+            ContentType::Document,
+            meta.clone(),
+        );
+        assert_eq!(
+            node_cbor.payload_cid.codec(),
+            DomainPayloadCodec::DagCbor.code()
+        );
         // Root cid is envelope (we encode as dag-cbor)
         assert_eq!(root_cbor.inner().codec(), 0x71);
 
         // DagJson
-        let (node_json, _root_json) = DomainNode::from_payload(payload, DomainPayloadCodec::DagJson, meta);
-        assert_eq!(node_json.payload_cid.codec(), DomainPayloadCodec::DagJson.code());
+        let (node_json, _root_json) = DomainNode::from_payload(
+            payload,
+            DomainPayloadCodec::DagJson,
+            ContentType::Document,
+            meta,
+        );
+        assert_eq!(
+            node_json.payload_cid.codec(),
+            DomainPayloadCodec::DagJson.code()
+        );
     }
 
     #[test]
@@ -374,7 +421,12 @@ mod tests {
     fn test_domain_node_payload_cid_is_valid_ipld_cid() {
         let payload = br#"{ "ipld": "ok" }"#;
         let meta = BTreeMap::new();
-        let (node, _root) = DomainNode::from_payload(payload, DomainPayloadCodec::DagJson, meta);
+        let (node, _root) = DomainNode::from_payload(
+            payload,
+            DomainPayloadCodec::DagJson,
+            ContentType::Document,
+            meta,
+        );
         // payload_is IPLD.Cid: ensure it parses with cid crate
         let cid_text = node.payload_cid.to_string();
         let parsed = CidImpl::from_str(&cid_text).expect("valid IPLD.Cid string");

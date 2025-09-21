@@ -130,17 +130,35 @@ impl<T: Clone + Send + Sync> ReadModelStorage<T> for InMemoryReadModel<T> {
 mod tests {
     // Read-path tests (pure, no IO)
     use super::*;
-    use crate::cqrs::{self, AggregateTransactionId, Query as CqrsQuery, QueryEnvelope, QueryHandler as CqrsQueryHandler, QueryResponse};
+    use crate::cqrs::{
+        AggregateTransactionId, Query as CqrsQuery, QueryAcknowledgment, QueryEnvelope,
+        QueryHandler as CqrsQueryHandler, QueryResponse, QueryStatus,
+    };
     use uuid::Uuid;
 
     #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-    struct Item { id: String, v: i32 }
+    struct Item {
+        id: String,
+        v: i32,
+    }
 
     #[test]
     fn in_memory_read_model_basic_ops() {
         let rm: InMemoryReadModel<Item> = InMemoryReadModel::new();
-        rm.insert("a".into(), Item { id: "a".into(), v: 1 });
-        rm.insert("b".into(), Item { id: "b".into(), v: 2 });
+        rm.insert(
+            "a".into(),
+            Item {
+                id: "a".into(),
+                v: 1,
+            },
+        );
+        rm.insert(
+            "b".into(),
+            Item {
+                id: "b".into(),
+                v: 2,
+            },
+        );
         assert_eq!(rm.get("a").unwrap().v, 1);
         let res = rm.query(&QueryCriteria::new().with_limit(1));
         assert_eq!(res.len(), 1);
@@ -148,11 +166,19 @@ mod tests {
     }
 
     #[derive(Clone, Debug)]
-    struct GetTop { n: usize }
+    struct GetTop {
+        n: usize,
+    }
     impl CqrsQuery for GetTop {}
 
-    struct ItemsHandler { rm: InMemoryReadModel<Item> }
-    impl ItemsHandler { fn new(rm: InMemoryReadModel<Item>) -> Self { Self { rm } } }
+    struct ItemsHandler {
+        rm: InMemoryReadModel<Item>,
+    }
+    impl ItemsHandler {
+        fn new(rm: InMemoryReadModel<Item>) -> Self {
+            Self { rm }
+        }
+    }
 
     impl CqrsQueryHandler<GetTop> for ItemsHandler {
         fn handle(&self, envelope: QueryEnvelope<GetTop>) -> QueryResponse {
@@ -160,7 +186,11 @@ mod tests {
             items.sort_by_key(|i| i.id.clone());
             items.truncate(envelope.query.n);
             let result = serde_json::to_value(items).unwrap();
-            QueryResponse { query_id: *envelope.id.as_uuid(), correlation_id: envelope.identity.correlation_id, result }
+            QueryResponse {
+                query_id: *envelope.id.as_uuid(),
+                correlation_id: envelope.identity.correlation_id,
+                result,
+            }
         }
     }
 
@@ -168,13 +198,32 @@ mod tests {
     fn query_path_responds_with_data() {
         // Arrange read model
         let rm: InMemoryReadModel<Item> = InMemoryReadModel::new();
-        rm.insert("b".into(), Item { id: "b".into(), v: 2 });
-        rm.insert("a".into(), Item { id: "a".into(), v: 1 });
+        rm.insert(
+            "b".into(),
+            Item {
+                id: "b".into(),
+                v: 2,
+            },
+        );
+        rm.insert(
+            "a".into(),
+            Item {
+                id: "a".into(),
+                v: 1,
+            },
+        );
 
         // Build query envelope
         let q = GetTop { n: 1 };
         let tx = AggregateTransactionId(Uuid::new_v4());
         let env = QueryEnvelope::new_in_tx(q, "tester".into(), tx);
+        let ack = QueryAcknowledgment {
+            query_id: env.id,
+            correlation_id: env.identity.correlation_id,
+            status: QueryStatus::Accepted,
+            reason: None,
+        };
+        assert_eq!(ack.status, QueryStatus::Accepted);
 
         // Handle and assert
         let handler = ItemsHandler::new(rm);

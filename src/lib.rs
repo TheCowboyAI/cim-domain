@@ -45,11 +45,11 @@ pub mod state_machine;
 // Workflow module has been extracted to cim-domain-workflow
 pub mod category;
 pub mod composition;
-pub mod domain;
-pub mod concepts;
-pub mod ontology_quality;
 pub mod concept_naming;
+pub mod concepts;
 pub mod core_concepts;
+pub mod domain;
+pub mod ontology_quality;
 pub mod ul_classifier;
 // Infrastructure removed - belongs in infrastructure layer (cim-ipld or separate crate)
 // Integration removed - belongs in infrastructure layer
@@ -58,11 +58,14 @@ pub mod projections;
 
 // FP FOUNDATION - Entity as MONAD and Formal Domain Structure
 pub mod formal_domain;
-pub mod fp_monad;
 pub mod fp_adts;
+pub mod fp_monad;
 
 // Core domain concepts (content addressing optional, may be turned off downstream)
 pub mod cid;
+pub mod domain_path;
+pub mod object_store;
+pub mod subject;
 
 /// FP-aligned JSON schemas for domain primitives
 pub mod fp_schemas;
@@ -74,16 +77,19 @@ pub mod vector_clock;
 pub use composition_types::{CompositionType, DomainCompositionType};
 pub use context_types::{ContextType, ServiceType, SubdomainType};
 pub use cqrs::{
-    CausationId, Command, CommandAcknowledgment, CommandEnvelope, CommandHandler, CommandId,
-    CommandStatus, CorrelationId, EventId, EventStreamSubscription, IdType, Query,
-    QueryAcknowledgment, QueryEnvelope, QueryHandler as CqrsQueryHandler, QueryId, QueryResponse,
-    QueryStatus,
+    AggregateTransactionId, CausationId, Command, CommandAcknowledgment, CommandEnvelope,
+    CommandHandler, CommandId, CommandStatus, CorrelationId, EventId, EventStreamSubscription,
+    IdType, MessageIdentity, Query, QueryAcknowledgment, QueryEnvelope,
+    QueryHandler as CqrsQueryHandler, QueryId, QueryResponse, QueryStatus,
 };
+pub use domain_path::{DomainArtifactKind, DomainPath, DomainPathError, DomainPathSegment};
 pub use entity::{AggregateRoot, DomainEntity, Entity, EntityId};
 pub use identifiers::{EdgeId, GraphId, NodeId, StateId, TransitionId};
 pub use node_types::NodeType;
+pub use object_store::{BucketEntry, BucketLog, BucketRootKind, CidIndexEntry, MoveHistoryEntry};
 pub use relationship_types::RelationshipType;
 pub use saga::{Participant, Saga};
+pub use subject::{Subject, SubjectError, SubjectPattern, SubjectPatternSegment, SubjectSegment};
 pub use transaction_state::{TransactionInput, TransactionState, TxOutput};
 pub use vector_clock::{ActorId, ClockCmp, VectorClock};
 
@@ -174,8 +180,10 @@ pub use formal_domain::{
 };
 
 // Re-export concepts
-pub use concepts::{Concept, ConceptEdge, ConceptGraph, ConceptRelationshipType, HasConcept};
-pub use ontology_quality::{OntologyQualifier, QualityDimension, QualitySchema, QualityVector, ScaleType};
 pub use concept_naming::{suggest_by_prototypes, vector_from_features};
+pub use concepts::{Concept, ConceptEdge, ConceptGraph, ConceptRelationshipType, HasConcept};
 pub use core_concepts::{core_concepts, CoreConceptId};
+pub use ontology_quality::{
+    OntologyQualifier, QualityDimension, QualitySchema, QualityVector, ScaleType,
+};
 pub use ul_classifier::classify_object;

@@ -47,7 +47,7 @@ fn bdd_feature_runs() {
                     // Then steps
                     _ if line.starts_with("Then ") || line.starts_with("And Expect ") => {
                         // Assert final state and/or expected event stream
-                        // use tests::bdd_support::assert_event_types(&world.events, &["EventType"]); 
+                        // use tests::bdd_support::assert_event_types(&world.events, &["EventType"]);
                     }
                     _ => {}
                 }
@@ -55,4 +55,3 @@ fn bdd_feature_runs() {
         }
     }
 }
-

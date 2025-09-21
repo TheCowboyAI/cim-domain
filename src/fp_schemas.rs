@@ -16,7 +16,11 @@
 //! - Mealy state machine and specification helpers
 //! - Marker trait wrappers for ValueObject/Entity/Aggregate/etc.
 
-use crate::{DomainCid, EntityId};
+use crate::{
+    domain_path::DomainPath,
+    subject::{Subject, SubjectPattern},
+    DomainCid, EntityId,
+};
 use schemars::{
     schema::{InstanceType, ObjectValidation, Schema, SchemaObject},
     JsonSchema,
@@ -128,6 +132,92 @@ impl JsonSchema for DomainCid {
     }
 }
 
+// ============================================================================
+// SUBJECT SCHEMAS - String representations of the subject algebra
+// ============================================================================
+
+impl JsonSchema for Subject {
+    fn schema_name() -> String {
+        "Subject".to_string()
+    }
+
+    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> Schema {
+        let mut schema = SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            ..Default::default()
+        };
+
+        schema.metadata = Some(Box::new(schemars::schema::Metadata {
+            title: Some("Subject".to_string()),
+            description: Some(
+                "Subject string composed of `.` separated validated segments (no whitespace, `*`, `>`, or dots within a segment)."
+                    .to_string(),
+            ),
+            ..Default::default()
+        }));
+
+        schema.string = Some(Box::new(schemars::schema::StringValidation {
+            pattern: Some("^[^.*>\\s]+(\\.[^.*>\\s]+)*$".to_string()),
+            ..Default::default()
+        }));
+
+        Schema::Object(schema)
+    }
+}
+
+impl JsonSchema for SubjectPattern {
+    fn schema_name() -> String {
+        "SubjectPattern".to_string()
+    }
+
+    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> Schema {
+        let mut schema = SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            ..Default::default()
+        };
+
+        schema.metadata = Some(Box::new(schemars::schema::Metadata {
+            title: Some("SubjectPattern".to_string()),
+            description: Some(
+                "Subject pattern supporting `*` (single segment) and a terminal `>` (multi-segment) wildcard."
+                    .to_string(),
+            ),
+            ..Default::default()
+        }));
+
+        Schema::Object(schema)
+    }
+}
+
+impl JsonSchema for DomainPath {
+    fn schema_name() -> String {
+        "DomainPath".to_string()
+    }
+
+    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> Schema {
+        let mut schema = SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            ..Default::default()
+        };
+
+        schema.metadata = Some(Box::new(schemars::schema::Metadata {
+            title: Some("DomainPath".to_string()),
+            description: Some(
+                "Canonical domain path beginning with 'cim.domain' followed by bounded context and facet segments."
+                    .to_string(),
+            ),
+            ..Default::default()
+        }));
+
+        schema.string = Some(Box::new(schemars::schema::StringValidation {
+            pattern: Some("^cim\\.domain(\\.[a-z0-9_-]+)*$".to_string()),
+            ..Default::default()
+        }));
+
+        Schema::Object(schema)
+    }
+}
+
 // CidGeneric JsonSchema implementation removed
 // Cannot implement foreign trait for foreign type (orphan rule)
 // This should be implemented in cim-ipld or wherever CidGeneric is defined
@@ -228,13 +318,19 @@ pub fn aggregate_state_schema<S: JsonSchema>(
     states: Vec<&str>,
     _gen: &mut schemars::gen::SchemaGenerator,
 ) -> Schema {
-    let mut schema = SchemaObject { instance_type: None, ..Default::default() };
+    let mut schema = SchemaObject {
+        instance_type: None,
+        ..Default::default()
+    };
 
     // Use oneOf for sum types (algebraic data types)
     let variants: Vec<Schema> = states
         .iter()
         .map(|state| {
-            let mut variant = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+            let mut variant = SchemaObject {
+                instance_type: Some(InstanceType::Object.into()),
+                ..Default::default()
+            };
 
             let mut object = ObjectValidation::default();
             object.properties.insert(
@@ -276,9 +372,15 @@ pub fn aggregate_state_schema<S: JsonSchema>(
 
 /// Schema for Mealy state machines
 pub fn mealy_machine_schema(states: Vec<&str>, _inputs: Vec<&str>, _outputs: Vec<&str>) -> Schema {
-    let mut schema = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+    let mut schema = SchemaObject {
+        instance_type: Some(InstanceType::Object.into()),
+        ..Default::default()
+    };
 
-    let mut object = ObjectValidation { additional_properties: Some(Box::new(Schema::Bool(true))), ..Default::default() };
+    let mut object = ObjectValidation {
+        additional_properties: Some(Box::new(Schema::Bool(true))),
+        ..Default::default()
+    };
 
     // Transition table: (State, Input) -> State
     object.properties.insert(
@@ -286,7 +388,12 @@ pub fn mealy_machine_schema(states: Vec<&str>, _inputs: Vec<&str>, _outputs: Vec
         Schema::Object({
             SchemaObject {
                 instance_type: Some(InstanceType::Object.into()),
-                metadata: Some(Box::new(schemars::schema::Metadata { description: Some("State transition function: (State, Input) -> State".to_string()), ..Default::default() })),
+                metadata: Some(Box::new(schemars::schema::Metadata {
+                    description: Some(
+                        "State transition function: (State, Input) -> State".to_string(),
+                    ),
+                    ..Default::default()
+                })),
                 ..Default::default()
             }
         }),
@@ -298,7 +405,10 @@ pub fn mealy_machine_schema(states: Vec<&str>, _inputs: Vec<&str>, _outputs: Vec
         Schema::Object({
             SchemaObject {
                 instance_type: Some(InstanceType::Object.into()),
-                metadata: Some(Box::new(schemars::schema::Metadata { description: Some("Output function: (State, Input) -> Output".to_string()), ..Default::default() })),
+                metadata: Some(Box::new(schemars::schema::Metadata {
+                    description: Some("Output function: (State, Input) -> Output".to_string()),
+                    ..Default::default()
+                })),
                 ..Default::default()
             }
         }),
@@ -338,14 +448,20 @@ pub fn mealy_machine_schema(states: Vec<&str>, _inputs: Vec<&str>, _outputs: Vec
 
 /// Schema for specifications (validation rules)
 pub fn specification_schema<T: JsonSchema>() -> Schema {
-    let mut schema = SchemaObject { instance_type: None, ..Default::default() };
+    let mut schema = SchemaObject {
+        instance_type: None,
+        ..Default::default()
+    };
 
     // Specifications form a boolean algebra (and, or, not)
     schema.subschemas = Some(Box::new(schemars::schema::SubschemaValidation {
         one_of: Some(vec![
             // Leaf specification
             Schema::Object({
-                let mut s = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+                let mut s = SchemaObject {
+                    instance_type: Some(InstanceType::Object.into()),
+                    ..Default::default()
+                };
                 let mut obj = ObjectValidation::default();
                 obj.properties.insert("rule".to_owned(), Schema::Bool(true));
                 obj.required.insert("rule".to_owned());
@@ -354,11 +470,17 @@ pub fn specification_schema<T: JsonSchema>() -> Schema {
             }),
             // AND composition
             Schema::Object({
-                let mut s = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+                let mut s = SchemaObject {
+                    instance_type: Some(InstanceType::Object.into()),
+                    ..Default::default()
+                };
                 let mut obj = ObjectValidation::default();
                 obj.properties.insert(
                     "and".to_owned(),
-                    Schema::Object(SchemaObject { instance_type: Some(InstanceType::Array.into()), ..Default::default() }),
+                    Schema::Object(SchemaObject {
+                        instance_type: Some(InstanceType::Array.into()),
+                        ..Default::default()
+                    }),
                 );
                 obj.required.insert("and".to_owned());
                 s.object = Some(Box::new(obj));
@@ -366,11 +488,17 @@ pub fn specification_schema<T: JsonSchema>() -> Schema {
             }),
             // OR composition
             Schema::Object({
-                let mut s = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+                let mut s = SchemaObject {
+                    instance_type: Some(InstanceType::Object.into()),
+                    ..Default::default()
+                };
                 let mut obj = ObjectValidation::default();
                 obj.properties.insert(
                     "or".to_owned(),
-                    Schema::Object(SchemaObject { instance_type: Some(InstanceType::Array.into()), ..Default::default() }),
+                    Schema::Object(SchemaObject {
+                        instance_type: Some(InstanceType::Array.into()),
+                        ..Default::default()
+                    }),
                 );
                 obj.required.insert("or".to_owned());
                 s.object = Some(Box::new(obj));
@@ -378,7 +506,10 @@ pub fn specification_schema<T: JsonSchema>() -> Schema {
             }),
             // NOT negation
             Schema::Object({
-                let mut s = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+                let mut s = SchemaObject {
+                    instance_type: Some(InstanceType::Object.into()),
+                    ..Default::default()
+                };
                 let mut obj = ObjectValidation::default();
                 obj.properties.insert("not".to_owned(), Schema::Bool(true));
                 obj.required.insert("not".to_owned());
@@ -404,12 +535,19 @@ pub fn specification_schema<T: JsonSchema>() -> Schema {
 
 /// Schema for domain marker traits (ValueObject, Entity, Aggregate, etc.)
 pub fn domain_trait_schema(trait_name: &str) -> Schema {
-    let mut schema = SchemaObject { instance_type: Some(InstanceType::Object.into()), ..Default::default() };
+    let mut schema = SchemaObject {
+        instance_type: Some(InstanceType::Object.into()),
+        ..Default::default()
+    };
 
     let mut object = ObjectValidation::default();
     object.properties.insert(
         "_domain_trait".to_owned(),
-        Schema::Object(SchemaObject { instance_type: Some(InstanceType::String.into()), enum_values: Some(vec![serde_json::json!(trait_name)]), ..Default::default() }),
+        Schema::Object(SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            enum_values: Some(vec![serde_json::json!(trait_name)]),
+            ..Default::default()
+        }),
     );
 
     // Allow additional properties for the actual domain object (already set in initializer)

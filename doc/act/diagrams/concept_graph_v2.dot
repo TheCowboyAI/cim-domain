@@ -1,0 +1,17 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "CIM.Graph" [label="cim-graph:concept_graph
+(External)", color="#374151", fillcolor="#ffffff"];
+  "Concept" [label="Concept
+(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainEntity" [label="DomainEntity
+(Entity)", color="#2563eb", fillcolor="#eff6ff"];
+
+  "Concept" -> "Concept" [label="refines_concept", color="#374151", style="solid"];
+  "Concept" -> "Concept" [label="part_of", color="#374151", style="solid"];
+  "Concept" -> "Concept" [label="is_partially_equivalent_to", color="#374151", style="solid"];
+  "DomainEntity" -> "Concept" [label="name_entity", color="#374151", style="solid"];
+  "Concept" -> "CIM.Graph" [label="specified_by_cim_graph", color="#374151", style="solid"];
+}

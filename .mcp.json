@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    },
+    "arxiv-cowboy": {
+      "type": "stdio", 
+      "command": "/run/current-system/sw/bin/arxiv-mcp-server",
+      "args": [],
+      "env": {
+        "ARXIV_STORAGE_PATH": "/var/lib/arxiv-mcp/papers"
+      }
+    },
+    "mcp-nats": {
+      "type": "stdio",
+      "command": "/nix/store/zb2ph4iilc2f3miz25mp4v07plszm261-mcp-nats-0.1.0/bin/mcp-nats",
+      "args": [
+        "--transport",
+        "stdio",
+        "--log-level",
+        "info",
+        "--no-authentication"
+      ],
+      "env": {}
+    },
+    "nixos": {
+      "type": "stdio",
+      "command": "/run/current-system/sw/bin/mcp-nixos",
+      "args": [],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {}
+    }
+  }
+}

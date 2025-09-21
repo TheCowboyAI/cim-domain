@@ -8,19 +8,19 @@
 pub mod cross_domain_rules;
 pub mod domain_predicates;
 pub mod invariants;
+pub mod org_chart;
 pub mod semantic_analyzer;
 pub mod value_objects;
-pub mod org_chart;
 
 pub use cross_domain_rules::{CrossDomainRule, RuleEngine, RuleEvaluationResult};
 pub use domain_predicates::{DomainPredicate, PredicateEvaluator};
 pub use invariants::{DomainInvariant, InvariantChecker, InvariantViolation};
+pub use org_chart::{
+    LocationMarker, OrganizationMarker, PersonMarker, PolicyVO, ProjectAggregate, ProjectCommand,
+    ProjectEvent, ProjectMarker, ProjectState,
+};
 pub use semantic_analyzer::{ConceptAlignment, SemanticAnalyzer, SemanticDistance};
 pub use value_objects::{
     ConversionRate, Currency, CurrencyType, Money, PhysicalAddress, RateProvider, Temperature,
     TemperatureScale,
-};
-pub use org_chart::{
-    OrganizationMarker, LocationMarker, PersonMarker, PolicyVO, ProjectAggregate, ProjectCommand,
-    ProjectEvent, ProjectMarker, ProjectState,
 };

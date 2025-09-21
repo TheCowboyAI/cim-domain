@@ -5,4 +5,3 @@
 //! exercise event streams and ordering for sample aggregates.
 
 // No code is required here; all examples live in `tests/` as integration tests.
-

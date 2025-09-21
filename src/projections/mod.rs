@@ -57,8 +57,12 @@ mod tests {
     #[derive(Debug)]
     struct E(Uuid);
     impl DomainEvent for E {
-        fn aggregate_id(&self) -> Uuid { self.0 }
-        fn event_type(&self) -> &'static str { "E" }
+        fn aggregate_id(&self) -> Uuid {
+            self.0
+        }
+        fn event_type(&self) -> &'static str {
+            "E"
+        }
     }
 
     #[tokio::test]

@@ -1,0 +1,24 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "AggregateRoot" [label="AggregateRoot\n(Trait)", color="#0ea5e9", fillcolor="lightblue"];
+  "DomainEntity" [label="DomainEntity\n(Entity)", color="#2563eb", fillcolor="#eff6ff"];
+  "ValueCollection" [label="ValueCollection\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "ValueObject" [label="ValueObject\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "Policy" [label="Policy\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainInvariant" [label="DomainInvariant\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "StateMachine" [label="StateMachine\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "DomainEvent" [label="DomainEvent\n(Event)", color="#0ea5e9", fillcolor="#e0f2fe"];
+  "InvariantViolation" [label="InvariantViolation\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+
+  "AggregateRoot" -> "DomainEntity" [label="aggregate_contains_entity", color="#374151", style="solid"];
+  "DomainEntity" -> "ValueCollection" [label="owns_value_collection", color="#374151", style="solid"];
+  "ValueCollection" -> "ValueObject" [label="collection_contains_value_object", color="#374151", style="solid"];
+  "AggregateRoot" -> "Policy" [label="constrained_by_policy", color="#374151", style="solid"];
+  "AggregateRoot" -> "StateMachine" [label="governed_by", color="#374151", style="solid"];
+  "AggregateRoot" -> "DomainEvent" [label="emits_event", color="#374151", style="solid"];
+  "Policy" -> "DomainInvariant" [label="defines_invariant", color="#374151", style="solid"];
+  "AggregateRoot" -> "DomainInvariant" [label="enforces_invariant", color="#374151", style="solid"];
+  "DomainInvariant" -> "InvariantViolation" [label="reports_violation", color="#475569", style="dashed"];
+}

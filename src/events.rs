@@ -6,8 +6,8 @@
 //! and form the basis of event sourcing and event-driven communication.
 
 use crate::cid::DomainCid;
-use crate::fp_adts::Either;
 use crate::cqrs::{CausationId, CorrelationId, EventId};
+use crate::fp_adts::Either;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -65,13 +65,12 @@ pub trait DomainEvent: Send + Sync + std::fmt::Debug {
     }
 }
 
-/// How an event payload is represented inside an envelope.
-// Payload is modeled as an Either: Left(DomainCid) | Right(Event)
-
 /// Domain event envelope carrying identity and either an inline payload or a CID reference.
 ///
-/// This type is pure and performs no persistence; infrastructure is responsible for
-/// extracting `Inline(E)`, producing a `DomainCid`, and replacing the payload with `ByCid(DomainCid)`.
+/// Payload is modeled as an [`Either`]: [`Left(DomainCid)`](Either::Left) when the payload has been
+/// persisted and replaced by a CID, or [`Right(E)`](Either::Right) when the event is carried inline.
+/// This type is pure and performs no persistence; infrastructure is responsible for extracting the
+/// inline payload, persisting it, and swapping the variant when needed.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DomainEventEnvelope<E: DomainEvent> {
     /// The event ID
@@ -104,6 +103,13 @@ pub struct PayloadMetadata {
 
     /// Additional metadata properties (payload-oriented)
     pub properties: std::collections::HashMap<String, serde_json::Value>,
+
+    /// Domain payload type identifier (used by infra to lift from CID)
+    ///
+    /// Backward compatibility: older events may not carry this field.
+    /// We default to an empty string so deserialization does not fail pre‑v1.0.
+    #[serde(default)]
+    pub payload_type: String,
 }
 
 // DomainEventEnvelope removed - had subject routing which belongs in transport layer
@@ -115,9 +121,11 @@ impl<E: DomainEvent> DomainEventEnvelope<E> {
         event: E,
         correlation_id: CorrelationId,
         causation_id: CausationId,
-        payload_metadata: PayloadMetadata,
+        mut payload_metadata: PayloadMetadata,
     ) -> Self {
         let aggregate_id = event.aggregate_id();
+        // Ensure payload_type is present for lifting downstream
+        payload_metadata.payload_type = event.event_type().to_string();
         Self {
             event_id,
             aggregate_id,
@@ -149,7 +157,10 @@ impl<E: DomainEvent> DomainEventEnvelope<E> {
 
     /// Replace an inline payload with a CID reference, keeping all metadata.
     pub fn with_payload_cid(self, cid: DomainCid) -> Self {
-        Self { payload: Either::Left(cid), ..self }
+        Self {
+            payload: Either::Left(cid),
+            ..self
+        }
     }
 
     /// Accessor: return inline event reference if present.
@@ -183,9 +194,10 @@ impl<E: DomainEvent> DomainEventEnvelope<E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::{Deserialize, Serialize};
-    use crate::cqrs::{MessageFactory, CorrelationId, CausationId, EventId};
+    use crate::cqrs::{CausationId, CorrelationId, EventId, MessageFactory};
     use crate::markers::CommandMarker;
+    use crate::EntityId;
+    use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
     struct TestEvent {
@@ -194,21 +206,35 @@ mod tests {
     }
 
     impl DomainEvent for TestEvent {
-        fn aggregate_id(&self) -> Uuid { self.id }
-        fn event_type(&self) -> &'static str { "TestEvent" }
-        fn version(&self) -> &'static str { "v1" }
+        fn aggregate_id(&self) -> Uuid {
+            self.id
+        }
+        fn event_type(&self) -> &'static str {
+            "TestEvent"
+        }
+        fn version(&self) -> &'static str {
+            "v1"
+        }
     }
 
     #[test]
     fn event_envelope_inline_and_cid() {
-        let event = TestEvent { id: Uuid::new_v4(), name: "created".into() };
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "created".into(),
+        };
         let eid = Uuid::new_v4();
         let env = DomainEventEnvelope::inline(
             crate::cqrs::EventId(eid),
             event.clone(),
             CorrelationId::Single(Uuid::new_v4()),
             CausationId(Uuid::new_v4()),
-            PayloadMetadata { source: "tests".into(), version: "v1".into(), properties: Default::default() },
+            PayloadMetadata {
+                source: "tests".into(),
+                version: "v1".into(),
+                properties: Default::default(),
+                payload_type: String::new(),
+            },
         );
         assert_eq!(env.event_id, crate::cqrs::EventId(eid));
         assert_eq!(env.aggregate_id, event.id);
@@ -223,13 +249,21 @@ mod tests {
 
     #[test]
     fn event_envelope_serde_roundtrip() {
-        let event = TestEvent { id: Uuid::new_v4(), name: "updated".into() };
+        let event = TestEvent {
+            id: Uuid::new_v4(),
+            name: "updated".into(),
+        };
         let env = DomainEventEnvelope::inline(
             crate::cqrs::EventId(Uuid::new_v4()),
             event,
             CorrelationId::Single(Uuid::new_v4()),
             CausationId(Uuid::new_v4()),
-            PayloadMetadata { source: "tests".into(), version: "v1".into(), properties: Default::default() },
+            PayloadMetadata {
+                source: "tests".into(),
+                version: "v1".into(),
+                properties: Default::default(),
+                payload_type: String::new(),
+            },
         );
         let json = serde_json::to_string(&env).unwrap();
         let back: DomainEventEnvelope<TestEvent> = serde_json::from_str(&json).unwrap();
@@ -248,23 +282,45 @@ mod tests {
         let ident = MessageFactory::create_root_command(cmd_uuid);
 
         #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-        struct Ev { id: uuid::Uuid }
+        struct Ev {
+            id: uuid::Uuid,
+        }
         impl DomainEvent for Ev {
-            fn aggregate_id(&self) -> uuid::Uuid { self.id }
-            fn event_type(&self) -> &'static str { "Ev" }
-            fn version(&self) -> &'static str { "v1" }
+            fn aggregate_id(&self) -> uuid::Uuid {
+                self.id
+            }
+            fn event_type(&self) -> &'static str {
+                "Ev"
+            }
+            fn version(&self) -> &'static str {
+                "v1"
+            }
         }
 
-        let ev = Ev { id: uuid::Uuid::new_v4() };
+        let ev = Ev {
+            id: uuid::Uuid::new_v4(),
+        };
         let env = DomainEventEnvelope::inline(
             EventId::new(),
             ev,
             ident.correlation_id,
             ident.causation_id,
-            PayloadMetadata { source: "tests".into(), version: "v1".into(), properties: Default::default() },
+            PayloadMetadata {
+                source: "tests".into(),
+                version: "v1".into(),
+                properties: Default::default(),
+                payload_type: String::new(),
+            },
         );
 
         assert_eq!(env.correlation_id, ident.correlation_id);
         assert_eq!(env.causation_id, ident.causation_id);
+    }
+
+    #[test]
+    fn command_marker_entity_ids_are_unique() {
+        let first = EntityId::<CommandMarker>::new();
+        let second = EntityId::<CommandMarker>::new();
+        assert_ne!(first, second, "CommandMarker IDs must remain unique");
     }
 }

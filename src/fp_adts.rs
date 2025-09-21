@@ -48,4 +48,3 @@ impl<L, R> Either<L, R> {
         }
     }
 }
-

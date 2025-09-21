@@ -39,8 +39,14 @@ fn usage() -> ! {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let path = if args.len() >= 2 { args[1].clone() } else { "dialog-dag.json".to_string() };
-    if args.len() > 2 { usage(); }
+    let path = if args.len() >= 2 {
+        args[1].clone()
+    } else {
+        "dialog-dag.json".to_string()
+    };
+    if args.len() > 2 {
+        usage();
+    }
 
     let p = Path::new(&path);
     let content = fs::read_to_string(p)?;
@@ -54,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let content_v = ev.get("content").cloned().ok_or("missing content")?;
         let mut node: DialogNode = DialogNode {
             cid: String::new(),
-            content: serde_json::from_value(content_v)?
+            content: serde_json::from_value(content_v)?,
         };
         node.content.parent_cid = prev_cid.clone();
         let cid = calculate_cid(&node.content);
@@ -69,4 +75,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(p, serde_json::to_string_pretty(&dag)?)?;
     Ok(())
 }
-

@@ -1,0 +1,46 @@
+digraph UL {
+  rankdir=LR;
+  node [shape=box, style=filled, fontname=Helvetica];
+
+  "DomainPath" [label="DomainPath\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainPathSegment" [label="DomainPathSegment\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainArtifactKind" [label="DomainArtifactKind\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+
+  "Subject" [label="Subject\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "SubjectPattern" [label="SubjectPattern\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "SubjectPatternSegment" [label="SubjectPatternSegment\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+
+  "BucketLog" [label="BucketLog\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "BucketEntry" [label="BucketEntry\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "CidIndexEntry" [label="CidIndexEntry\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "MoveHistoryEntry" [label="MoveHistoryEntry\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainCid" [label="DomainCid\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+  "DomainNode" [label="DomainNode\n(Concept)", color="#7c3aed", fillcolor="#f5f3ff"];
+  "BoundedContext" [label="BoundedContext\n(Context)", color="#2563eb", fillcolor="#eff6ff"];
+  "EventId" [label="EventId\n(ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
+
+  "DomainPath" -> "DomainPathSegment" [label="domain_path_composes_with_segment", color="#374151", style="solid"];
+  "DomainPath" -> "DomainPath" [label="domain_path_concatenates_with_path", color="#374151", style="solid"];
+  "DomainPath" -> "BoundedContext" [label="domain_path_addresses_context", color="#374151", style="solid"];
+  "DomainPath" -> "DomainArtifactKind" [label="domain_path_identifies_facet", color="#374151", style="solid"];
+  "DomainArtifactKind" -> "DomainPathSegment" [label="domain_artifact_renders_segment", color="#475569", style="dashed"];
+
+  "Subject" -> "SubjectSegment" [label="composes_with_segment", color="#374151", style="solid"];
+  "Subject" -> "Subject" [label="concatenates_with_subject", color="#374151", style="solid"];
+  "SubjectPattern" -> "Subject" [label="matches_subject", color="#374151", style="solid"];
+  "SubjectPattern" -> "SubjectPatternSegment" [label="composes_with_pattern_segment", color="#374151", style="solid"];
+  "SubjectPatternSegment" -> "SubjectSegment" [label="references_literal_segment", color="#475569", style="dashed"];
+
+  "BucketLog" -> "BucketEntry" [label="yields_entry", color="#374151", style="solid"];
+  "BucketLog" -> "DomainCid" [label="appends_payload_cid", color="#374151", style="solid"];
+  "BucketEntry" -> "DomainCid" [label="records_cid", color="#374151", style="solid"];
+  "BucketEntry" -> "BucketLog" [label="previous_tail", color="#475569", style="dashed"];
+
+  "CidIndexEntry" -> "DomainCid" [label="indexes_cid", color="#374151", style="solid"];
+  "CidIndexEntry" -> "BucketLog" [label="locates_bucket", color="#374151", style="solid"];
+  "CidIndexEntry" -> "MoveHistoryEntry" [label="records_move", color="#374151", style="solid"];
+  "MoveHistoryEntry" -> "EventId" [label="caused_by", color="#374151", style="solid"];
+
+  "DomainNode" -> "DomainCid" [label="domain_cid_defines_node", color="#374151", style="solid"];
+  "DomainNode" -> "Subject" [label="annotated_by_metadata", color="#475569", style="dashed"];
+}

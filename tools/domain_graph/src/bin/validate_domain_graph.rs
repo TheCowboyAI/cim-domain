@@ -4,7 +4,9 @@ use std::fs;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::env::args().nth(1).unwrap_or_else(|| "domain-graph.json".to_string());
+    let path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "domain-graph.json".to_string());
     let mut v: Value = serde_json::from_str(&fs::read_to_string(&path)?)?;
 
     // Basic structure checks
@@ -35,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Validate diagram path exists
         if let Some(p) = d.get("path").and_then(|p| p.as_str()) {
             if !Path::new(p).exists() {
-                eprintln!("Diagram path missing: {}", p);
+                eprintln!("Diagram path missing: {p}");
                 return Err("missing diagram file".into());
             }
         }
@@ -44,9 +46,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Check coverage for non-identity morphisms
     let mut uncovered: Vec<String> = Vec::new();
     for m in morphisms {
-        let id = m.get("id").and_then(|s| s.as_str()).ok_or("morphism without id")?;
+        let id = m
+            .get("id")
+            .and_then(|s| s.as_str())
+            .ok_or("morphism without id")?;
         let ty = m.get("type").and_then(|s| s.as_str()).unwrap_or("");
-        if ty == "Identity" { continue; }
+        if ty == "Identity" {
+            continue;
+        }
         if !described.contains(id) {
             uncovered.push(id.to_string());
         }
@@ -54,11 +61,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if !uncovered.is_empty() {
         eprintln!("Uncovered morphisms (no diagram describes them):");
-        for id in &uncovered { eprintln!("  - {}", id); }
+        for id in &uncovered {
+            eprintln!("  - {id}");
+        }
         // Ensure verified=false
         if let Some(meta) = v.get_mut("metadata").and_then(|m| m.as_object_mut()) {
-            if let Some(iso) = meta.get_mut("isomorphic_to").and_then(|x| x.as_object_mut()) {
-                if let Some(diag) = iso.get_mut("string_diagrams").and_then(|x| x.as_object_mut()) {
+            if let Some(iso) = meta
+                .get_mut("isomorphic_to")
+                .and_then(|x| x.as_object_mut())
+            {
+                if let Some(diag) = iso
+                    .get_mut("string_diagrams")
+                    .and_then(|x| x.as_object_mut())
+                {
                     diag.insert("verified".to_string(), Value::Bool(false));
                 }
             }
@@ -70,8 +85,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // All covered: set verified=true
     if let Some(meta) = v.get_mut("metadata").and_then(|m| m.as_object_mut()) {
-        if let Some(iso) = meta.get_mut("isomorphic_to").and_then(|x| x.as_object_mut()) {
-            if let Some(diag) = iso.get_mut("string_diagrams").and_then(|x| x.as_object_mut()) {
+        if let Some(iso) = meta
+            .get_mut("isomorphic_to")
+            .and_then(|x| x.as_object_mut())
+        {
+            if let Some(diag) = iso
+                .get_mut("string_diagrams")
+                .and_then(|x| x.as_object_mut())
+            {
                 diag.insert("verified".to_string(), Value::Bool(true));
             }
         }
@@ -80,4 +101,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("OK: all non-identity morphisms are covered by diagrams; set verified=true");
     Ok(())
 }
-

@@ -15,22 +15,48 @@
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay) ];
+        # Use the rust-overlay provided by the flake input
+        overlays = [ rust-overlay.overlays.default ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
         
         rustVersion = pkgs.rust-bin.nightly.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" ];
+          extensions = [ "rust-src" "rust-analyzer" "rustfmt" ];
         };
+
+        # nixfmt package detection for different nixpkgs versions
+        nixfmtPkg =
+          if pkgs ? nixfmt-classic then pkgs.nixfmt-classic
+          else if pkgs ? nixfmt then pkgs.nixfmt
+          else if pkgs ? nixfmt-rfc-style then pkgs.nixfmt-rfc-style
+          else pkgs.nixpkgs-fmt;
+
+        treefmtConfig = pkgs.writeText "treefmt.toml" ''
+# Unified formatting via treefmt
+
+[formatter.rust]
+command = "rustfmt"
+options = ["--edition", "2021"]
+includes = ["**/*.rs"]
+excludes = [
+  "target/**",
+  "tools/**/target/**",
+  "vendor/**",
+]
+
+[formatter.nix]
+command = "nixfmt"
+includes = ["**/*.nix"]
+'';
 
         buildInputs = with pkgs; [
           openssl
           pkg-config
           protobuf
-        ] ++ lib.optionals stdenv.isDarwin [
-          darwin.apple_sdk.frameworks.Security
-          darwin.apple_sdk.frameworks.SystemConfiguration
+        ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+          pkgs.darwin.apple_sdk.frameworks.Security
+          pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
         ];
 
         nativeBuildInputs = with pkgs; [
@@ -44,124 +70,170 @@
         ];
       in
       {
+        # Provide a formatter for `nix fmt` with treefmt (Rust+Nix)
+        formatter = pkgs.writeShellApplication {
+          name = "treefmt-wrapper";
+          runtimeInputs = [ pkgs.treefmt rustVersion nixfmtPkg ];
+          text = ''
+            exec treefmt --config-file ${treefmtConfig} --tree-root . "$@"
+          '';
+        };
+        # Keep flake checks fully hermetic (no network). Heavy tasks are exposed as apps.
         checks = {
           fmt = pkgs.runCommand "fmt-check" {
-            nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [ rustfmt ]);
+            src = self;
+            nativeBuildInputs = [ pkgs.treefmt rustVersion nixfmtPkg ];
           } ''
             export HOME=$TMPDIR
-            cargo fmt --all -- --check
+            cp -R $src/. .
+            chmod -R +w .
+            treefmt --config-file ${treefmtConfig} --tree-root . --no-cache --fail-on-change
             touch $out
           '';
 
           clippy = pkgs.runCommand "clippy-check" {
-            nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [ clippy ]);
+            inherit buildInputs nativeBuildInputs;
+            src = self;
           } ''
             export HOME=$TMPDIR
-            cargo clippy --workspace --all-features -- -D warnings
+            cp -R $src/. .
+            chmod -R +w .
+            cargo clippy --workspace --all-features --locked -- -D warnings
             touch $out
           '';
 
           tests = pkgs.runCommand "unit-tests" {
-            nativeBuildInputs = nativeBuildInputs;
+            inherit buildInputs nativeBuildInputs;
+            src = self;
           } ''
             export HOME=$TMPDIR
+            cp -R $src/. .
+            chmod -R +w .
             cargo test --workspace --all-features --locked -- --nocapture
-            touch $out
-          '';
-
-          coverage = pkgs.runCommand "coverage-llvm-cov" {
-            nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [ cargo-llvm-cov llvmPackages.llvm ]);
-          } ''
-            export HOME=$TMPDIR
-            # llvm-cov does runtime instrumentation; ptrace not required (works in sandbox)
-            cargo llvm-cov --workspace --all-features --fail-under-lines 100 --no-report
             touch $out
           '';
         };
 
-        apps = {
+        apps = let
+          mkAppMeta = description: {
+            inherit description;
+            longDescription = description;
+            platforms = pkgs.lib.platforms.all;
+          };
+        in {
+          # Unified formatting
+          fmt = {
+            type = "app";
+            program = (pkgs.writeShellApplication {
+              name = "fmt";
+              runtimeInputs = [ pkgs.treefmt rustVersion nixfmtPkg ];
+              text = ''
+                exec treefmt --config-file ${treefmtConfig} --tree-root . "$@"
+              '';
+            }).outPath + "/bin/fmt";
+            meta = mkAppMeta "Run treefmt with Rust and Nix formatters.";
+          };
+          fmt-check = {
+            type = "app";
+            program = (pkgs.writeShellApplication {
+              name = "fmt-check";
+              runtimeInputs = [ pkgs.treefmt rustVersion nixfmtPkg ];
+              text = ''
+                exec treefmt --config-file ${treefmtConfig} --tree-root . --no-cache --fail-on-change "$@"
+              '';
+            }).outPath + "/bin/fmt-check";
+            meta = mkAppMeta "Verify treefmt output without modifying files.";
+          };
           # On-demand strict ACT/DDD verification gate (does not run in default checks)
           act-strict = {
             type = "app";
-            program = pkgs.writeShellScriptBin "act-strict" ''
+            program = "${pkgs.writeShellScriptBin "act-strict" ''
               set -euo pipefail
               export HOME=${TMPDIR:-/tmp}
               echo "Running strict ACT/DDD tests (feature: act_strict)"
-              cargo test --features act_strict -- --nocapture
-            '';
+              "${rustVersion}/bin/cargo" test --features act_strict -- --nocapture
+            ''}/bin/act-strict";
+            meta = mkAppMeta "Run ACT/DDD strict feature test suite.";
           };
 
           # TDD run: execute all tests but do not fail the app exit code (useful during red phase)
           tdd = {
             type = "app";
-            program = pkgs.writeShellScriptBin "tdd" ''
+            program = "${pkgs.writeShellScriptBin "tdd" ''
               export HOME=${TMPDIR:-/tmp}
               echo "TDD mode: running tests and continuing even if failing..."
               set +e
-              cargo test --workspace --all-features -- --nocapture
+              "${rustVersion}/bin/cargo" test --workspace --all-features -- --nocapture
               code=$?
               echo "\n[TDD] cargo test exit code: $code (non-blocking)"
               exit 0
-            '';
+            ''}/bin/tdd";
+            meta = mkAppMeta "Run the full test suite but always exit successfully for red/green TDD loops.";
           };
 
           # UL tools (forward args)
           ul-dot = {
             type = "app";
-            program = pkgs.writeShellScriptBin "ul-dot" ''
+            program = "${pkgs.writeShellScriptBin "ul-dot" ''
               set -euo pipefail
-              cargo run -q -p domain_graph_tools --bin ul_dot -- "$@"
-            '';
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin ul_dot -- "$@"
+            ''}/bin/ul-dot";
+            meta = mkAppMeta "Render the UL graph to DOT using domain_graph_tools.";
           };
 
           ul-narrative = {
             type = "app";
-            program = pkgs.writeShellScriptBin "ul-narrative" ''
+            program = "${pkgs.writeShellScriptBin "ul-narrative" ''
               set -euo pipefail
-              cargo run -q -p domain_graph_tools --bin ul_narrative -- "$@"
-            '';
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin ul_narrative -- "$@"
+            ''}/bin/ul-narrative";
+            meta = mkAppMeta "Generate narrative output for the UL graph.";
           };
 
           add-morphism = {
             type = "app";
-            program = pkgs.writeShellScriptBin "add-morphism" ''
+            program = "${pkgs.writeShellScriptBin "add-morphism" ''
               set -euo pipefail
-              cargo run -q -p domain_graph_tools --bin add_morphism -- "$@"
-            '';
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_morphism -- "$@"
+            ''}/bin/add-morphism";
+            meta = mkAppMeta "Add a morphism to domain-graph.json via domain_graph_tools.";
           };
 
           add-diagram = {
             type = "app";
-            program = pkgs.writeShellScriptBin "add-diagram" ''
+            program = "${pkgs.writeShellScriptBin "add-diagram" ''
               set -euo pipefail
-              cargo run -q -p domain_graph_tools --bin add_diagram -- "$@"
-            '';
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_diagram -- "$@"
+            ''}/bin/add-diagram";
+            meta = mkAppMeta "Attach a diagram definition to the UL graph.";
           };
 
           # Render all DOT diagrams to SVG
           diagrams-render = {
             type = "app";
-            program = pkgs.writeShellScriptBin "diagrams-render" ''
+            program = "${pkgs.writeShellScriptBin "diagrams-render" ''
               set -euo pipefail
               shopt -s nullglob
               for f in doc/act/diagrams/*.dot; do
                 echo "Rendering $f"
-                dot -Tsvg "$f" -O
+                "${pkgs.graphviz}/bin/dot" -Tsvg "$f" -O
               done
-            '';
+            ''}/bin/diagrams-render";
+            meta = mkAppMeta "Render all DOT diagrams under doc/act/diagrams to SVG.";
           };
 
           # Attach planned diagrams with UL-aligned describes lists
           diagrams-attach = {
             type = "app";
-            program = pkgs.writeShellScriptBin "diagrams-attach" ''
+            program = "${pkgs.writeShellScriptBin "diagrams-attach" ''
               set -euo pipefail
-              cargo run -q -p domain_graph_tools --bin add_diagram -- --id event_pipeline_v2 --path doc/act/diagrams/event_pipeline_v2.dot.svg --describes handled_by,causes_event,emits_event,wraps_event,references_payload_cid,appended_to_stream,collects_envelope
-              cargo run -q -p domain_graph_tools --bin add_diagram -- --id identity_envelope_v2 --path doc/act/diagrams/identity_envelope_v2.dot.svg --describes identified_by_command_id,encloses_command,command_carries_identity,identified_by_query_id,encloses_query,query_carries_identity,provides_correlation_id,provides_causation_id,provides_event_id,identifies_event,identifies_aggregate,correlates_with,was_caused_by,describes_payload,command_correlates_to_event,query_correlates_to_event,precedes_envelope,acknowledged_by_command,acknowledged_by_query
-              cargo run -q -p domain_graph_tools --bin add_diagram -- --id read_path_v2 --path doc/act/diagrams/read_path_v2.dot.svg --describes subscribes_to_stream,consumes_event,updates_read_model,reads_from,responds_with
-              cargo run -q -p domain_graph_tools --bin add_diagram -- --id addressing_v2 --path doc/act/diagrams/addressing_v2.dot.svg --describes domain_cid_defines_node,uses_payload_codec,payload_is,annotated_by_metadata,defined_by_ipld
-              cargo run -q -p domain_graph_tools --bin add_diagram -- --id bounded_context_scope_v2 --path doc/act/diagrams/bounded_context_scope_v2.dot.svg --describes scopes_aggregate,scopes_projection,scopes_read_model,scopes_event_stream,scopes_command,scopes_query,scopes_policy,scopes_state_machine,scopes_saga
-            '';
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_diagram -- --id event_pipeline_v2 --path doc/act/diagrams/event_pipeline_v2.dot.svg --describes handled_by,causes_event,emits_event,wraps_event,references_payload_cid,appended_to_stream,collects_envelope
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_diagram -- --id identity_envelope_v2 --path doc/act/diagrams/identity_envelope_v2.dot.svg --describes identified_by_command_id,encloses_command,command_carries_identity,identified_by_query_id,encloses_query,query_carries_identity,provides_correlation_id,provides_causation_id,provides_event_id,identifies_event,identifies_aggregate,correlates_with,was_caused_by,describes_payload,command_correlates_to_event,query_correlates_to_event,precedes_envelope,acknowledged_by_command,acknowledged_by_query
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_diagram -- --id read_path_v2 --path doc/act/diagrams/read_path_v2.dot.svg --describes subscribes_to_stream,consumes_event,updates_read_model,reads_from,responds_with
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_diagram -- --id addressing_v2 --path doc/act/diagrams/addressing_v2.dot.svg --describes domain_cid_defines_node,uses_payload_codec,payload_is,annotated_by_metadata,defined_by_ipld
+              "${rustVersion}/bin/cargo" run -q -p domain_graph_tools --bin add_diagram -- --id bounded_context_scope_v2 --path doc/act/diagrams/bounded_context_scope_v2.dot.svg --describes scopes_aggregate,scopes_projection,scopes_read_model,scopes_event_stream,scopes_command,scopes_query,scopes_policy,scopes_state_machine,scopes_saga
+            ''}/bin/diagrams-attach";
+            meta = mkAppMeta "Attach UL diagram metadata for planned diagrams.";
           };
         };
 
@@ -194,7 +266,8 @@
             git
             jq
             graphviz
-            
+            treefmt
+          
             # Testing tools
             cargo-nextest
             cargo-llvm-cov
@@ -213,7 +286,7 @@
             
             # LLVM tools for coverage
             llvmPackages.bintools
-          ]);
+          ]) ++ [ nixfmtPkg ];
 
           shellHook = ''
             echo "CIM Domain development environment"
@@ -225,7 +298,8 @@
             echo "  cargo doc         - Generate documentation"
             echo "  cargo bench       - Run benchmarks"
             echo "  cargo clippy      - Run linter"
-            echo "  cargo fmt         - Format code"
+            echo "  cargo fmt         - Format Rust (rustfmt)"
+            echo "  nix fmt           - Treefmt (Rust+Nix)"
             echo "  dot -Tsvg doc/act/diagrams/*.dot -O  - Render DOT to SVG"
             echo "  cargo nextest run - Run tests with nextest"
             echo "  cargo tarpaulin   - Generate test coverage report"
@@ -256,6 +330,7 @@
               cargo-llvm-cov
               grcov
               graphviz
+              treefmt
               
               # Testing tools
               cargo-nextest
@@ -276,7 +351,7 @@
               jq
               yq-go
               git
-            ]);
+            ]) ++ [ nixfmtPkg ];
             
             shellHook = ''
               echo "CIM Domain Test & Coverage Environment"

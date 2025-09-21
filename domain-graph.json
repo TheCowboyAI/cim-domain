@@ -78,7 +78,193 @@
         "rule": "concat(x) ∘ concat(y) = concat(x ∘ y); identity = ∅"
       }
     ],
-    "diagrams": [],
+    "diagrams": [
+      {
+        "commutes": true,
+        "describes": [
+          "handled_by",
+          "causes_event",
+          "emits_event",
+          "wraps_event",
+          "references_payload_cid",
+          "appended_to_stream",
+          "collects_envelope"
+        ],
+        "id": "event_pipeline_v2",
+        "path": "doc/act/diagrams/event_pipeline_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "identified_by_command_id",
+          "encloses_command",
+          "command_carries_identity",
+          "identified_by_query_id",
+          "encloses_query",
+          "query_carries_identity",
+          "provides_correlation_id",
+          "provides_causation_id",
+          "provides_event_id",
+          "identifies_event",
+          "identifies_aggregate",
+          "correlates_with",
+          "was_caused_by",
+          "describes_payload",
+          "command_correlates_to_event",
+          "query_correlates_to_event",
+          "precedes_envelope",
+          "acknowledged_by_command",
+          "acknowledged_by_query"
+        ],
+        "id": "identity_envelope_v2",
+        "path": "doc/act/diagrams/identity_envelope_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "subscribes_to_stream",
+          "consumes_event",
+          "updates_read_model",
+          "reads_from",
+          "responds_with"
+        ],
+        "id": "read_path_v2",
+        "path": "doc/act/diagrams/read_path_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "domain_cid_defines_node",
+          "uses_payload_codec",
+          "payload_is",
+          "annotated_by_metadata",
+          "defined_by_ipld"
+        ],
+        "id": "addressing_v2",
+        "path": "doc/act/diagrams/addressing_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "composes_with_segment",
+          "concatenates_with_subject",
+          "matches_subject",
+          "composes_with_pattern_segment",
+          "references_literal_segment"
+        ],
+        "id": "subject_algebra_v2",
+        "path": "doc/act/diagrams/subject_algebra_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "domain_path_composes_with_segment",
+          "domain_path_concatenates_with_path",
+          "domain_path_addresses_context",
+          "domain_path_identifies_facet",
+          "domain_artifact_renders_segment"
+        ],
+        "id": "domain_path_algebra_v2",
+        "path": "doc/act/diagrams/domain_path_algebra_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "aggregate_contains_entity",
+          "owns_value_collection",
+          "collection_contains_value_object",
+          "constrained_by_policy",
+          "governed_by",
+          "emits_event",
+          "defines_invariant",
+          "enforces_invariant",
+          "reports_violation"
+        ],
+        "id": "aggregate_entity_value_v2",
+        "path": "doc/act/diagrams/aggregate_entity_value_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "domain_path_composes_with_segment",
+          "domain_path_concatenates_with_path",
+          "domain_path_addresses_context",
+          "domain_path_identifies_facet",
+          "domain_artifact_renders_segment",
+          "composes_with_segment",
+          "concatenates_with_subject",
+          "matches_subject",
+          "composes_with_pattern_segment",
+          "references_literal_segment",
+          "appends_payload_cid",
+          "yields_entry",
+          "records_cid",
+          "locates_bucket",
+          "records_move",
+          "caused_by",
+          "domain_cid_defines_node"
+        ],
+        "id": "domain_algebra_overview_v2",
+        "path": "doc/act/diagrams/domain_algebra_overview_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "scopes_aggregate",
+          "scopes_projection",
+          "scopes_read_model",
+          "scopes_event_stream",
+          "scopes_command",
+          "scopes_query",
+          "scopes_policy",
+          "scopes_state_machine",
+          "scopes_saga"
+        ],
+        "id": "bounded_context_scope_v2",
+        "path": "doc/act/diagrams/bounded_context_scope_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "refines_concept",
+          "part_of",
+          "is_partially_equivalent_to",
+          "name_entity",
+          "specified_by_cim_graph"
+        ],
+        "id": "concept_graph_v2",
+        "path": "doc/act/diagrams/concept_graph_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "owns_value_collection",
+          "concat_collections"
+        ],
+        "id": "ownership_v2",
+        "path": "doc/act/diagrams/ownership_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "governed_by",
+          "constrained_by_policy",
+          "coordinates",
+          "manages_participant",
+          "maintains_vector_clock"
+        ],
+        "id": "governance_v2",
+        "path": "doc/act/diagrams/governance_v2.dot"
+      },
+      {
+        "commutes": true,
+        "describes": [
+          "annotated_by_payload_type"
+        ],
+        "id": "payload_type_v2",
+        "path": "doc/act/diagrams/payload_type_v2.dot"
+      }
+    ],
     "identity_morphisms": [],
     "interpretation": true,
     "morphisms": [
@@ -439,6 +625,14 @@
         "type": "Annotation"
       },
       {
+        "id": "annotated_by_payload_type",
+        "name": "AnnotatedByPayloadType",
+        "notes": "DomainNode optionally records the domain payload type (Event/Aggregate/ValueObject/Document/Raw)",
+        "source": "DomainNode",
+        "target": "DomainPayloadType",
+        "type": "Annotation"
+      },
+      {
         "id": "payload_is",
         "name": "PayloadIs",
         "notes": "DomainNode references an IPLD payload CID",
@@ -461,6 +655,126 @@
         "source": "DomainCid",
         "target": "DomainNode",
         "type": "Definition"
+      },
+      {
+        "id": "composes_with_segment",
+        "name": "ComposesWithSegment",
+        "notes": "Subject is composed from ordered SubjectSegment tokens",
+        "source": "Subject",
+        "target": "SubjectSegment",
+        "type": "Composition"
+      },
+      {
+        "id": "concatenates_with_subject",
+        "name": "ConcatenatesWith",
+        "notes": "Subjects concatenate via free monoid operation",
+        "source": "Subject",
+        "target": "Subject",
+        "type": "Operation"
+      },
+      {
+        "id": "matches_subject",
+        "name": "MatchesSubject",
+        "notes": "SubjectPattern evaluates against concrete Subject instances",
+        "source": "SubjectPattern",
+        "target": "Subject",
+        "type": "Matching"
+      },
+      {
+        "id": "composes_with_pattern_segment",
+        "name": "ComposesWithPatternSegment",
+        "notes": "SubjectPattern is composed from pattern segment variants",
+        "source": "SubjectPattern",
+        "target": "SubjectPatternSegment",
+        "type": "Composition"
+      },
+      {
+        "id": "references_literal_segment",
+        "name": "ReferencesLiteralSegment",
+        "notes": "Pattern segments reference literal SubjectSegment when not wildcard",
+        "source": "SubjectPatternSegment",
+        "target": "SubjectSegment",
+        "type": "Reference"
+      },
+      {
+        "id": "domain_path_composes_with_segment",
+        "name": "ComposesWithSegment",
+        "notes": "DomainPath is composed from ordered DomainPathSegment tokens",
+        "source": "DomainPath",
+        "target": "DomainPathSegment",
+        "type": "Composition"
+      },
+      {
+        "id": "domain_path_concatenates_with_path",
+        "name": "ConcatenatesWith",
+        "notes": "DomainPath values concatenate using the cim.domain identity",
+        "source": "DomainPath",
+        "target": "DomainPath",
+        "type": "Operation"
+      },
+      {
+        "id": "domain_path_addresses_context",
+        "name": "AddressesContext",
+        "notes": "A DomainPath resolves to a specific BoundedContext (third segment)",
+        "source": "DomainPath",
+        "target": "BoundedContext",
+        "type": "Reference"
+      },
+      {
+        "id": "domain_path_identifies_facet",
+        "name": "IdentifiesFacet",
+        "notes": "DomainPath exposes a DomainArtifactKind describing the addressed facet",
+        "source": "DomainPath",
+        "target": "DomainArtifactKind",
+        "type": "Classification"
+      },
+      {
+        "id": "domain_artifact_renders_segment",
+        "name": "RendersAsSegment",
+        "notes": "DomainArtifactKind renders to the canonical path segment string",
+        "source": "DomainArtifactKind",
+        "target": "DomainPathSegment",
+        "type": "Annotation"
+      },
+      {
+        "id": "aggregate_contains_entity",
+        "name": "ContainsEntity",
+        "notes": "Aggregates encapsulate one or more domain entities within their boundary",
+        "source": "AggregateRoot",
+        "target": "DomainEntity",
+        "type": "Containment"
+      },
+      {
+        "id": "collection_contains_value_object",
+        "name": "ContainsValueObject",
+        "notes": "Value collections store the value objects owned by an entity",
+        "source": "ValueCollection",
+        "target": "ValueObject",
+        "type": "Containment"
+      },
+      {
+        "id": "defines_invariant",
+        "name": "DefinesInvariant",
+        "notes": "Policies declare the invariants that aggregates must enforce",
+        "source": "Policy",
+        "target": "DomainInvariant",
+        "type": "Definition"
+      },
+      {
+        "id": "enforces_invariant",
+        "name": "EnforcesInvariant",
+        "notes": "Aggregates enforce domain invariants as part of transaction boundaries",
+        "source": "AggregateRoot",
+        "target": "DomainInvariant",
+        "type": "Constraint"
+      },
+      {
+        "id": "reports_violation",
+        "name": "ReportsViolation",
+        "notes": "Invariants emit structured violations when checks fail",
+        "source": "DomainInvariant",
+        "target": "InvariantViolation",
+        "type": "Observation"
       },
       {
         "id": "acknowledged_by_command",
@@ -655,6 +969,86 @@
         "type": "ValueObject"
       },
       {
+        "details": {
+          "notes": "Validated dotted subject used for routing and addressing; forms a free monoid over SubjectSegment with concatenation."
+        },
+        "id": "Subject",
+        "name": "Subject",
+        "type": "ValueObject"
+      },
+      {
+        "details": {
+          "notes": "Single token within a subject; excludes delimiters and wildcard characters."
+        },
+        "id": "SubjectSegment",
+        "name": "SubjectSegment",
+        "type": "ValueObject"
+      },
+      {
+        "details": {
+          "notes": "Subject with wildcard support for subscriptions; retains value object semantics."
+        },
+        "id": "SubjectPattern",
+        "name": "SubjectPattern",
+        "type": "ValueObject"
+      },
+      {
+        "details": {
+          "notes": "Pattern segment variant capturing literals, single wildcards, or terminal multi-segment wildcard."
+        },
+        "id": "SubjectPatternSegment",
+        "name": "SubjectPatternSegment",
+        "type": "ValueObject"
+      },
+      {
+        "details": {
+          "notes": "Canonical dotted path rooted at cim.domain that composes bounded context and facet tokens."
+        },
+        "id": "DomainPath",
+        "name": "DomainPath",
+        "type": "ValueObject"
+      },
+      {
+        "details": {
+          "notes": "Validated token inside a DomainPath (lowercase, digits, underscore and dash)."
+        },
+        "id": "DomainPathSegment",
+        "name": "DomainPathSegment",
+        "type": "ValueObject"
+      },
+      {
+        "details": {
+          "notes": "Classifier for domain path facets (command, aggregate, value, saga, etc.)."
+        },
+        "id": "DomainArtifactKind",
+        "name": "DomainArtifactKind",
+        "type": "Concept"
+      },
+      {
+        "details": {
+          "notes": "Codec annotation for DomainNode payload blocks (raw/dag-cbor/dag-json)."
+        },
+        "id": "DomainPayloadCodec",
+        "name": "DomainPayloadCodec",
+        "type": "Concept"
+      },
+      {
+        "details": {
+          "notes": "Cross-aggregate constraint definitions enforcing business rules across entities." 
+        },
+        "id": "DomainInvariant",
+        "name": "DomainInvariant",
+        "type": "Concept"
+      },
+      {
+        "details": {
+          "notes": "Structured report describing how an invariant was violated." 
+        },
+        "id": "InvariantViolation",
+        "name": "InvariantViolation",
+        "type": "ValueObject"
+      },
+      {
         "id": "Policy",
         "name": "Policy",
         "type": "Concept"
@@ -746,8 +1140,8 @@
         "type": "Concept"
       },
       {
-        "id": "DomainPayloadCodec",
-        "name": "DomainPayloadCodec",
+        "id": "DomainPayloadType",
+        "name": "DomainPayloadType",
         "type": "Concept"
       }
     ]
@@ -791,9 +1185,23 @@
         "verified": true
       },
       "string_diagrams": {
-        "files": [],
+        "files": [
+          "doc/act/diagrams/event_pipeline_v2.dot",
+          "doc/act/diagrams/identity_envelope_v2.dot",
+          "doc/act/diagrams/read_path_v2.dot",
+      "doc/act/diagrams/addressing_v2.dot",
+      "doc/act/diagrams/subject_algebra_v2.dot",
+      "doc/act/diagrams/domain_path_algebra_v2.dot",
+      "doc/act/diagrams/aggregate_entity_value_v2.dot",
+      "doc/act/diagrams/domain_algebra_overview_v2.dot",
+      "doc/act/diagrams/bounded_context_scope_v2.dot",
+          "doc/act/diagrams/concept_graph_v2.dot",
+          "doc/act/diagrams/ownership_v2.dot",
+          "doc/act/diagrams/governance_v2.dot",
+          "doc/act/diagrams/payload_type_v2.dot"
+        ],
         "proofs_location": "doc/act/string_diagrams.md",
-        "verified": false
+        "verified": true
       }
     }
   },
