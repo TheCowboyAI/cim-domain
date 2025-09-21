@@ -49,7 +49,6 @@ See: doc/act/diagrams/identity_envelope_v2.dot.svg
 - Event IDs (`EventId::new`) are UUID v7, providing a monotone timestamp surface for downstream ordering proofs.
 - Ack/response artifacts (`CommandAcknowledgment`, `QueryAcknowledgment`, `QueryResponse`) are checked to reflect the originating envelope identity before emitting downstream projections.
 - Regression: `tests/envelope_identity_tests.rs` exercises the entire chain (root command → follow-up command/query → acknowledgments → event envelope) and the inline→CID transition.
-
 ## Content Addressing (DomainNode)
 
 See: doc/act/diagrams/addressing_v2.dot.svg
@@ -150,7 +149,7 @@ See: doc/act/diagrams/value_collection_monoid.svg
   - Set: operation = union; identity = ∅
   - Bag/Multiset: operation = multiset-union; identity = ∅
 - Laws: In all cases, (ValueCollection, ⊕, ∅) forms a monoid (associative; identity element).
-- Diagram coverage: concat_collections morphism documents the chosen ⊕. Regression: `tests/value_collection_monoid_tests.rs` validates associativity/identity for Vec concatenation and BTreeSet union.
+- Diagram coverage: concat_collections morphism documents the chosen ⊕. Tests validate associativity and identity for Vec (concat) and BTreeSet (union); regression coverage lives in `tests/value_collection_monoid_tests.rs`.
 
 ## Concept Graphs: CIM vs Domain
 

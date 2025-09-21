@@ -13,7 +13,6 @@ digraph UL {
 
   "VectorClock" [label="VectorClock
 (ValueObject)", color="#6366f1", fillcolor="#eef2ff"];
-
   "AggregateRoot" -> "StateMachine" [label="governed_by", color="#374151", style="solid"];
   "AggregateRoot" -> "Policy" [label="constrained_by_policy", color="#374151", style="solid"];
   "Saga" -> "AggregateRoot" [label="coordinates", color="#374151", style="solid"];
