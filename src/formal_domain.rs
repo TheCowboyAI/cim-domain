@@ -54,6 +54,13 @@ pub trait FormalDomainEntity: DomainConcept {
 /// Type-safe entity identifiers
 pub trait FormalEntityId: Clone + PartialEq + Eq + Hash + Send + Sync + Debug {}
 
+// Blanket implementation for EntityId<T> to satisfy formal domain requirements
+// Bounds match what EntityId's derives require
+impl<T> FormalEntityId for crate::entity::EntityId<T>
+where
+    T: Clone + PartialEq + Eq + Hash + Send + Sync + Debug + 'static
+{}
+
 /// Aggregates are consistency boundaries with state machines
 ///
 /// # Properties

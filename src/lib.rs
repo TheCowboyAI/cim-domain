@@ -30,7 +30,7 @@ mod commands;
 mod composition_types;
 mod context_types;
 mod cqrs;
-mod entity;
+pub mod entity;
 mod errors;
 mod event_handler;
 mod events;

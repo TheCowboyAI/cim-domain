@@ -2186,6 +2186,63 @@
           "verified non-vendor .rs and .md files carry canonical string"
         ]
       }
+    },
+    {
+      "cid": "bafkr4ifwx44nq4i6gul2k3dkg2a3gfllnftdsl3l2pcnd64bclv76eitoa",
+      "content": {
+        "event_id": "0d65ed33-414d-41c5-97ed-bd6e7d167b5d",
+        "i_understood": "Created and pushed annotated git tag v0.7.8",
+        "parent_cid": "bafkr4iakgqzkrtfrzvz3je2gib67jrydad3ruekqwsiifjsqtmcm62kp6m",
+        "timestamp": 1758491614,
+        "type": "assistant",
+        "user_said": "please tag this release as 0.7.8",
+        "what_i_did": [
+          "git tag -a v0.7.8",
+          "git push origin v0.7.8"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4ihuiramd6hupoucjd5voyr5brkbxcnkcqmep3ste2jv77yz77ak5i",
+      "content": {
+        "event_id": "adb3bb8b-f9cc-45e2-99e6-253635e8374a",
+        "i_understood": "You asked for a concise summary of all Rust dependencies across the workspace; I read dialog-dag purpose and scanned Cargo manifests to list them by scope.",
+        "parent_cid": "bafkr4ifwx44nq4i6gul2k3dkg2a3gfllnftdsl3l2pcnd64bclv76eitoa",
+        "timestamp": 1759347855,
+        "type": "assistant",
+        "user_said": "what are our dependencies?",
+        "what_i_did": [
+          "read dialog-dag insights",
+          "scanned root Cargo.toml",
+          "listed library dependencies",
+          "listed dev-dependencies",
+          "scanned examples/domain_examples/Cargo.toml",
+          "listed example dev-deps",
+          "scanned tools/dialog_dag and tools/domain_graph manifests",
+          "noted tools are excluded from workspace"
+        ]
+      }
+    },
+    {
+      "cid": "bafkr4igsm763k3d7c33wi5gsf7ye4tkrsdkvgnwzuppb224wcsc5v6kvjq",
+      "content": {
+        "event_id": "0a169592-f064-46c3-9159-52074003734c",
+        "i_understood": "You asked whether the latest version is pushed; I checked Cargo version, local and remote tags, compared SHAs, and branch sync status.",
+        "parent_cid": "bafkr4ihuiramd6hupoucjd5voyr5brkbxcnkcqmep3ste2jv77yz77ak5i",
+        "timestamp": 1759348039,
+        "type": "assistant",
+        "user_said": "have we pushed the latest version",
+        "what_i_did": [
+          "read dialog-dag insights",
+          "checked Cargo.toml version",
+          "ran git status",
+          "listed local tags",
+          "listed remote tags",
+          "fetched tags",
+          "compared v0.7.8 SHAs",
+          "checked ahead/behind"
+        ]
+      }
     }
   ],
   "insights": [
@@ -2647,5 +2704,5 @@
       ]
     }
   ],
-  "total_events": 127
+  "total_events": 130
 }
